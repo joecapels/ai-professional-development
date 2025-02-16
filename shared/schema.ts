@@ -167,6 +167,17 @@ export const studySessions = pgTable("study_sessions", {
   }>(),
 });
 
+// Add flashcards table
+export const flashcards = pgTable("flashcards", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  front: text("front").notNull(),
+  back: text("back").notNull(),
+  difficulty: integer("difficulty").notNull(),
+  documentIds: json("document_ids").$type<number[]>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -192,6 +203,12 @@ export const insertDocumentSchema = createInsertSchema(savedDocuments);
 export const insertStudySessionSchema = createInsertSchema(studySessions);
 export type StudySession = typeof studySessions.$inferSelect;
 export type InsertStudySession = z.infer<typeof insertStudySessionSchema>;
+
+// Add flashcard schema
+export const insertFlashcardSchema = createInsertSchema(flashcards);
+export type Flashcard = typeof flashcards.$inferSelect;
+export type InsertFlashcard = z.infer<typeof insertFlashcardSchema>;
+
 
 export type User = typeof users.$inferSelect;
 export type StudyMaterial = typeof studyMaterials.$inferSelect;

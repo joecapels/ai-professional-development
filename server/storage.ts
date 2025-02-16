@@ -1,6 +1,6 @@
 import { IStorage } from "./types";
-import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument } from "@shared/schema";
-import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments, studySessions } from "./db";
+import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument, Flashcard, InsertFlashcard, flashcards } from "@shared/schema";
+import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments, studySessions, flashcards as flashcardsTable } from "./db";
 import { eq, desc } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -217,6 +217,25 @@ export class DatabaseStorage implements IStorage {
         totalDuration,
       })
       .where(eq(studySessions.id, sessionId));
+  }
+
+  async getFlashcardsByUser(userId: number): Promise<Flashcard[]> {
+    return await db
+      .select()
+      .from(flashcards)
+      .where(eq(flashcards.userId, userId))
+      .orderBy(desc(flashcards.createdAt));
+  }
+
+  async saveFlashcards(cards: (Omit<InsertFlashcard, "id">)[]): Promise<Flashcard[]> {
+    if (cards.length === 0) return [];
+
+    const savedCards = await db
+      .insert(flashcards)
+      .values(cards)
+      .returning();
+
+    return savedCards;
   }
 }
 
