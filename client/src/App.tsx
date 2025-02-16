@@ -18,7 +18,7 @@ import AdminPage from "@/pages/admin-page";
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/admin" component={AdminPage} />
+      <ProtectedRoute path="/admin" component={AdminPage} requireAdmin={true} />
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/chat" component={ChatPage} />
       <ProtectedRoute path="/quiz" component={QuizPage} />
