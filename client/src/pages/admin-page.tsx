@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import type { StudyMaterial } from "@shared/schema";
+import type { StudyMaterial, InsertUser } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
 import { useLocation } from "wouter";
 
@@ -27,12 +27,20 @@ export default function AdminPage() {
     queryKey: ["/api/materials"],
   });
 
-  const form = useForm<StudyMaterial>({
+  const materialForm = useForm<StudyMaterial>({
     defaultValues: {
       title: "",
       content: "",
       subject: "",
       difficulty: 1,
+    },
+  });
+
+  const adminForm = useForm<InsertUser & { isAdmin: boolean }>({
+    defaultValues: {
+      username: "",
+      password: "",
+      isAdmin: true,
     },
   });
 
@@ -44,11 +52,29 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/materials"] });
       toast({ title: "Study material created successfully" });
-      form.reset();
+      materialForm.reset();
     },
     onError: (error) => {
       toast({ 
         title: "Failed to create study material", 
+        description: error.message,
+        variant: "destructive"
+      });
+    },
+  });
+
+  const createAdminMutation = useMutation({
+    mutationFn: async (data: InsertUser & { isAdmin: boolean }) => {
+      const res = await apiRequest("POST", "/api/register", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Admin user created successfully" });
+      adminForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to create admin user",
         description: error.message,
         variant: "destructive"
       });
@@ -73,27 +99,28 @@ export default function AdminPage() {
         <div className="space-y-6">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
 
-          <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
+          <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
+            {/* Study Material Form */}
             <Card>
               <CardHeader>
                 <CardTitle>Add Study Material</CardTitle>
               </CardHeader>
               <CardContent>
                 <form
-                  onSubmit={form.handleSubmit((data) => createMaterialMutation.mutate(data))}
+                  onSubmit={materialForm.handleSubmit((data) => createMaterialMutation.mutate(data))}
                   className="space-y-4"
                 >
                   <div>
                     <label className="block text-sm font-medium mb-2">Title</label>
-                    <Input {...form.register("title")} />
+                    <Input {...materialForm.register("title")} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Subject</label>
-                    <Input {...form.register("subject")} />
+                    <Input {...materialForm.register("subject")} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Content</label>
-                    <Textarea {...form.register("content")} rows={6} />
+                    <Textarea {...materialForm.register("content")} rows={6} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Difficulty (1-5)</label>
@@ -101,7 +128,7 @@ export default function AdminPage() {
                       type="number"
                       min="1"
                       max="5"
-                      {...form.register("difficulty", { valueAsNumber: true })}
+                      {...materialForm.register("difficulty", { valueAsNumber: true })}
                     />
                   </div>
                   <Button type="submit" disabled={createMaterialMutation.isPending}>
@@ -114,6 +141,38 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
+            {/* Admin Registration Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Create Admin User</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form
+                  onSubmit={adminForm.handleSubmit((data) => createAdminMutation.mutate(data))}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Username</label>
+                    <Input {...adminForm.register("username")} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Password</label>
+                    <Input 
+                      type="password" 
+                      {...adminForm.register("password")}
+                    />
+                  </div>
+                  <Button type="submit" disabled={createAdminMutation.isPending}>
+                    {createAdminMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Create Admin User
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Study Materials List */}
             <Card>
               <CardHeader>
                 <CardTitle>Study Materials</CardTitle>

@@ -97,19 +97,23 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Modified register endpoint to handle admin registration
   app.post("/api/register", async (req, res, next) => {
     try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
+      const { username, password, isAdmin } = req.body;
+
+      const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      const hashedPassword = await hashPassword(req.body.password);
-      console.log("Creating new user:", req.body.username);
+      const hashedPassword = await hashPassword(password);
+      console.log("Creating new user:", username, isAdmin ? "(admin)" : "");
 
       const user = await storage.createUser({
-        ...req.body,
+        username,
         password: hashedPassword,
+        isAdmin: !!isAdmin, // Convert to boolean
       });
 
       req.login(user, (err) => {
@@ -123,7 +127,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         console.error("Login error:", err);
         return next(err);
