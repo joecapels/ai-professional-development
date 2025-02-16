@@ -262,13 +262,15 @@ export async function handleStudyChat(
 // Add this function to the existing openai.ts file
 export async function generateMoodSuggestion(mood: string): Promise<string> {
   try {
-    const prompt = `As a supportive AI tutor, provide a brief, encouraging response to a student who is feeling "${mood}".
-    Consider their emotional state and offer constructive suggestions for their study session.
-    Keep the response concise, empathetic, and actionable.
+    console.log(`Generating mood suggestion for mood: ${mood}`);
+    const prompt = `Given a student feeling "${mood}", provide a brief, encouraging suggestion for their learning session.
+    Your response must be a JSON object with a single "suggestion" field containing a supportive message.
+    The message should be empathetic, positive, and actionable.
+    Keep it under 2-3 sentences.
 
-    Respond with a JSON object in this format:
+    Example format:
     {
-      "suggestion": "your supportive message here"
+      "suggestion": "I understand you're feeling unmotivated. Take a 5-minute break to stretch, then try breaking your study session into smaller, manageable chunks."
     }`;
 
     const response = await openai.chat.completions.create({
@@ -282,11 +284,20 @@ export async function generateMoodSuggestion(mood: string): Promise<string> {
 
     const content = response.choices[0].message.content;
     if (!content) {
-      throw new Error("No content in response");
+      console.error("Empty response from OpenAI");
+      return "I'm here to support you. Let's make the most of your study session!";
     }
 
-    const result = JSON.parse(content);
-    return result.suggestion || "Keep going, you're doing great!";
+    console.log("Raw OpenAI response:", content);
+
+    try {
+      const result = JSON.parse(content);
+      return result.suggestion || "Keep going, you're doing great!";
+    } catch (parseError) {
+      console.error("Failed to parse OpenAI response:", parseError);
+      console.error("Raw content:", content);
+      return "I'm here to support your learning journey. Let's keep going!";
+    }
   } catch (error) {
     console.error("Error generating mood suggestion:", error);
     return "Keep going, you're doing great!";

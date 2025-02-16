@@ -5,7 +5,7 @@ import type { IncomingMessage } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { StudyMaterial, Progress, type LearningPreferences, type StudySessionMessage, studySessionMessageSchema } from "@shared/schema";
-import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat } from "./openai.js";
+import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat, generateMoodSuggestion } from "./openai";
 import { generateAdvancedAnalytics, generatePersonalizedStudyPlan } from "./analytics";
 
 // Extend the IncomingMessage type to include session
@@ -59,7 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           case 'pause':
           case 'resume':
-            await storage.updateStudySessionStatus(validatedMessage.sessionId, 
+            await storage.updateStudySessionStatus(validatedMessage.sessionId,
               validatedMessage.type === 'pause' ? 'paused' : 'active');
             break;
 
@@ -250,6 +250,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const analytics = await generateAdvancedAnalytics(req.user.id);
     const studyPlan = await generatePersonalizedStudyPlan(req.user.id, analytics.performanceMetrics);
     res.json(studyPlan);
+  });
+
+  // Update the mood route with better error handling
+  app.post("/api/mood", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { mood } = req.body;
+      if (!mood) {
+        return res.status(400).json({ error: "Mood is required" });
+      }
+      const suggestion = await generateMoodSuggestion(mood);
+      res.json({ suggestion });
+    } catch (error: any) {
+      console.error("Error processing mood:", error);
+      res.status(500).json({ error: "Failed to process mood" });
+    }
   });
 
   // Helper function to calculate quiz score
