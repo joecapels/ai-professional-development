@@ -1,6 +1,8 @@
 import { useAuth } from "@/hooks/use-auth";
 import { NavBar } from "@/components/nav-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { InfoIcon } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -87,6 +89,14 @@ export default function AnalyticsPage() {
     <div className="min-h-screen bg-background">
       <NavBar />
       <main className="container py-8">
+        {user?.username === "joe" && (
+          <Alert className="mb-6">
+            <InfoIcon className="h-4 w-4" />
+            <AlertDescription>
+              You are viewing demo analytics data. As you use the platform, this section will be populated with your actual learning progress and personalized insights.
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="grid gap-6">
           {/* Overall Performance */}
           <Card>
