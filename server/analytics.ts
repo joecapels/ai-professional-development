@@ -1,6 +1,6 @@
 import { Progress, QuizResult, StudyMaterial } from "@shared/schema";
 import OpenAI from "openai";
-import { db, progress, quizResults, studyMaterials } from "./db";
+import { db, progress, quizResults, studyMaterials, users } from "./db";
 import { eq } from "drizzle-orm";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
@@ -27,7 +27,7 @@ interface SubjectPerformance {
 }
 
 // Generate demo data for development and testing
-function generateDemoData(userId: number) {
+function generateDemoData() {
   const subjects = [
     "Biology",
     "History",
@@ -94,13 +94,58 @@ function generateDemoData(userId: number) {
   };
 }
 
+// Default data for non-demo users
+function getDefaultData(): {
+  performanceMetrics: PerformanceMetrics;
+  subjectPerformance: SubjectPerformance[];
+  nextStepRecommendations: string[];
+} {
+  return {
+    performanceMetrics: {
+      overallScore: 0,
+      strengthAreas: [],
+      improvementAreas: [],
+      learningTrends: [
+        { period: "Week 1", score: 0 }
+      ],
+      recommendedTopics: ["Start with introductory materials"],
+      predictedDifficulty: 1
+    },
+    subjectPerformance: [
+      {
+        subject: "General",
+        averageScore: 0,
+        totalAttempts: 0,
+        lastAttemptDate: new Date().toISOString(),
+        improvement: 0
+      }
+    ],
+    nextStepRecommendations: [
+      "Begin with foundational courses",
+      "Take initial assessment tests",
+      "Set your learning preferences"
+    ]
+  };
+}
+
 export async function generateAdvancedAnalytics(userId: number): Promise<{
   performanceMetrics: PerformanceMetrics;
   subjectPerformance: SubjectPerformance[];
   nextStepRecommendations: string[];
 }> {
-  // For now, return demo data
-  return generateDemoData(userId);
+  try {
+    // Check if the user is "joe"
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+
+    if (user && user.username === "joe") {
+      return generateDemoData();
+    }
+
+    return getDefaultData();
+  } catch (error) {
+    console.error("Error checking user:", error);
+    return getDefaultData();
+  }
 }
 
 // Helper function to calculate basic score when ML analysis fails
@@ -108,6 +153,84 @@ function calculateBasicScore(quizResults: QuizResult[]): number {
   if (quizResults.length === 0) return 0;
   const totalScore = quizResults.reduce((sum, result) => sum + result.score, 0);
   return Math.round(totalScore / quizResults.length);
+}
+
+// Generate personalized study plan based on analytics
+export async function generatePersonalizedStudyPlan(
+  userId: number,
+  metrics: PerformanceMetrics
+): Promise<{
+  dailyGoals: string[];
+  focusAreas: string[];
+  estimatedTimeInvestment: number;
+  milestones: { description: string; targetDate: string }[];
+}> {
+  try {
+    // Check if the user is "joe"
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+
+    if (user && user.username === "joe") {
+      // Return demo study plan for joe
+      return {
+        dailyGoals: [
+          "Review Biology Chapter 5: Cell Division",
+          "Practice Music Theory scales for 30 minutes",
+          "Study Art History: Modern Period",
+          "Complete 2 Physics practice problems"
+        ],
+        focusAreas: metrics.improvementAreas,
+        estimatedTimeInvestment: 2.5,
+        milestones: [
+          {
+            description: "Complete Biology Module Assessment",
+            targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            description: "Master Basic Music Theory Concepts",
+            targetDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            description: "Finish Art History Period Overview",
+            targetDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
+          }
+        ],
+      };
+    }
+
+    // Return default study plan for other users
+    return {
+      dailyGoals: [
+        "Complete your profile settings",
+        "Take initial assessments",
+        "Explore available courses"
+      ],
+      focusAreas: ["Basic concepts", "Fundamentals"],
+      estimatedTimeInvestment: 1,
+      milestones: [
+        {
+          description: "Complete profile setup",
+          targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          description: "Finish initial assessments",
+          targetDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        }
+      ],
+    };
+  } catch (error) {
+    console.error("Error checking user:", error);
+    return {
+      dailyGoals: ["Set up your profile"],
+      focusAreas: ["Getting started"],
+      estimatedTimeInvestment: 0.5,
+      milestones: [
+        {
+          description: "Complete initial setup",
+          targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        }
+      ],
+    };
+  }
 }
 
 // Calculate performance trends over time
@@ -134,42 +257,5 @@ export function calculatePerformanceTrends(quizResults: QuizResult[]): {
   return {
     trend: averageChange > 1 ? "improving" : averageChange < -1 ? "declining" : "stable",
     rate: Number(averageChange.toFixed(2)),
-  };
-}
-
-// Generate personalized study plan based on analytics
-export async function generatePersonalizedStudyPlan(
-  userId: number,
-  metrics: PerformanceMetrics
-): Promise<{
-  dailyGoals: string[];
-  focusAreas: string[];
-  estimatedTimeInvestment: number;
-  milestones: { description: string; targetDate: string }[];
-}> {
-  // Generate demo study plan
-  return {
-    dailyGoals: [
-      "Review Biology Chapter 5: Cell Division",
-      "Practice Music Theory scales for 30 minutes",
-      "Study Art History: Modern Period",
-      "Complete 2 Physics practice problems"
-    ],
-    focusAreas: metrics.improvementAreas,
-    estimatedTimeInvestment: 2.5,
-    milestones: [
-      {
-        description: "Complete Biology Module Assessment",
-        targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        description: "Master Basic Music Theory Concepts",
-        targetDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        description: "Finish Art History Period Overview",
-        targetDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
-      }
-    ],
   };
 }
