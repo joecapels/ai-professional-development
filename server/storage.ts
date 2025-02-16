@@ -1,86 +1,60 @@
 import { IStorage } from "./types";
 import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress } from "@shared/schema";
+import { db, users, studyMaterials, progress } from "./db";
+import { eq } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private materials: Map<number, StudyMaterial>;
-  private progress: Map<number, Progress>;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
-  currentId: number;
 
   constructor() {
-    this.users = new Map();
-    this.materials = new Map();
-    this.progress = new Map();
-    this.currentId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = {
-      ...insertUser,
-      id,
-      isAdmin: false,
-      createdAt: new Date(),
-    };
-    this.users.set(id, user);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
   async getMaterial(id: number): Promise<StudyMaterial | undefined> {
-    return this.materials.get(id);
+    const [material] = await db.select().from(studyMaterials).where(eq(studyMaterials.id, id));
+    return material;
   }
 
   async getAllMaterials(): Promise<StudyMaterial[]> {
-    return Array.from(this.materials.values());
+    return await db.select().from(studyMaterials);
   }
 
   async createMaterial(material: InsertStudyMaterial): Promise<StudyMaterial> {
-    const id = this.currentId++;
-    const studyMaterial: StudyMaterial = {
-      ...material,
-      id,
-      createdAt: new Date(),
-    };
-    this.materials.set(id, studyMaterial);
-    return studyMaterial;
+    const [newMaterial] = await db.insert(studyMaterials).values(material).returning();
+    return newMaterial;
   }
 
   async getProgressByUser(userId: number): Promise<Progress[]> {
-    return Array.from(this.progress.values()).filter(p => p.userId === userId);
+    return await db.select().from(progress).where(eq(progress.userId, userId));
   }
 
   async createProgress(insertProgress: InsertProgress): Promise<Progress> {
-    const id = this.currentId++;
-    const { aiRecommendations, ...rest } = insertProgress;
-
-    const newProgress: Progress = {
-      ...rest,
-      id,
-      aiRecommendations: aiRecommendations ? [...aiRecommendations] : null,
-      completedAt: new Date(),
-    };
-
-    this.progress.set(id, newProgress);
+    const [newProgress] = await db.insert(progress).values(insertProgress).returning();
     return newProgress;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
