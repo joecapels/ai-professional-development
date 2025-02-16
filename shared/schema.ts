@@ -13,6 +13,7 @@ export const users = pgTable("users", {
     pacePreference: "fast" | "moderate" | "slow";
     explanationDetail: "basic" | "detailed" | "comprehensive";
     exampleFrequency: "few" | "moderate" | "many";
+    chatbotPersonality: "encouraging" | "socratic" | "professional" | "friendly";
   }>(),
 });
 
@@ -44,6 +45,7 @@ export const learningPreferencesSchema = z.object({
   pacePreference: z.enum(["fast", "moderate", "slow"]),
   explanationDetail: z.enum(["basic", "detailed", "comprehensive"]),
   exampleFrequency: z.enum(["few", "moderate", "many"]),
+  chatbotPersonality: z.enum(["encouraging", "socratic", "professional", "friendly"]),
 });
 
 export const insertStudyMaterialSchema = createInsertSchema(studyMaterials);

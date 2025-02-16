@@ -184,14 +184,26 @@ interface LearningPreferences {
   pacePreference: string;
   explanationDetail: string;
   exampleFrequency: string;
+  chatbotPersonality?: "encouraging" | "socratic" | "professional" | "friendly"; // Added chatbotPersonality
 }
 
-// Add this function to the existing openai.ts file
+// Update the handleStudyChat function
 export async function handleStudyChat(
   message: string,
   preferences?: LearningPreferences | null
 ): Promise<string> {
   try {
+    const personalityPrompts = {
+      encouraging: "Be encouraging and motivating. Celebrate student successes and provide positive reinforcement. Use phrases like 'Great question!' and 'You're making excellent progress!'",
+      socratic: "Use the Socratic method. Guide students to answers through questioning. Help them discover solutions themselves rather than providing direct answers.",
+      professional: "Maintain a professional and formal tone. Focus on clear, concise explanations with academic language.",
+      friendly: "Be casual and approachable. Use conversational language and relatable examples. Make learning feel fun and informal.",
+    };
+
+    const personalityPrompt = preferences?.chatbotPersonality
+      ? personalityPrompts[preferences.chatbotPersonality]
+      : personalityPrompts.professional;
+
     const preferencesPrompt = preferences
       ? `
         Consider these learning preferences when responding:
@@ -200,7 +212,9 @@ export async function handleStudyChat(
         - Detail Level: ${preferences.explanationDetail}
         - Example Frequency: ${preferences.exampleFrequency}
 
-        Adapt your response style accordingly. For example:
+        Personality Instructions: ${personalityPrompt}
+
+        Adapt your response style accordingly:
         - If visual learning style, use more descriptive language and suggest diagrams
         - If comprehensive detail is preferred, provide in-depth explanations
         - If many examples are preferred, include multiple relevant examples

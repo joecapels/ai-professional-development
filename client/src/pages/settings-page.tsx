@@ -40,6 +40,7 @@ export default function SettingsPage() {
       pacePreference: "moderate",
       explanationDetail: "detailed",
       exampleFrequency: "moderate",
+      chatbotPersonality: "encouraging", // Added default value
     },
   });
 
@@ -197,7 +198,35 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
-
+                {/* Add this form field after the exampleFrequency field */}
+                <FormField
+                  control={form.control}
+                  name="chatbotPersonality"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Chatbot Personality</FormLabel>
+                      <FormDescription>
+                        Choose how you'd like your AI tutor to interact with you
+                      </FormDescription>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select chatbot personality" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="encouraging">Encouraging & Motivating</SelectItem>
+                          <SelectItem value="socratic">Socratic Method</SelectItem>
+                          <SelectItem value="professional">Professional & Direct</SelectItem>
+                          <SelectItem value="friendly">Friendly & Casual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
                 <Button
                   type="submit"
                   className="w-full"
