@@ -48,7 +48,7 @@ export default function FlashcardPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/flashcards"] });
       toast({ title: "New flashcards generated successfully" });
       setIsGenerating(false);
-      setSelectedDocs([]); // Reset selection after successful generation
+      setSelectedDocs([]);
     },
     onError: (error: Error) => {
       toast({
@@ -76,7 +76,7 @@ export default function FlashcardPage() {
       } else {
         setCurrentCardIndex(0);
       }
-    }, 200);
+    }, 300); // Match the exit animation duration
   };
 
   if (documentsLoading || flashcardsLoading) {
@@ -147,27 +147,42 @@ export default function FlashcardPage() {
         {/* Flashcard Display */}
         {flashcards && flashcards.length > 0 ? (
           <div className="space-y-6">
-            <div className="relative h-[400px] perspective-1000">
+            <div className="relative h-[400px] perspective-[1000px]">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentCardIndex + (flipped ? "-back" : "-front")}
                   initial={{ rotateY: flipped ? -180 : 0, opacity: 0 }}
                   animate={{ rotateY: flipped ? 0 : 180, opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.4 }}
+                  transition={{
+                    duration: 0.3,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30
+                  }}
+                  style={{
+                    transformStyle: "preserve-3d",
+                    backfaceVisibility: "hidden"
+                  }}
                   className="absolute inset-0"
                 >
                   <Card
-                    className="h-full w-full cursor-pointer bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-lg transition-shadow"
+                    className={`h-full w-full cursor-pointer bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-lg transition-all transform-gpu
+                      ${flipped ? "rotate-y-180" : ""}`}
                     onClick={() => setFlipped(!flipped)}
                   >
                     <CardContent className="flex items-center justify-center h-full p-8">
-                      <div className="text-center">
+                      <motion.div
+                        className="text-center"
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                      >
                         <p className="text-xl">{flipped ? flashcards[currentCardIndex].back : flashcards[currentCardIndex].front}</p>
                         <p className="text-sm text-muted-foreground mt-4">
                           Click to {flipped ? "hide" : "show"} answer
                         </p>
-                      </div>
+                      </motion.div>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -175,35 +190,41 @@ export default function FlashcardPage() {
             </div>
 
             <div className="flex justify-center gap-4">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-32"
-                onClick={() => nextCard()}
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Next
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-32"
+                  onClick={() => nextCard()}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Next
+                </Button>
+              </motion.div>
               {flipped && (
                 <>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-32 text-red-500 hover:text-red-600"
-                    onClick={() => nextCard()}
-                  >
-                    <ThumbsDown className="h-4 w-4 mr-2" />
-                    Hard
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-32 text-green-500 hover:text-green-600"
-                    onClick={() => nextCard()}
-                  >
-                    <ThumbsUp className="h-4 w-4 mr-2" />
-                    Easy
-                  </Button>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-32 text-red-500 hover:text-red-600"
+                      onClick={() => nextCard()}
+                    >
+                      <ThumbsDown className="h-4 w-4 mr-2" />
+                      Hard
+                    </Button>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-32 text-green-500 hover:text-green-600"
+                      onClick={() => nextCard()}
+                    >
+                      <ThumbsUp className="h-4 w-4 mr-2" />
+                      Easy
+                    </Button>
+                  </motion.div>
                 </>
               )}
             </div>
