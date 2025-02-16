@@ -15,6 +15,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { useLocation } from "wouter";
 import type { Quiz, QuizResult } from "@shared/schema";
 
 interface Question {
@@ -26,6 +27,7 @@ interface Question {
 
 export default function QuizPage() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [subject, setSubject] = useState("");
   const [difficulty, setDifficulty] = useState<number>(1);
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
@@ -67,8 +69,34 @@ export default function QuizPage() {
         description: `Your score: ${result.score}%`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
+      setLocation("/"); // Redirect to home page after quiz completion
     },
   });
+
+  const handleEndQuiz = () => {
+    if (!currentQuiz?.questions) return;
+
+    // Calculate score based on answered questions
+    const answers = selectedAnswers.map((selectedAnswer, index) => ({
+      questionIndex: index,
+      selectedAnswer: selectedAnswer || "",
+      isCorrect: selectedAnswer === currentQuiz.questions[index]?.correctAnswer,
+    }));
+
+    // Add empty answers for unanswered questions
+    while (answers.length < currentQuiz.questions.length) {
+      answers.push({
+        questionIndex: answers.length,
+        selectedAnswer: "",
+        isCorrect: false,
+      });
+    }
+
+    submitAnswerMutation.mutate({
+      quizId: currentQuiz.id,
+      answers,
+    });
+  };
 
   const currentQuestion: Question | undefined = currentQuiz?.questions?.[currentQuestionIndex];
 
@@ -79,16 +107,14 @@ export default function QuizPage() {
     setShowExplanation(true);
 
     if (currentQuestionIndex === (currentQuiz?.questions?.length || 0) - 1) {
-      // Submit quiz
-      const answers = newAnswers.map((selectedAnswer, index) => ({
-        questionIndex: index,
-        selectedAnswer,
-        isCorrect: selectedAnswer === currentQuiz?.questions[index].correctAnswer,
-      }));
-
+      // Submit quiz if it's the last question
       submitAnswerMutation.mutate({
         quizId: currentQuiz!.id,
-        answers,
+        answers: newAnswers.map((selectedAnswer, index) => ({
+          questionIndex: index,
+          selectedAnswer,
+          isCorrect: selectedAnswer === currentQuiz?.questions?.[index].correctAnswer,
+        })),
       });
     }
   };
@@ -146,11 +172,18 @@ export default function QuizPage() {
           </Card>
         ) : currentQuestion ? (
           <Card className="max-w-3xl mx-auto">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>
                 Question {currentQuestionIndex + 1} of{" "}
                 {currentQuiz.questions?.length}
               </CardTitle>
+              <Button 
+                variant="outline" 
+                onClick={handleEndQuiz}
+                disabled={submitAnswerMutation.isPending}
+              >
+                End Quiz
+              </Button>
             </CardHeader>
             <CardContent className="space-y-6">
               <p className="text-lg font-medium">{currentQuestion.question}</p>

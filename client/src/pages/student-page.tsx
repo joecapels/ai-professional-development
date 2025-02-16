@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon, Brain, Clock, LineChart, BookOpen, MessageSquare, Quote } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { NavBar } from "@/components/nav-bar";
-import type { StudyMaterial, Progress as ProgressType, SavedDocument } from "@shared/schema";
+import type { StudyMaterial, Progress as ProgressType, SavedDocument, QuizResult } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { MoodTracker } from "@/components/mood-tracker";
@@ -55,10 +55,14 @@ export default function StudentPage() {
     queryKey: ["/api/documents"],
   });
 
+  const { data: quizResults, isLoading: quizResultsLoading } = useQuery<QuizResult[]>({
+    queryKey: ["/api/quiz-results"],
+  });
+
   // Get a random quote
   const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
 
-  if (materialsLoading || progressLoading || recommendationsLoading || documentsLoading) {
+  if (materialsLoading || progressLoading || recommendationsLoading || documentsLoading || quizResultsLoading) {
     return (
       <div className="min-h-screen">
         <NavBar />
@@ -68,6 +72,15 @@ export default function StudentPage() {
       </div>
     );
   }
+
+  // Calculate quiz statistics
+  const totalQuizzes = quizResults?.length || 0;
+  const averageScore = quizResults?.length
+    ? Math.round(quizResults.reduce((acc, quiz) => acc + quiz.score, 0) / quizResults.length)
+    : 0;
+  const latestQuiz = quizResults?.sort((a, b) =>
+    new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+  )[0];
 
   return (
     <div className="min-h-screen bg-background">
@@ -101,6 +114,42 @@ export default function StudentPage() {
         <Card className="mb-8">
           <MoodTracker />
         </Card>
+
+        {/* Quiz Statistics Card */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              Quiz Performance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Total Quizzes</p>
+                <p className="text-2xl font-bold">{totalQuizzes}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Average Score</p>
+                <p className="text-2xl font-bold">{averageScore}%</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Latest Quiz</p>
+                {latestQuiz ? (
+                  <div>
+                    <p className="text-2xl font-bold">{latestQuiz.score}%</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(latestQuiz.completedAt), "MMM d, yyyy")}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No quizzes taken yet</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
 
         {/* Feature Cards Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
