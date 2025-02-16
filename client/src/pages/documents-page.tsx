@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NavBar } from "@/components/nav-bar";
 import { Loader2, Search, FileText, MessageSquare, Brain, Filter } from "lucide-react";
 import type { SavedDocument } from "@shared/schema";
@@ -15,6 +16,7 @@ export default function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [selectedDocument, setSelectedDocument] = useState<SavedDocument | null>(null);
 
   const { data: documents, isLoading } = useQuery<SavedDocument[]>({
     queryKey: ["/api/documents"],
@@ -154,6 +156,7 @@ export default function DocumentsPage() {
                     <Button
                       variant="ghost"
                       className="w-full mt-4 group-hover:bg-primary/10"
+                      onClick={() => setSelectedDocument(doc)}
                     >
                       Show More
                     </Button>
@@ -171,6 +174,41 @@ export default function DocumentsPage() {
           </div>
         </div>
       </main>
+
+      <Dialog open={!!selectedDocument} onOpenChange={() => setSelectedDocument(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedDocument && (
+                <>
+                  <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                    {getDocumentIcon(selectedDocument.type)}
+                  </div>
+                  {selectedDocument.title}
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedDocument?.metadata?.subject && (
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Subject:</span>
+                <span className="text-muted-foreground">
+                  {selectedDocument.metadata.subject}
+                </span>
+              </div>
+            )}
+            <div className="p-6 bg-muted rounded-lg">
+              <pre className="whitespace-pre-wrap">
+                {selectedDocument?.content}
+              </pre>
+            </div>
+            <div className="text-sm text-muted-foreground text-right">
+              Created: {selectedDocument && format(new Date(selectedDocument.createdAt), "PPp")}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
