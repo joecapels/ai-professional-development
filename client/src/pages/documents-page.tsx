@@ -6,22 +6,53 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NavBar } from "@/components/nav-bar";
-import { Loader2, Search, FileText, MessageSquare, Brain, Filter } from "lucide-react";
+import { Loader2, Search, FileText, MessageSquare, Brain, Filter, HelpCircle } from "lucide-react";
 import type { SavedDocument } from "@shared/schema";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 
 type SortOption = "newest" | "oldest" | "title";
 
-const getDocumentPreviewBackground = (type: string) => {
-  switch (type) {
-    case "chat":
-      return "bg-blue-100 dark:bg-blue-900/20";
-    case "quiz":
-      return "bg-green-100 dark:bg-green-900/20";
-    default:
-      return "bg-orange-100 dark:bg-orange-900/20";
+interface DocumentTypeConfig {
+  color: string;
+  darkColor: string;
+  icon: JSX.Element;
+  label: string;
+}
+
+const documentTypes: Record<string, DocumentTypeConfig> = {
+  chat: {
+    color: "bg-blue-500",
+    darkColor: "dark:bg-blue-600",
+    icon: <MessageSquare className="h-5 w-5" />,
+    label: "Chat Conversations"
+  },
+  quiz: {
+    color: "bg-green-500",
+    darkColor: "dark:bg-green-600",
+    icon: <Brain className="h-5 w-5" />,
+    label: "Quiz Results"
+  },
+  notes: {
+    color: "bg-orange-500",
+    darkColor: "dark:bg-orange-600",
+    icon: <FileText className="h-5 w-5" />,
+    label: "Study Notes"
   }
+};
+
+const getDocumentPreviewBackground = (type: string) => {
+  const config = documentTypes[type] || documentTypes.notes;
+  return `${config.color}/10 ${config.darkColor}/20`;
+};
+
+const getDocumentStripColor = (type: string) => {
+  const config = documentTypes[type] || documentTypes.notes;
+  return `${config.color} ${config.darkColor}`;
+};
+
+const getDocumentIcon = (type: string) => {
+  return (documentTypes[type] || documentTypes.notes).icon;
 };
 
 export default function DocumentsPage() {
@@ -30,21 +61,11 @@ export default function DocumentsPage() {
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [selectedDocument, setSelectedDocument] = useState<SavedDocument | null>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [showLegend, setShowLegend] = useState(false);
 
   const { data: documents, isLoading } = useQuery<SavedDocument[]>({
     queryKey: ["/api/documents"],
   });
-
-  const getDocumentIcon = (type: string) => {
-    switch (type) {
-      case "chat":
-        return <MessageSquare className="h-5 w-5" />;
-      case "quiz":
-        return <Brain className="h-5 w-5" />;
-      default:
-        return <FileText className="h-5 w-5" />;
-    }
-  };
 
   const filteredDocuments = documents?.filter((doc) => {
     const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -77,7 +98,7 @@ export default function DocumentsPage() {
     );
   }
 
-  const documentTypes = ["all", ...new Set(documents?.map(doc => doc.type) || [])];
+  const documentTypesArray = ["all", ...new Set(documents?.map(doc => doc.type) || [])];
 
   return (
     <div className="min-h-screen bg-background">
@@ -85,7 +106,17 @@ export default function DocumentsPage() {
       <main className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold">Documents Library</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-bold">Documents Library</h1>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-2"
+                onClick={() => setShowLegend(!showLegend)}
+              >
+                <HelpCircle className="h-5 w-5" />
+              </Button>
+            </div>
             <div className="flex items-center gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -102,9 +133,13 @@ export default function DocumentsPage() {
                   <SelectValue placeholder="Filter by type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {documentTypes.map((type) => (
+                  <SelectItem value="all">All Types</SelectItem>
+                  {Object.entries(documentTypes).map(([type, config]) => (
                     <SelectItem key={type} value={type} className="capitalize">
-                      {type}
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${config.color}`} />
+                        {config.label}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -122,6 +157,24 @@ export default function DocumentsPage() {
             </div>
           </div>
 
+          {showLegend && (
+            <Card className="bg-muted/50">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {Object.entries(documentTypes).map(([type, config]) => (
+                    <div key={type} className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${config.color}`} />
+                      <div className="flex items-center gap-2">
+                        {config.icon}
+                        <span className="text-sm font-medium">{config.label}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {sortedDocuments?.map((doc) => (
               <motion.div
@@ -133,10 +186,11 @@ export default function DocumentsPage() {
                 onHoverEnd={() => setHoveredId(null)}
               >
                 <Card
-                  className={`group hover:border-primary transition-all duration-300 ${
+                  className={`group hover:border-primary transition-all duration-300 overflow-hidden ${
                     hoveredId === doc.id ? 'shadow-lg scale-[1.02]' : 'shadow-md'
                   }`}
                 >
+                  <div className={`h-1 ${getDocumentStripColor(doc.type)}`} />
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-2">
@@ -153,7 +207,8 @@ export default function DocumentsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                      <span className="capitalize">{doc.type}</span>
+                      <div className={`w-2 h-2 rounded-full ${getDocumentStripColor(doc.type)}`} />
+                      <span className="capitalize">{documentTypes[doc.type]?.label || doc.type}</span>
                       <span>•</span>
                       <span>{format(new Date(doc.createdAt), "PPp")}</span>
                     </div>
@@ -223,6 +278,7 @@ export default function DocumentsPage() {
             <DialogTitle className="flex items-center gap-2">
               {selectedDocument && (
                 <>
+                  <div className={`w-2 h-2 rounded-full ${getDocumentStripColor(selectedDocument.type)}`} />
                   <div className="p-2 bg-primary/10 rounded-lg text-primary">
                     {getDocumentIcon(selectedDocument.type)}
                   </div>
