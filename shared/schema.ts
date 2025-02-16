@@ -2,6 +2,30 @@ import { pgTable, text, serial, integer, boolean, json, timestamp } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const gradeLevel = [
+  "elementary_1_3",
+  "elementary_4_6",
+  "middle_school",
+  "high_school",
+  "undergraduate",
+  "masters",
+  "phd",
+  "professional"
+] as const;
+
+export const researchArea = [
+  "machine_learning",
+  "deep_learning",
+  "natural_language_processing",
+  "computer_vision",
+  "robotics",
+  "reinforcement_learning",
+  "data_science",
+  "neural_networks",
+  "ai_ethics",
+  "quantum_computing"
+] as const;
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -14,6 +38,8 @@ export const users = pgTable("users", {
     explanationDetail: "basic" | "detailed" | "comprehensive";
     exampleFrequency: "few" | "moderate" | "many";
     chatbotPersonality: "encouraging" | "socratic" | "professional" | "friendly";
+    gradeLevel: typeof gradeLevel[number];
+    researchAreas: typeof researchArea[number][];
   }>(),
 });
 
@@ -87,6 +113,8 @@ export const learningPreferencesSchema = z.object({
   explanationDetail: z.enum(["basic", "detailed", "comprehensive"]),
   exampleFrequency: z.enum(["few", "moderate", "many"]),
   chatbotPersonality: z.enum(["encouraging", "socratic", "professional", "friendly"]),
+  gradeLevel: z.enum(gradeLevel),
+  researchAreas: z.array(z.enum(researchArea)).min(1),
 });
 
 export const insertStudyMaterialSchema = createInsertSchema(studyMaterials);

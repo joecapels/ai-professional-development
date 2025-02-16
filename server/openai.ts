@@ -4,7 +4,9 @@ import { Progress } from "@shared/schema";
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const SYSTEM_PROMPT = `You are an AI tutor focused on providing personalized learning recommendations and generating practice questions. Your responses should be educational, encouraging, and tailored to the student's needs.`;
+const SYSTEM_PROMPT = `You are an AI tutor focused on providing personalized learning recommendations and generating practice questions. 
+Your responses should be educational, encouraging, and tailored to the student's educational level and research interests.
+Adjust your language, examples, and complexity based on the student's grade level.`;
 
 export async function generateStudyRecommendations(
   progress: Progress[]
@@ -184,7 +186,9 @@ interface LearningPreferences {
   pacePreference: string;
   explanationDetail: string;
   exampleFrequency: string;
-  chatbotPersonality?: "encouraging" | "socratic" | "professional" | "friendly"; // Added chatbotPersonality
+  chatbotPersonality?: "encouraging" | "socratic" | "professional" | "friendly";
+  gradeLevel: string; // Added gradeLevel
+  researchAreas?: string[]; // Added researchAreas
 }
 
 // Update the handleStudyChat function
@@ -207,6 +211,8 @@ export async function handleStudyChat(
     const preferencesPrompt = preferences
       ? `
         Consider these learning preferences when responding:
+        - Educational Level: ${preferences.gradeLevel}
+        - Research Interests: ${preferences.researchAreas?.join(", ")}
         - Learning Style: ${preferences.learningStyle}
         - Pace: ${preferences.pacePreference}
         - Detail Level: ${preferences.explanationDetail}
@@ -215,6 +221,8 @@ export async function handleStudyChat(
         Personality Instructions: ${personalityPrompt}
 
         Adapt your response style accordingly:
+        - Match the complexity to the educational level
+        - Use examples from their research interests when possible
         - If visual learning style, use more descriptive language and suggest diagrams
         - If comprehensive detail is preferred, provide in-depth explanations
         - If many examples are preferred, include multiple relevant examples

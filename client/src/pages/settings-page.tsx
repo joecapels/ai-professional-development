@@ -41,6 +41,9 @@ export default function SettingsPage() {
       explanationDetail: "detailed",
       exampleFrequency: "moderate",
       chatbotPersonality: "encouraging", // Added default value
+      gradeLevel: "high_school", //Added default value
+      researchAreas: ["machine_learning"], //Added default value
+
     },
   });
 
@@ -86,6 +89,73 @@ export default function SettingsPage() {
                 )}
                 className="space-y-6"
               >
+                <FormField
+                  control={form.control}
+                  name="gradeLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Educational Level</FormLabel>
+                      <FormDescription>
+                        Select your current educational level for personalized content
+                      </FormDescription>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your educational level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="elementary_1_3">Elementary School (Grades 1-3)</SelectItem>
+                          <SelectItem value="elementary_4_6">Elementary School (Grades 4-6)</SelectItem>
+                          <SelectItem value="middle_school">Middle School</SelectItem>
+                          <SelectItem value="high_school">High School</SelectItem>
+                          <SelectItem value="undergraduate">Undergraduate</SelectItem>
+                          <SelectItem value="masters">Master's Degree</SelectItem>
+                          <SelectItem value="phd">PhD / Doctoral</SelectItem>
+                          <SelectItem value="professional">Professional / Industry</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="researchAreas"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Research Areas of Interest</FormLabel>
+                      <FormDescription>
+                        Select areas you're interested in studying (at least one)
+                      </FormDescription>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select research areas" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="machine_learning">Machine Learning</SelectItem>
+                          <SelectItem value="deep_learning">Deep Learning</SelectItem>
+                          <SelectItem value="natural_language_processing">Natural Language Processing</SelectItem>
+                          <SelectItem value="computer_vision">Computer Vision</SelectItem>
+                          <SelectItem value="robotics">Robotics</SelectItem>
+                          <SelectItem value="reinforcement_learning">Reinforcement Learning</SelectItem>
+                          <SelectItem value="data_science">Data Science</SelectItem>
+                          <SelectItem value="neural_networks">Neural Networks</SelectItem>
+                          <SelectItem value="ai_ethics">AI Ethics</SelectItem>
+                          <SelectItem value="quantum_computing">Quantum Computing</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="learningStyle"
