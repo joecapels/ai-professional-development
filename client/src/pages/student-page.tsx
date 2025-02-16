@@ -5,10 +5,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon, Brain, Clock, LineChart, BookOpen, MessageSquare, Quote } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { NavBar } from "@/components/nav-bar";
-import type { StudyMaterial, Progress as ProgressType } from "@shared/schema";
+import type { StudyMaterial, Progress as ProgressType, SavedDocument } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { MoodTracker } from "@/components/mood-tracker";
+import { format } from "date-fns";
 
 // Motivational quotes array
 const motivationalQuotes = [
@@ -50,10 +51,14 @@ export default function StudentPage() {
     queryKey: ["/api/recommendations"],
   });
 
+  const { data: documents, isLoading: documentsLoading } = useQuery<SavedDocument[]>({
+    queryKey: ["/api/documents"],
+  });
+
   // Get a random quote
   const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
 
-  if (materialsLoading || progressLoading || recommendationsLoading) {
+  if (materialsLoading || progressLoading || recommendationsLoading || documentsLoading) {
     return (
       <div className="min-h-screen">
         <NavBar />
@@ -100,7 +105,7 @@ export default function StudentPage() {
         {/* Feature Cards Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
           {/* AI Learning Assistant */}
-          <Card 
+          <Card
             className="hover:border-primary cursor-pointer transition-colors"
             onClick={() => setLocation("/chat")}
           >
@@ -121,7 +126,7 @@ export default function StudentPage() {
           </Card>
 
           {/* Real-time Study Tracking */}
-          <Card 
+          <Card
             className="hover:border-primary cursor-pointer transition-colors"
             onClick={() => setLocation("/study-tracker")}
           >
@@ -142,7 +147,7 @@ export default function StudentPage() {
           </Card>
 
           {/* Analytics & Insights */}
-          <Card 
+          <Card
             className="hover:border-primary cursor-pointer transition-colors"
             onClick={() => setLocation("/analytics")}
           >
@@ -165,29 +170,33 @@ export default function StudentPage() {
 
         {/* Recent Progress Section */}
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Study Materials */}
+          {/* Recent Documents */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
-                Recent Materials
+                Recent Documents
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {materials?.slice(0, 3).map((material) => (
-                  <div key={material.id} className="flex items-center justify-between">
+                {documents?.slice(0, 10).map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between hover:bg-muted p-2 rounded-lg cursor-pointer"
+                    onClick={() => setLocation("/documents")}
+                  >
                     <div>
-                      <p className="font-medium">{material.title}</p>
+                      <p className="font-medium">{doc.title}</p>
                       <p className="text-sm text-muted-foreground">
-                        {material.subject} • Level {material.difficulty}
+                        {doc.type} • {format(new Date(doc.createdAt), "MMM d, yyyy")}
                       </p>
                     </div>
                   </div>
                 ))}
-                {(!materials || materials.length === 0) && (
+                {(!documents || documents.length === 0) && (
                   <p className="text-sm text-muted-foreground">
-                    No study materials available yet
+                    No documents created yet
                   </p>
                 )}
               </div>
