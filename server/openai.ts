@@ -258,3 +258,37 @@ export async function handleStudyChat(
     return "I apologize, but I'm having trouble processing your question. Please try again.";
   }
 }
+
+// Add this function to the existing openai.ts file
+export async function generateMoodSuggestion(mood: string): Promise<string> {
+  try {
+    const prompt = `As a supportive AI tutor, provide a brief, encouraging response to a student who is feeling "${mood}".
+    Consider their emotional state and offer constructive suggestions for their study session.
+    Keep the response concise, empathetic, and actionable.
+
+    Respond with a JSON object in this format:
+    {
+      "suggestion": "your supportive message here"
+    }`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No content in response");
+    }
+
+    const result = JSON.parse(content);
+    return result.suggestion || "Keep going, you're doing great!";
+  } catch (error) {
+    console.error("Error generating mood suggestion:", error);
+    return "Keep going, you're doing great!";
+  }
+}

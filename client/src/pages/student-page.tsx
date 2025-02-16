@@ -8,6 +8,7 @@ import { NavBar } from "@/components/nav-bar";
 import type { StudyMaterial, Progress as ProgressType } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
+import { MoodTracker } from "@/components/mood-tracker";
 
 // Motivational quotes array
 const motivationalQuotes = [
@@ -89,6 +90,11 @@ export default function StudentPage() {
               </div>
             </div>
           </CardContent>
+        </Card>
+
+        {/* Mood Tracker */}
+        <Card className="mb-8">
+          <MoodTracker />
         </Card>
 
         {/* Feature Cards Grid */}
