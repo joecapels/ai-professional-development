@@ -2,6 +2,8 @@ import { pgTable, text, serial, integer, boolean, json, timestamp } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Keep existing imports and type definitions
+
 export const gradeLevel = [
   "elementary_1_3",
   "elementary_4_6",
@@ -137,6 +139,34 @@ export const savedDocuments = pgTable("saved_documents", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Add study session related types and schemas
+export const studySessionStatus = [
+  "active",
+  "paused",
+  "completed"
+] as const;
+
+export const studySessions = pgTable("study_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  subject: text("subject").notNull(),
+  status: text("status").$type<typeof studySessionStatus[number]>().notNull(),
+  startTime: timestamp("start_time").notNull().defaultNow(),
+  endTime: timestamp("end_time"),
+  totalDuration: integer("total_duration"), // in seconds
+  breaks: json("breaks").$type<{
+    startTime: string;
+    endTime: string;
+    duration: number;
+  }[]>(),
+  notes: text("notes"),
+  metrics: json("metrics").$type<{
+    focusScore?: number;
+    completedTasks?: string[];
+    milestones?: string[];
+  }>(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -158,6 +188,11 @@ export const insertQuizSchema = createInsertSchema(quizzes);
 export const insertQuizResultSchema = createInsertSchema(quizResults);
 export const insertDocumentSchema = createInsertSchema(savedDocuments);
 
+// Add to existing export types
+export const insertStudySessionSchema = createInsertSchema(studySessions);
+export type StudySession = typeof studySessions.$inferSelect;
+export type InsertStudySession = z.infer<typeof insertStudySessionSchema>;
+
 export type User = typeof users.$inferSelect;
 export type StudyMaterial = typeof studyMaterials.$inferSelect;
 export type Progress = typeof progress.$inferSelect;
@@ -171,3 +206,22 @@ export type InsertQuiz = z.infer<typeof insertQuizSchema>;
 export type InsertQuizResult = z.infer<typeof insertQuizResultSchema>;
 export type SavedDocument = typeof savedDocuments.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+
+
+// WebSocket message types
+export const studySessionMessageSchema = z.object({
+  type: z.enum(["start", "pause", "resume", "end", "break_start", "break_end", "update_metrics"]),
+  sessionId: z.number(),
+  timestamp: z.string(),
+  data: z.object({
+    subject: z.string().optional(),
+    duration: z.number().optional(),
+    metrics: z.object({
+      focusScore: z.number().optional(),
+      completedTasks: z.array(z.string()).optional(),
+      milestones: z.array(z.string()).optional(),
+    }).optional(),
+  }).optional(),
+});
+
+export type StudySessionMessage = z.infer<typeof studySessionMessageSchema>;

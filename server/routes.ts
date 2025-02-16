@@ -1,13 +1,107 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
+import type { IncomingMessage } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { StudyMaterial, Progress, type LearningPreferences } from "@shared/schema";
+import { StudyMaterial, Progress, type LearningPreferences, type StudySessionMessage, studySessionMessageSchema } from "@shared/schema";
 import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat } from "./openai.js";
 import { generateAdvancedAnalytics, generatePersonalizedStudyPlan } from "./analytics";
 
+// Extend the IncomingMessage type to include session
+interface WebSocketRequestWithSession extends IncomingMessage {
+  session?: {
+    passport?: {
+      user?: number;
+    };
+  };
+}
+
+// Track active study sessions
+const activeSessions = new Map<number, {
+  ws: WebSocket;
+  userId: number;
+  sessionData: any;
+}>();
+
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
+  const httpServer = createServer(app);
+
+  // Set up WebSocket server
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+  wss.on('connection', (ws: WebSocket, req: WebSocketRequestWithSession) => {
+    // Check authentication
+    if (!req.session?.passport?.user) {
+      ws.close(1008, 'Authentication required');
+      return;
+    }
+
+    const userId = req.session.passport.user;
+
+    ws.on('message', async (data: WebSocket.Data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        const validatedMessage = studySessionMessageSchema.parse(message);
+
+        switch (validatedMessage.type) {
+          case 'start':
+            // Start new study session
+            const session = await storage.createStudySession({
+              userId,
+              subject: validatedMessage.data?.subject || 'General',
+              status: 'active',
+            });
+            activeSessions.set(session.id, { ws, userId, sessionData: session });
+            ws.send(JSON.stringify({ type: 'session_started', sessionId: session.id }));
+            break;
+
+          case 'pause':
+          case 'resume':
+            await storage.updateStudySessionStatus(validatedMessage.sessionId, 
+              validatedMessage.type === 'pause' ? 'paused' : 'active');
+            break;
+
+          case 'break_start':
+          case 'break_end':
+            await storage.updateStudySessionBreaks(validatedMessage.sessionId, {
+              startTime: validatedMessage.type === 'break_start' ? new Date().toISOString() : undefined,
+              endTime: validatedMessage.type === 'break_end' ? new Date().toISOString() : undefined,
+            });
+            break;
+
+          case 'end':
+            await storage.completeStudySession(validatedMessage.sessionId);
+            activeSessions.delete(validatedMessage.sessionId);
+            break;
+
+          case 'update_metrics':
+            if (validatedMessage.data?.metrics) {
+              await storage.updateStudySessionMetrics(
+                validatedMessage.sessionId,
+                validatedMessage.data.metrics
+              );
+            }
+            break;
+        }
+      } catch (error: any) {
+        console.error('Error processing WebSocket message:', error);
+        ws.send(JSON.stringify({ type: 'error', message: error.message }));
+      }
+    });
+
+    ws.on('close', () => {
+      // Clean up any active sessions for this connection
+      // Using Array.from to convert the Map entries iterator to an array
+      for (const [sessionId, session] of Array.from(activeSessions.entries())) {
+        if (session.ws === ws) {
+          storage.completeStudySession(sessionId);
+          activeSessions.delete(sessionId);
+        }
+      }
+    });
+  });
 
   // Study materials routes
   app.get("/api/materials", async (req, res) => {
@@ -164,6 +258,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.round((correctAnswers / answers.length) * 100);
   }
 
-  const httpServer = createServer(app);
   return httpServer;
 }

@@ -1,6 +1,6 @@
 import { IStorage } from "./types";
 import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument } from "@shared/schema";
-import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments } from "./db";
+import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments, studySessions } from "./db";
 import { eq, desc } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -132,6 +132,91 @@ export class DatabaseStorage implements IStorage {
       .from(savedDocuments)
       .where(eq(savedDocuments.id, id));
     return document;
+  }
+
+  async createStudySession(sessionData: { userId: number; subject: string; status: string }): Promise<any> {
+    const [session] = await db
+      .insert(studySessions)
+      .values({
+        userId: sessionData.userId,
+        subject: sessionData.subject,
+        status: sessionData.status,
+        startTime: new Date(),
+      })
+      .returning();
+    return session;
+  }
+
+  async getStudySession(id: number): Promise<any> {
+    const [session] = await db
+      .select()
+      .from(studySessions)
+      .where(eq(studySessions.id, id));
+    return session;
+  }
+
+  async updateStudySessionStatus(sessionId: number, status: string): Promise<void> {
+    await db
+      .update(studySessions)
+      .set({ status })
+      .where(eq(studySessions.id, sessionId));
+  }
+
+  async updateStudySessionBreaks(
+    sessionId: number,
+    breakData: { startTime?: string; endTime?: string }
+  ): Promise<void> {
+    const session = await this.getStudySession(sessionId);
+    const breaks = session.breaks || [];
+
+    if (breakData.startTime) {
+      breaks.push({
+        startTime: breakData.startTime,
+        endTime: null,
+        duration: 0,
+      });
+    } else if (breakData.endTime) {
+      const lastBreak = breaks[breaks.length - 1];
+      if (lastBreak && !lastBreak.endTime) {
+        lastBreak.endTime = breakData.endTime;
+        lastBreak.duration =
+          (new Date(breakData.endTime).getTime() - new Date(lastBreak.startTime).getTime()) / 1000;
+      }
+    }
+
+    await db
+      .update(studySessions)
+      .set({ breaks })
+      .where(eq(studySessions.id, sessionId));
+  }
+
+  async updateStudySessionMetrics(
+    sessionId: number,
+    metrics: { focusScore?: number; completedTasks?: string[]; milestones?: string[] }
+  ): Promise<void> {
+    await db
+      .update(studySessions)
+      .set({ metrics })
+      .where(eq(studySessions.id, sessionId));
+  }
+
+  async completeStudySession(sessionId: number): Promise<void> {
+    const endTime = new Date();
+    const session = await this.getStudySession(sessionId);
+
+    if (!session) return;
+
+    const startTime = new Date(session.startTime);
+    const totalDuration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+
+    await db
+      .update(studySessions)
+      .set({
+        status: 'completed',
+        endTime,
+        totalDuration,
+      })
+      .where(eq(studySessions.id, sessionId));
   }
 }
 
