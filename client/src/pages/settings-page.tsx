@@ -40,10 +40,9 @@ export default function SettingsPage() {
       pacePreference: "moderate",
       explanationDetail: "detailed",
       exampleFrequency: "moderate",
-      chatbotPersonality: "encouraging", // Added default value
-      gradeLevel: "high_school", //Added default value
-      researchAreas: ["machine_learning"], //Added default value
-
+      chatbotPersonality: "encouraging",
+      gradeLevel: "high_school",
+      researchAreas: ["computer_science"],
     },
   });
 
@@ -89,6 +88,7 @@ export default function SettingsPage() {
                 )}
                 className="space-y-6"
               >
+                {/* Grade Level Selection */}
                 <FormField
                   control={form.control}
                   name="gradeLevel"
@@ -122,6 +122,7 @@ export default function SettingsPage() {
                   )}
                 />
 
+                {/* Research Areas Selection */}
                 <FormField
                   control={form.control}
                   name="researchAreas"
@@ -140,22 +141,67 @@ export default function SettingsPage() {
                             <SelectValue placeholder="Select research areas" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="machine_learning">Machine Learning</SelectItem>
-                          <SelectItem value="deep_learning">Deep Learning</SelectItem>
-                          <SelectItem value="natural_language_processing">Natural Language Processing</SelectItem>
-                          <SelectItem value="computer_vision">Computer Vision</SelectItem>
-                          <SelectItem value="robotics">Robotics</SelectItem>
-                          <SelectItem value="reinforcement_learning">Reinforcement Learning</SelectItem>
+                        <SelectContent className="max-h-[300px]">
+                          {/* Sciences */}
+                          <SelectItem value="biology">Biology</SelectItem>
+                          <SelectItem value="chemistry">Chemistry</SelectItem>
+                          <SelectItem value="physics">Physics</SelectItem>
+                          <SelectItem value="environmental_science">Environmental Science</SelectItem>
+
+                          {/* Technology & Computing */}
+                          <SelectItem value="computer_science">Computer Science</SelectItem>
+                          <SelectItem value="artificial_intelligence">Artificial Intelligence</SelectItem>
                           <SelectItem value="data_science">Data Science</SelectItem>
-                          <SelectItem value="neural_networks">Neural Networks</SelectItem>
-                          <SelectItem value="ai_ethics">AI Ethics</SelectItem>
-                          <SelectItem value="quantum_computing">Quantum Computing</SelectItem>
+                          <SelectItem value="robotics">Robotics</SelectItem>
+
+                          {/* Mathematics */}
+                          <SelectItem value="mathematics">Mathematics</SelectItem>
+                          <SelectItem value="statistics">Statistics</SelectItem>
+                          <SelectItem value="algebra">Algebra</SelectItem>
+                          <SelectItem value="calculus">Calculus</SelectItem>
+
+                          {/* Social Sciences */}
+                          <SelectItem value="psychology">Psychology</SelectItem>
+                          <SelectItem value="sociology">Sociology</SelectItem>
+                          <SelectItem value="economics">Economics</SelectItem>
+                          <SelectItem value="political_science">Political Science</SelectItem>
+
+                          {/* Humanities */}
+                          <SelectItem value="history">History</SelectItem>
+                          <SelectItem value="philosophy">Philosophy</SelectItem>
+                          <SelectItem value="literature">Literature</SelectItem>
+                          <SelectItem value="linguistics">Linguistics</SelectItem>
+
+                          {/* Arts */}
+                          <SelectItem value="visual_arts">Visual Arts</SelectItem>
+                          <SelectItem value="music">Music</SelectItem>
+                          <SelectItem value="performing_arts">Performing Arts</SelectItem>
+                          <SelectItem value="design">Design</SelectItem>
+
+                          {/* Health & Medicine */}
+                          <SelectItem value="medicine">Medicine</SelectItem>
+                          <SelectItem value="anatomy">Anatomy</SelectItem>
+                          <SelectItem value="public_health">Public Health</SelectItem>
+                          <SelectItem value="nutrition">Nutrition</SelectItem>
+
+                          {/* Business */}
+                          <SelectItem value="business">Business</SelectItem>
+                          <SelectItem value="marketing">Marketing</SelectItem>
+                          <SelectItem value="finance">Finance</SelectItem>
+                          <SelectItem value="management">Management</SelectItem>
+
+                          {/* Other Fields */}
+                          <SelectItem value="education">Education</SelectItem>
+                          <SelectItem value="engineering">Engineering</SelectItem>
+                          <SelectItem value="architecture">Architecture</SelectItem>
+                          <SelectItem value="law">Law</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>
                   )}
                 />
+
+                {/* Learning Style Selection */}
                 <FormField
                   control={form.control}
                   name="learningStyle"
@@ -185,6 +231,7 @@ export default function SettingsPage() {
                   )}
                 />
 
+                {/* Learning Pace Selection */}
                 <FormField
                   control={form.control}
                   name="pacePreference"
@@ -213,6 +260,7 @@ export default function SettingsPage() {
                   )}
                 />
 
+                {/* Explanation Detail Selection */}
                 <FormField
                   control={form.control}
                   name="explanationDetail"
@@ -241,6 +289,7 @@ export default function SettingsPage() {
                   )}
                 />
 
+                {/* Example Frequency Selection */}
                 <FormField
                   control={form.control}
                   name="exampleFrequency"
@@ -268,7 +317,8 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
-                {/* Add this form field after the exampleFrequency field */}
+
+                {/* Chatbot Personality Selection */}
                 <FormField
                   control={form.control}
                   name="chatbotPersonality"
@@ -297,6 +347,8 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
+
+                {/* Submit Button */}
                 <Button
                   type="submit"
                   className="w-full"

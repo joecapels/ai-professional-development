@@ -14,16 +14,51 @@ export const gradeLevel = [
 ] as const;
 
 export const researchArea = [
-  "machine_learning",
-  "deep_learning",
-  "natural_language_processing",
-  "computer_vision",
-  "robotics",
-  "reinforcement_learning",
+  // Sciences
+  "biology",
+  "chemistry",
+  "physics",
+  "environmental_science",
+  // Technology & Computing
+  "computer_science",
+  "artificial_intelligence",
   "data_science",
-  "neural_networks",
-  "ai_ethics",
-  "quantum_computing"
+  "robotics",
+  // Mathematics
+  "mathematics",
+  "statistics",
+  "algebra",
+  "calculus",
+  // Social Sciences
+  "psychology",
+  "sociology",
+  "economics",
+  "political_science",
+  // Humanities
+  "history",
+  "philosophy",
+  "literature",
+  "linguistics",
+  // Arts
+  "visual_arts",
+  "music",
+  "performing_arts",
+  "design",
+  // Health & Medicine
+  "medicine",
+  "anatomy",
+  "public_health",
+  "nutrition",
+  // Business
+  "business",
+  "marketing",
+  "finance",
+  "management",
+  // Other Fields
+  "education",
+  "engineering",
+  "architecture",
+  "law"
 ] as const;
 
 export const users = pgTable("users", {
