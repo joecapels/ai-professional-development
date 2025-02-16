@@ -87,18 +87,97 @@ function generateDemoData() {
     "Continue excellent progress in Biology and Music Theory"
   ];
 
+  // Add demo quiz analysis data
+  const demoQuizAnalysis = {
+    topicBreakdown: [
+      { topic: "Biology", correctAnswers: 45, totalQuestions: 50 },
+      { topic: "Physics", correctAnswers: 32, totalQuestions: 50 },
+      { topic: "Chemistry", correctAnswers: 38, totalQuestions: 50 },
+      { topic: "Mathematics", correctAnswers: 42, totalQuestions: 50 },
+      { topic: "Literature", correctAnswers: 47, totalQuestions: 50 }
+    ],
+    commonMistakes: [
+      {
+        topic: "Physics - Force and Motion",
+        description: "Difficulty applying Newton's laws to complex scenarios",
+        frequency: 8
+      },
+      {
+        topic: "Chemistry - Organic Compounds",
+        description: "Confusion with naming conventions and structures",
+        frequency: 6
+      },
+      {
+        topic: "Mathematics - Integration",
+        description: "Struggles with integration by parts method",
+        frequency: 5
+      }
+    ],
+    timeOfDayPerformance: [
+      { timeSlot: "Morning", averageScore: 85 },
+      { timeSlot: "Afternoon", averageScore: 78 },
+      { timeSlot: "Evening", averageScore: 72 },
+      { timeSlot: "Night", averageScore: 68 }
+    ]
+  };
+
+  // Add demo document analysis data
+  const demoDocumentAnalysis = {
+    topicsDistribution: [
+      { topic: "Biology", count: 15 },
+      { topic: "Physics", count: 12 },
+      { topic: "Chemistry", count: 10 },
+      { topic: "Mathematics", count: 18 },
+      { topic: "Literature", count: 14 }
+    ],
+    complexityTrend: [
+      { month: "January", averageComplexity: 2.5 },
+      { month: "February", averageComplexity: 3.2 },
+      { month: "March", averageComplexity: 3.8 }
+    ],
+    conceptConnections: [
+      {
+        concept: "Cell Biology",
+        relatedConcepts: ["Genetics", "Biochemistry", "Molecular Biology"],
+        strength: 0.85
+      },
+      {
+        concept: "Classical Mechanics",
+        relatedConcepts: ["Forces", "Motion", "Energy"],
+        strength: 0.78
+      },
+      {
+        concept: "Organic Chemistry",
+        relatedConcepts: ["Molecular Structure", "Reactions", "Synthesis"],
+        strength: 0.72
+      }
+    ]
+  };
+
   return {
     performanceMetrics: demoPerformanceMetrics,
     subjectPerformance: demoSubjectPerformance,
-    nextStepRecommendations: demoRecommendations
+    nextStepRecommendations: demoRecommendations,
+    quizAnalysis: demoQuizAnalysis,
+    documentAnalysis: demoDocumentAnalysis
   };
 }
 
-// Default data for non-demo users
+// Update the default data function to include the new fields
 function getDefaultData(): {
   performanceMetrics: PerformanceMetrics;
   subjectPerformance: SubjectPerformance[];
   nextStepRecommendations: string[];
+  quizAnalysis: {
+    topicBreakdown: { topic: string; correctAnswers: number; totalQuestions: number }[];
+    commonMistakes: { topic: string; description: string; frequency: number }[];
+    timeOfDayPerformance: { timeSlot: string; averageScore: number }[];
+  };
+  documentAnalysis: {
+    topicsDistribution: { topic: string; count: number }[];
+    complexityTrend: { month: string; averageComplexity: number }[];
+    conceptConnections: { concept: string; relatedConcepts: string[]; strength: number }[];
+  };
 } {
   return {
     performanceMetrics: {
@@ -124,7 +203,17 @@ function getDefaultData(): {
       "Begin with foundational courses",
       "Take initial assessment tests",
       "Set your learning preferences"
-    ]
+    ],
+    quizAnalysis: {
+      topicBreakdown: [],
+      commonMistakes: [],
+      timeOfDayPerformance: []
+    },
+    documentAnalysis: {
+      topicsDistribution: [],
+      complexityTrend: [],
+      conceptConnections: []
+    }
   };
 }
 
@@ -132,6 +221,16 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
   performanceMetrics: PerformanceMetrics;
   subjectPerformance: SubjectPerformance[];
   nextStepRecommendations: string[];
+  quizAnalysis: {
+    topicBreakdown: { topic: string; correctAnswers: number; totalQuestions: number }[];
+    commonMistakes: { topic: string; description: string; frequency: number }[];
+    timeOfDayPerformance: { timeSlot: string; averageScore: number }[];
+  };
+  documentAnalysis: {
+    topicsDistribution: { topic: string; count: number }[];
+    complexityTrend: { month: string; averageComplexity: number }[];
+    conceptConnections: { concept: string; relatedConcepts: string[]; strength: number }[];
+  };
 }> {
   try {
     // Check if the user is "joe"

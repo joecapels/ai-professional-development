@@ -7,6 +7,8 @@ import { storage } from "./storage";
 import { StudyMaterial, Progress, type LearningPreferences, type StudySessionMessage, studySessionMessageSchema } from "@shared/schema";
 import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat, generateMoodSuggestion } from "./openai";
 import { generateAdvancedAnalytics, generatePersonalizedStudyPlan } from "./analytics";
+import session from "express-session";
+import { pool } from "./db";
 
 // Extend the IncomingMessage type to include session
 interface WebSocketRequestWithSession extends IncomingMessage {
@@ -25,20 +27,36 @@ const activeSessions = new Map<number, {
 }>();
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up session middleware before auth setup
+  app.use(
+    session({
+      store: storage.sessionStore,
+      secret: process.env.SESSION_SECRET || 'your-secret-key',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      },
+    })
+  );
+
   setupAuth(app);
   const httpServer = createServer(app);
 
-  // Set up WebSocket server
+  // Set up WebSocket server with session handling
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
-  wss.on('connection', (ws: WebSocket, req: WebSocketRequestWithSession) => {
+  wss.on('connection', async (ws: WebSocket, req: WebSocketRequestWithSession) => {
     // Check authentication
     if (!req.session?.passport?.user) {
+      console.log("WebSocket connection attempt without authentication");
       ws.close(1008, 'Authentication required');
       return;
     }
 
     const userId = req.session.passport.user;
+    console.log(`WebSocket authenticated for user ${userId}`);
 
     ws.on('message', async (data: WebSocket.Data) => {
       try {
@@ -238,18 +256,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(document);
   });
 
-  // Add these routes in the registerRoutes function
+  // Analytics routes with proper authentication and error handling
   app.get("/api/analytics", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const analytics = await generateAdvancedAnalytics(req.user.id);
-    res.json(analytics);
+    try {
+      if (!req.isAuthenticated()) {
+        console.log("Unauthorized access attempt to analytics");
+        return res.sendStatus(401);
+      }
+
+      console.log(`Generating analytics for user ${req.user.id}`);
+      const analytics = await generateAdvancedAnalytics(req.user.id);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error generating analytics:", error);
+      res.status(500).json({ error: "Failed to generate analytics" });
+    }
   });
 
   app.get("/api/study-plan", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const analytics = await generateAdvancedAnalytics(req.user.id);
-    const studyPlan = await generatePersonalizedStudyPlan(req.user.id, analytics.performanceMetrics);
-    res.json(studyPlan);
+    try {
+      if (!req.isAuthenticated()) {
+        console.log("Unauthorized access attempt to study plan");
+        return res.sendStatus(401);
+      }
+
+      console.log(`Generating study plan for user ${req.user.id}`);
+      const analytics = await generateAdvancedAnalytics(req.user.id);
+      const studyPlan = await generatePersonalizedStudyPlan(req.user.id, analytics.performanceMetrics);
+      res.json(studyPlan);
+    } catch (error) {
+      console.error("Error generating study plan:", error);
+      res.status(500).json({ error: "Failed to generate study plan" });
+    }
   });
 
   // Update the mood route with better error handling
