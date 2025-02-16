@@ -26,108 +26,81 @@ interface SubjectPerformance {
   improvement: number; // percentage improvement over time
 }
 
+// Generate demo data for development and testing
+function generateDemoData(userId: number) {
+  const subjects = [
+    "Biology",
+    "History",
+    "Music Theory",
+    "Art History",
+    "Physics",
+    "Literature",
+    "Mathematics",
+    "Chemistry",
+    "World Geography",
+    "Computer Science"
+  ];
+
+  const demoPerformanceMetrics: PerformanceMetrics = {
+    overallScore: 78,
+    strengthAreas: [
+      "Biology - Cell Structure and Function",
+      "Music Theory - Scales and Harmony",
+      "Art History - Renaissance Period",
+      "History - Ancient Civilizations"
+    ],
+    improvementAreas: [
+      "Physics - Quantum Mechanics",
+      "Chemistry - Organic Compounds",
+      "Mathematics - Calculus",
+      "Literature - Modern Poetry"
+    ],
+    learningTrends: [
+      { period: "Week 1", score: 65 },
+      { period: "Week 2", score: 70 },
+      { period: "Week 3", score: 75 },
+      { period: "Week 4", score: 78 },
+      { period: "Week 5", score: 82 }
+    ],
+    recommendedTopics: [
+      "Advanced Cell Biology",
+      "Baroque Music Composition",
+      "Modern Art Movements",
+      "World History - Industrial Revolution"
+    ],
+    predictedDifficulty: 3
+  };
+
+  const demoSubjectPerformance: SubjectPerformance[] = subjects.map(subject => ({
+    subject,
+    averageScore: 60 + Math.floor(Math.random() * 30),
+    totalAttempts: 5 + Math.floor(Math.random() * 10),
+    lastAttemptDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+    improvement: Math.floor(Math.random() * 15)
+  }));
+
+  const demoRecommendations = [
+    "Focus on practical applications in Physics to strengthen understanding",
+    "Review fundamental concepts in Organic Chemistry",
+    "Practice more Calculus problems with real-world examples",
+    "Explore contemporary literature to build analysis skills",
+    "Continue excellent progress in Biology and Music Theory"
+  ];
+
+  return {
+    performanceMetrics: demoPerformanceMetrics,
+    subjectPerformance: demoSubjectPerformance,
+    nextStepRecommendations: demoRecommendations
+  };
+}
+
 export async function generateAdvancedAnalytics(userId: number): Promise<{
   performanceMetrics: PerformanceMetrics;
   subjectPerformance: SubjectPerformance[];
   nextStepRecommendations: string[];
 }> {
-  // Fetch user's progress and quiz results
-  const userProgress = await db
-    .select()
-    .from(progress)
-    .where(eq(progress.userId, userId));
-
-  const userQuizResults = await db
-    .select()
-    .from(quizResults)
-    .where(eq(quizResults.userId, userId));
-
-  // Fetch all study materials for reference
-  const materials = await db.select().from(studyMaterials);
-
-  // Prepare data for ML analysis
-  const analysisData = {
-    progress: userProgress,
-    quizResults: userQuizResults,
-    studyMaterials: materials,
-  };
-
-  try {
-    const prompt = `Analyze this student's performance data and generate advanced insights including:
-    1. Overall performance metrics
-    2. Strength and improvement areas
-    3. Learning trends over time
-    4. Recommended topics based on current progress
-    5. Predicted optimal difficulty level for new content
-    6. Subject-specific performance analysis
-    7. Next step recommendations
-
-    Student Data:
-    ${JSON.stringify(analysisData, null, 2)}
-
-    Respond with a JSON object containing detailed analytics in this format:
-    {
-      "performanceMetrics": {
-        "overallScore": number,
-        "strengthAreas": string[],
-        "improvementAreas": string[],
-        "learningTrends": [{ "period": string, "score": number }],
-        "recommendedTopics": string[],
-        "predictedDifficulty": number
-      },
-      "subjectPerformance": [{
-        "subject": string,
-        "averageScore": number,
-        "totalAttempts": number,
-        "lastAttemptDate": string,
-        "improvement": number
-      }],
-      "nextStepRecommendations": string[]
-    }`;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are an advanced educational analytics system that analyzes student performance data and provides detailed insights and recommendations.",
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
-    });
-
-    const content = response.choices[0].message.content;
-    if (!content) {
-      throw new Error("No content in response");
-    }
-
-    const result = JSON.parse(content);
-    return {
-      performanceMetrics: result.performanceMetrics,
-      subjectPerformance: result.subjectPerformance,
-      nextStepRecommendations: result.nextStepRecommendations,
-    };
-  } catch (error) {
-    console.error("Error generating advanced analytics:", error);
-    // Return default analytics if there's an error
-    return {
-      performanceMetrics: {
-        overallScore: calculateBasicScore(userQuizResults),
-        strengthAreas: [],
-        improvementAreas: [],
-        learningTrends: [],
-        recommendedTopics: [],
-        predictedDifficulty: 2,
-      },
-      subjectPerformance: [],
-      nextStepRecommendations: [
-        "Review recent materials",
-        "Practice more quizzes",
-        "Focus on challenging topics",
-      ],
-    };
-  }
+  // For now, return demo data
+  return generateDemoData(userId);
 }
 
 // Helper function to calculate basic score when ML analysis fails
@@ -174,48 +147,29 @@ export async function generatePersonalizedStudyPlan(
   estimatedTimeInvestment: number;
   milestones: { description: string; targetDate: string }[];
 }> {
-  try {
-    const prompt = `Based on these performance metrics, generate a personalized study plan:
-    ${JSON.stringify(metrics, null, 2)}
-
-    Respond with a JSON object containing:
-    {
-      "dailyGoals": string[],
-      "focusAreas": string[],
-      "estimatedTimeInvestment": number,
-      "milestones": [{ "description": string, "targetDate": string }]
-    }`;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are an educational planning system that creates personalized study plans based on student performance data.",
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
-    });
-
-    const content = response.choices[0].message.content;
-    if (!content) {
-      throw new Error("No content in response");
-    }
-
-    return JSON.parse(content);
-  } catch (error) {
-    console.error("Error generating study plan:", error);
-    return {
-      dailyGoals: ["Review course materials", "Complete practice exercises"],
-      focusAreas: metrics.improvementAreas,
-      estimatedTimeInvestment: 2,
-      milestones: [
-        {
-          description: "Complete current module",
-          targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-      ],
-    };
-  }
+  // Generate demo study plan
+  return {
+    dailyGoals: [
+      "Review Biology Chapter 5: Cell Division",
+      "Practice Music Theory scales for 30 minutes",
+      "Study Art History: Modern Period",
+      "Complete 2 Physics practice problems"
+    ],
+    focusAreas: metrics.improvementAreas,
+    estimatedTimeInvestment: 2.5,
+    milestones: [
+      {
+        description: "Complete Biology Module Assessment",
+        targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        description: "Master Basic Music Theory Concepts",
+        targetDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        description: "Finish Art History Period Overview",
+        targetDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
+      }
+    ],
+  };
 }
