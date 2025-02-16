@@ -82,6 +82,14 @@ export default function StudentPage() {
     new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
   )[0];
 
+  // Calculate chat statistics
+  const chatDocuments = documents?.filter(doc => doc.type === "chat") || [];
+  const totalChats = chatDocuments.length;
+  const latestChat = chatDocuments.sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )[0];
+
+
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
@@ -113,6 +121,37 @@ export default function StudentPage() {
         {/* Mood Tracker */}
         <Card className="mb-8">
           <MoodTracker />
+        </Card>
+
+        {/* Chat Statistics Card */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              AI Study Chat Stats
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Total Chats</p>
+                <p className="text-2xl font-bold">{totalChats}</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Latest Chat</p>
+                {latestChat ? (
+                  <div>
+                    <p className="text-lg font-semibold truncate">{latestChat.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(latestChat.createdAt), "MMM d, yyyy")}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No chats yet</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Quiz Statistics Card */}
