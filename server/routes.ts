@@ -27,7 +27,7 @@ const activeSessions = new Map<number, {
 }>();
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Set up session middleware before auth setup
+  // Set up session middleware with updated configuration
   app.use(
     session({
       store: storage.sessionStore,
@@ -38,6 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secure: process.env.NODE_ENV === 'production',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       },
+      name: 'sid' // Set a specific cookie name
     })
   );
 
