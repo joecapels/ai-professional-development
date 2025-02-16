@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Brain, Sparkles, RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NavBar } from "@/components/nav-bar";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import type { SavedDocument } from "@shared/schema";
 
 interface Flashcard {
   id: number;
@@ -19,18 +21,31 @@ export default function FlashcardPage() {
   const { toast } = useToast();
   const [flipped, setFlipped] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [selectedDocs, setSelectedDocs] = useState<number[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const { data: flashcards, isLoading } = useQuery<Flashcard[]>({
+  const { data: documents, isLoading: documentsLoading } = useQuery<SavedDocument[]>({
+    queryKey: ["/api/documents"],
+  });
+
+  const { data: flashcards, isLoading: flashcardsLoading } = useQuery<Flashcard[]>({
     queryKey: ["/api/flashcards"],
   });
 
   const generateCardsMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/flashcards/generate");
+      if (selectedDocs.length === 0) {
+        throw new Error("Please select at least one document");
+      }
+      setIsGenerating(true);
+      const res = await apiRequest("POST", "/api/flashcards/generate", {
+        documentIds: selectedDocs
+      });
       return res.json();
     },
     onSuccess: () => {
       toast({ title: "New flashcards generated successfully" });
+      setIsGenerating(false);
     },
     onError: (error) => {
       toast({
@@ -38,10 +53,17 @@ export default function FlashcardPage() {
         description: error.message,
         variant: "destructive"
       });
+      setIsGenerating(false);
     },
   });
 
-  const currentCard = flashcards?.[currentCardIndex];
+  const toggleDocument = (docId: number) => {
+    setSelectedDocs(prev => 
+      prev.includes(docId) 
+        ? prev.filter(id => id !== docId)
+        : [...prev, docId]
+    );
+  };
 
   const nextCard = () => {
     setFlipped(false);
@@ -54,7 +76,7 @@ export default function FlashcardPage() {
     }, 200);
   };
 
-  if (isLoading) {
+  if (documentsLoading || flashcardsLoading) {
     return (
       <div className="min-h-screen">
         <NavBar />
@@ -74,21 +96,53 @@ export default function FlashcardPage() {
             <Brain className="h-8 w-8 text-primary" />
             <h1 className="text-4xl font-bold">AI Flashcards</h1>
           </div>
-          <Button
-            onClick={() => generateCardsMutation.mutate()}
-            disabled={generateCardsMutation.isPending}
-            className="bg-primary hover:bg-primary/90"
-          >
-            {generateCardsMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            Generate Cards
-          </Button>
         </div>
 
-        {currentCard ? (
+        {/* Document Selection */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-xl">Select Documents for Flashcards</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {documents?.map((doc) => (
+                <div key={doc.id} className="flex items-center space-x-3">
+                  <Checkbox 
+                    id={`doc-${doc.id}`}
+                    checked={selectedDocs.includes(doc.id)}
+                    onCheckedChange={() => toggleDocument(doc.id)}
+                  />
+                  <label 
+                    htmlFor={`doc-${doc.id}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    {doc.title}
+                  </label>
+                </div>
+              ))}
+              {(!documents || documents.length === 0) && (
+                <p className="text-muted-foreground">
+                  No documents available. Upload some documents first!
+                </p>
+              )}
+              <Button
+                onClick={() => generateCardsMutation.mutate()}
+                disabled={generateCardsMutation.isPending || selectedDocs.length === 0}
+                className="mt-4 bg-primary hover:bg-primary/90"
+              >
+                {generateCardsMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                Generate Cards
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Flashcard Display */}
+        {flashcards && flashcards.length > 0 ? (
           <div className="space-y-6">
             <div className="relative h-[400px] perspective-1000">
               <AnimatePresence mode="wait">
@@ -106,7 +160,7 @@ export default function FlashcardPage() {
                   >
                     <CardContent className="flex items-center justify-center h-full p-8">
                       <div className="text-center">
-                        <p className="text-xl">{flipped ? currentCard.back : currentCard.front}</p>
+                        <p className="text-xl">{flipped ? flashcards[currentCardIndex].back : flashcards[currentCardIndex].front}</p>
                         <p className="text-sm text-muted-foreground mt-4">
                           Click to {flipped ? "hide" : "show"} answer
                         </p>
@@ -158,7 +212,7 @@ export default function FlashcardPage() {
         ) : (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              No flashcards available. Click "Generate Cards" to create some from your study materials!
+              No flashcards available. Select some documents and click "Generate Cards" to create flashcards from your study materials!
             </p>
           </div>
         )}
