@@ -52,10 +52,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProgress(progressData: InsertProgress): Promise<Progress> {
-    const [newProgress] = await db.insert(progress).values({
-      ...progressData,
-      aiRecommendations: progressData.aiRecommendations || [],
-    }).returning();
+    const [newProgress] = await db.insert(progress).values(progressData).returning();
     return newProgress;
   }
 
@@ -68,8 +65,16 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createQuiz(quiz: InsertQuiz): Promise<Quiz> {
-    const [newQuiz] = await db.insert(quizzes).values(quiz).returning();
+  async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
+    const [newQuiz] = await db
+      .insert(quizzes)
+      .values({
+        userId: quizData.userId,
+        subject: quizData.subject,
+        difficulty: quizData.difficulty,
+        questions: quizData.questions || [],
+      })
+      .returning();
     return newQuiz;
   }
 
@@ -82,8 +87,16 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(quizzes).where(eq(quizzes.userId, userId));
   }
 
-  async createQuizResult(result: InsertQuizResult): Promise<QuizResult> {
-    const [newResult] = await db.insert(quizResults).values(result).returning();
+  async createQuizResult(resultData: InsertQuizResult): Promise<QuizResult> {
+    const [newResult] = await db
+      .insert(quizResults)
+      .values({
+        quizId: resultData.quizId,
+        userId: resultData.userId,
+        score: resultData.score,
+        answers: resultData.answers || [],
+      })
+      .returning();
     return newResult;
   }
 
