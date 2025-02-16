@@ -47,19 +47,54 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  });
+  // Handle graceful shutdown
+  const shutdown = () => {
+    log('Received kill signal, shutting down gracefully');
+    server.close(() => {
+      log('Closed out remaining connections');
+      process.exit(0);
+    });
+
+    // Force shutdown after 10s
+    setTimeout(() => {
+      log('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+
+  const PORT = process.env.PORT || 5000;
+  const MAX_RETRIES = 3;
+  let retries = 0;
+
+  const startServer = () => {
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`serving on port ${PORT}`);
+    }).on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        log(`Port ${PORT} is in use`);
+        if (retries < MAX_RETRIES) {
+          retries++;
+          log(`Retrying in 1 second... (Attempt ${retries}/${MAX_RETRIES})`);
+          setTimeout(startServer, 1000);
+        } else {
+          log('Max retries reached. Could not start server.');
+          process.exit(1);
+        }
+      } else {
+        log(`Error starting server: ${error.message}`);
+        process.exit(1);
+      }
+    });
+  };
+
+  startServer();
 })();
