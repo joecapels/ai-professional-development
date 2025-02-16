@@ -132,7 +132,7 @@ export function StudyChat() {
         >
           <div className="space-y-2">
             <div className="flex items-start justify-between gap-2">
-              <p className={`leading-relaxed ${isAssistant ? "text-foreground" : "text-primary-foreground"} font-sans text-sm md:text-base`}>
+              <p className={`leading-relaxed ${isAssistant ? "text-foreground prose prose-sm md:prose-base prose-zinc dark:prose-invert" : "text-primary-foreground"} font-sans text-sm md:text-base tracking-normal`}>
                 {content.text}
               </p>
               {isAssistant && (
@@ -149,7 +149,7 @@ export function StudyChat() {
             </div>
 
             {content.media && (
-              <div className="space-y-3 mt-3">
+              <div className="space-y-3 mt-4">
                 {content.media.map((item, mediaIndex) => (
                   <div key={mediaIndex} className="rounded-md overflow-hidden">
                     {item.type === 'code' && (
@@ -160,14 +160,14 @@ export function StudyChat() {
                         <SyntaxHighlighter
                           language={item.language || 'javascript'}
                           style={vscDarkPlus}
-                          customStyle={{ margin: 0, borderRadius: '0.5rem' }}
+                          customStyle={{ margin: 0, borderRadius: '0.5rem', fontSize: '0.9em' }}
                         >
                           {item.content}
                         </SyntaxHighlighter>
                       </div>
                     )}
                     {(item.type === 'image' || item.type === 'graph') && (
-                      <div className="relative bg-muted rounded-md p-2">
+                      <div className="relative bg-muted rounded-md p-3">
                         <div className="absolute right-2 top-2">
                           <ImageIcon className="h-4 w-4 text-muted-foreground" />
                         </div>
@@ -190,7 +190,7 @@ export function StudyChat() {
 
   return (
     <Card className="flex flex-col h-[calc(100vh-12rem)] mx-auto max-w-4xl shadow-lg border-border/40">
-      <CardHeader className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 px-6">
+      <CardHeader className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 px-6 py-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl font-semibold text-primary flex items-center gap-2">
             <svg
@@ -231,7 +231,7 @@ export function StudyChat() {
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col gap-4 p-6">
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 pr-4 [&>div>div]:space-y-6">
           <AnimatePresence>
             {messages.map((msg, i) => renderMessage(msg, i))}
           </AnimatePresence>
@@ -250,13 +250,13 @@ export function StudyChat() {
 
         <div className="sticky bottom-0 bg-background pt-4">
           <div className="flex flex-col gap-4">
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="Ask any study-related question..."
-                className="flex-1 bg-muted border-border/40"
+                className="flex-1 bg-muted border-border/40 text-base"
               />
               <Button
                 onClick={handleSend}
