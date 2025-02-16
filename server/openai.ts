@@ -178,3 +178,36 @@ export async function analyzePerformance(progress: Progress[]): Promise<string> 
     return "Unable to analyze performance at this time. Please try again later.";
   }
 }
+
+// Add this function to the existing openai.ts file
+export async function handleStudyChat(message: string): Promise<string> {
+  try {
+    const prompt = `You are an AI study assistant. Help the student with their question:
+    "${message}"
+
+    Respond with a JSON object in this format:
+    {
+      "message": "your helpful response"
+    }`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No content in response");
+    }
+
+    const result = JSON.parse(content);
+    return result.message;
+  } catch (error) {
+    console.error("Error in study chat:", error);
+    return "I apologize, but I'm having trouble processing your question. Please try again.";
+  }
+}

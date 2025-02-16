@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { StudyMaterial, Progress } from "@shared/schema";
-import { generateStudyRecommendations, generatePracticeQuestions } from "./openai.js";
+import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat } from "./openai.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -51,6 +51,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { subject, difficulty } = req.body;
     const questions = await generatePracticeQuestions(subject, difficulty);
     res.json(questions);
+  });
+
+  app.post("/api/chat", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ message: "Message is required" });
+
+    const response = await handleStudyChat(message);
+    res.json({ message: response });
   });
 
   const httpServer = createServer(app);

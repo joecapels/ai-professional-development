@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { StudyMaterial, Progress as ProgressType } from "@shared/schema";
 import { Loader2 } from "lucide-react";
+import { StudyChat } from "@/components/study-chat";
 
 export default function StudentPage() {
   const { user, logoutMutation } = useAuth();
@@ -87,6 +88,8 @@ export default function StudentPage() {
           </Card>
 
           <div className="space-y-6">
+            <StudyChat />
+
             <Card>
               <CardHeader>
                 <CardTitle>Your Progress</CardTitle>
