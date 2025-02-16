@@ -2,12 +2,36 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon, Brain, Clock, LineChart, BookOpen, MessageSquare } from "lucide-react";
+import { InfoIcon, Brain, Clock, LineChart, BookOpen, MessageSquare, Quote } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { NavBar } from "@/components/nav-bar";
 import type { StudyMaterial, Progress as ProgressType } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
+
+// Motivational quotes array
+const motivationalQuotes = [
+  {
+    text: "Education is not preparation for life; education is life itself.",
+    author: "John Dewey"
+  },
+  {
+    text: "The beautiful thing about learning is that no one can take it away from you.",
+    author: "B.B. King"
+  },
+  {
+    text: "The more that you read, the more things you will know. The more that you learn, the more places you'll go.",
+    author: "Dr. Seuss"
+  },
+  {
+    text: "Live as if you were to die tomorrow. Learn as if you were to live forever.",
+    author: "Mahatma Gandhi"
+  },
+  {
+    text: "The expert in anything was once a beginner.",
+    author: "Helen Hayes"
+  }
+];
 
 export default function StudentPage() {
   const [, setLocation] = useLocation();
@@ -24,6 +48,9 @@ export default function StudentPage() {
   const { data: recommendations, isLoading: recommendationsLoading } = useQuery<string[]>({
     queryKey: ["/api/recommendations"],
   });
+
+  // Get a random quote
+  const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
 
   if (materialsLoading || progressLoading || recommendationsLoading) {
     return (
@@ -49,7 +76,20 @@ export default function StudentPage() {
           </Alert>
         )}
 
-        <h1 className="text-4xl font-bold mb-8">Welcome back, {user?.username}!</h1>
+        <h1 className="text-4xl font-bold mb-4">Welcome back, {user?.username}!</h1>
+
+        {/* Motivational Quote Card */}
+        <Card className="mb-8 bg-primary/5 border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex gap-4 items-start">
+              <Quote className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+              <div>
+                <p className="text-lg font-medium italic mb-2">{randomQuote.text}</p>
+                <p className="text-sm text-muted-foreground">― {randomQuote.author}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Feature Cards Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
