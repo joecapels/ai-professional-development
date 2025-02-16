@@ -103,6 +103,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Admin routes
+  app.get("/api/admin/users", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const users = await storage.getAllUsers();
+      // Add last active time for each user based on their study sessions
+      const usersWithActivity = await Promise.all(
+        users.map(async (user) => {
+          const sessions = await storage.getStudySessionsByUser(user.id);
+          const lastSession = sessions.sort((a, b) =>
+            new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+          )[0];
+
+          return {
+            ...user,
+            lastActive: lastSession?.startTime || null,
+            totalSessions: sessions.length,
+          };
+        })
+      );
+
+      res.json(usersWithActivity);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get("/api/admin/usage", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) {
+      return res.sendStatus(403);
+    }
+
+    try {
+      // Get all study sessions
+      const sessions = await storage.getAllStudySessions();
+
+      // Calculate total study hours
+      const totalHours = sessions.reduce((acc, session) => {
+        if (session.totalDuration) {
+          return acc + (session.totalDuration / 3600); // Convert seconds to hours
+        }
+        return acc;
+      }, 0);
+
+      // Count active sessions
+      const activeSessions = sessions.filter(
+        session => session.status === "active"
+      ).length;
+
+      // Get user progress statistics
+      const progress = await storage.getAllProgress();
+      const averageScore = progress.reduce((acc, p) => acc + p.score, 0) / (progress.length || 1);
+
+      res.json({
+        totalHours: Math.round(totalHours * 10) / 10, // Round to 1 decimal place
+        activeSessions,
+        totalSessions: sessions.length,
+        averageScore: Math.round(averageScore),
+        totalProgress: progress.length,
+      });
+    } catch (error) {
+      console.error("Error fetching usage statistics:", error);
+      res.status(500).json({ message: "Failed to fetch usage statistics" });
+    }
+  });
+
   // Study materials routes
   app.get("/api/materials", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

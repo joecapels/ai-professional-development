@@ -1,10 +1,10 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { Loader2 } from "lucide-react";
+import { Loader2, Users, BookOpen, Clock, LineChart } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -23,8 +23,16 @@ export default function AdminPage() {
     return null;
   }
 
-  const { data: materials, isLoading } = useQuery<StudyMaterial[]>({
+  const { data: materials, isLoading: materialsLoading } = useQuery<StudyMaterial[]>({
     queryKey: ["/api/materials"],
+  });
+
+  const { data: users, isLoading: usersLoading } = useQuery({
+    queryKey: ["/api/admin/users"],
+  });
+
+  const { data: usage, isLoading: usageLoading } = useQuery({
+    queryKey: ["/api/admin/usage"],
   });
 
   const materialForm = useForm<StudyMaterial>({
@@ -81,7 +89,7 @@ export default function AdminPage() {
     },
   });
 
-  if (isLoading) {
+  if (materialsLoading || usersLoading || usageLoading) {
     return (
       <div className="min-h-screen">
         <NavBar />
@@ -99,7 +107,86 @@ export default function AdminPage() {
         <div className="space-y-6">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
 
-          <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
+          {/* Overview Statistics */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{users?.length || 0}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Study Materials</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{materials?.length || 0}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{usage?.activeSessions || 0}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Study Hours</CardTitle>
+                <LineChart className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{usage?.totalHours || 0}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* User Management Section */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>Overview of all registered users and their activity</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {users?.map((user) => (
+                  <div key={user.id} className="p-4 border rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold">{user.username}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {user.isAdmin ? "Admin" : "Student"} • Joined {new Date(user.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">Last Active</p>
+                        <p className="text-sm text-muted-foreground">
+                          {user.lastActive ? new Date(user.lastActive).toLocaleString() : "Never"}
+                        </p>
+                      </div>
+                    </div>
+                    {user.learningPreferences && (
+                      <div className="mt-2 text-sm">
+                        <p>Grade Level: {user.learningPreferences.gradeLevel}</p>
+                        <p>Research Areas: {user.learningPreferences.researchAreas?.join(", ")}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-8 grid-cols-1 lg:grid-cols-2">
             {/* Study Material Form */}
             <Card>
               <CardHeader>
@@ -169,33 +256,6 @@ export default function AdminPage() {
                     Create Admin User
                   </Button>
                 </form>
-              </CardContent>
-            </Card>
-
-            {/* Study Materials List */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Study Materials</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {materials?.map((material) => (
-                    <div
-                      key={material.id}
-                      className="p-4 border rounded-lg hover:border-primary transition-colors"
-                    >
-                      <h3 className="font-bold">{material.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Subject: {material.subject} • Difficulty: {material.difficulty}
-                      </p>
-                    </div>
-                  ))}
-                  {(!materials || materials.length === 0) && (
-                    <div className="text-center py-4 text-muted-foreground">
-                      No study materials available.
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
           </div>
