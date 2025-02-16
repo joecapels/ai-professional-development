@@ -84,9 +84,9 @@ export function StudyChat() {
   };
 
   return (
-    <Card className="flex flex-col h-[calc(100vh-12rem)] mx-auto max-w-3xl shadow-lg">
+    <Card className="flex flex-col h-[calc(100vh-12rem)] mx-auto max-w-3xl shadow-md">
       <CardHeader className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <CardTitle className="text-lg font-semibold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+        <CardTitle className="text-lg font-semibold text-primary">
           AI Study Assistant
         </CardTitle>
       </CardHeader>
@@ -101,9 +101,9 @@ export function StudyChat() {
                 }`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2 shadow-sm ${
+                  className={`max-w-[85%] rounded-lg px-4 py-2 shadow-sm ${
                     msg.role === "user"
-                      ? "bg-primary text-primary-foreground ml-4"
+                      ? "bg-primary/90 text-primary-foreground ml-4"
                       : "bg-muted mr-4"
                   }`}
                 >
@@ -113,7 +113,7 @@ export function StudyChat() {
             ))}
             {chatMutation.isPending && (
               <div className="flex justify-start">
-                <div className="bg-muted rounded-2xl px-4 py-2 mr-4">
+                <div className="bg-muted rounded-lg px-4 py-2 mr-4">
                   <Loader2 className="h-4 w-4 animate-spin text-primary" />
                 </div>
               </div>
@@ -142,7 +142,7 @@ export function StudyChat() {
               <Button
                 variant="outline"
                 onClick={() => setSaveDialogOpen(true)}
-                className="w-full border-primary/20 hover:bg-primary/10 hover:text-primary"
+                className="w-full"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Save Conversation

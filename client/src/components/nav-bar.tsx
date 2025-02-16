@@ -14,8 +14,8 @@ export function NavBar() {
   const getNavClass = (path: string) => 
     `text-sm font-medium transition-colors hover:text-primary ${
       isActive(path) 
-        ? "text-primary" 
-        : "text-muted-foreground hover:text-primary"
+        ? "text-primary font-semibold" 
+        : "text-muted-foreground"
     }`;
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -25,7 +25,7 @@ export function NavBar() {
       <div className="container px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold text-primary">
               Study AI
             </h1>
           </div>
@@ -57,11 +57,10 @@ export function NavBar() {
                   {user.username}
                 </span>
                 <Button 
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
-                  className="hover:bg-primary/10 hover:text-primary"
                 >
                   Logout
                 </Button>
@@ -90,11 +89,10 @@ export function NavBar() {
                   {user.username}
                 </span>
                 <Button 
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
-                  className="hover:bg-primary/10 hover:text-primary"
                 >
                   Logout
                 </Button>
