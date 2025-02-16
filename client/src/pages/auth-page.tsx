@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Redirect } from "wouter";
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
-  
+
   const loginForm = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
     defaultValues: { username: "", password: "" },
@@ -19,7 +20,11 @@ export default function AuthPage() {
 
   const registerForm = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
-    defaultValues: { username: "", password: "" },
+    defaultValues: { 
+      username: "", 
+      password: "",
+      isAdmin: false 
+    },
   });
 
   if (user) {
@@ -39,7 +44,7 @@ export default function AuthPage() {
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="register">Register</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="login">
                 <Form {...loginForm}>
                   <form onSubmit={loginForm.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-4">
@@ -105,6 +110,40 @@ export default function AuthPage() {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={registerForm.control}
+                      name="isAdmin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Type</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              defaultValue={field.value.toString()}
+                              className="flex flex-col space-y-1"
+                            >
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="false" />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  Student
+                                </FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="true" />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  Administrator
+                                </FormLabel>
+                              </FormItem>
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
                       Register
                     </Button>
@@ -115,7 +154,7 @@ export default function AuthPage() {
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="flex-1 bg-primary p-8 text-white flex items-center">
         <div className="max-w-lg mx-auto">
           <h1 className="text-4xl font-bold mb-6">Welcome to Study AI</h1>

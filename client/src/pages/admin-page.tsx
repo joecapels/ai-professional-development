@@ -4,19 +4,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { Loader2 } from "lucide-react";
+import { Loader2, Users, BookOpen, BarChart2, Brain } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import type { StudyMaterial } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AdminPage() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const { data: materials, isLoading } = useQuery<StudyMaterial[]>({
+  // Fetch study materials
+  const { data: materials, isLoading: materialsLoading } = useQuery<StudyMaterial[]>({
     queryKey: ["/api/materials"],
+  });
+
+  // Fetch analytics data
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ["/api/analytics"],
   });
 
   const form = useForm<StudyMaterial>({
@@ -47,7 +54,7 @@ export default function AdminPage() {
     },
   });
 
-  if (isLoading) {
+  if (materialsLoading || analyticsLoading) {
     return (
       <div className="min-h-screen">
         <NavBar />
@@ -63,75 +70,188 @@ export default function AdminPage() {
       <NavBar />
       <main className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <span className="text-sm text-muted-foreground">
+              Welcome back, {user?.username}
+            </span>
+          </div>
 
-          <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
+          {/* Quick Stats */}
+          <div className="grid gap-4 md:grid-cols-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Add Study Material</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <form
-                  onSubmit={form.handleSubmit((data) => createMaterialMutation.mutate(data))}
-                  className="space-y-4"
-                >
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Title</label>
-                    <Input {...form.register("title")} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Subject</label>
-                    <Input {...form.register("subject")} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Content</label>
-                    <Textarea {...form.register("content")} rows={6} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Difficulty (1-5)</label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="5"
-                      {...form.register("difficulty", { valueAsNumber: true })}
-                    />
-                  </div>
-                  <Button type="submit" disabled={createMaterialMutation.isPending}>
-                    {createMaterialMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Add Material
-                  </Button>
-                </form>
+                <div className="text-2xl font-bold">{analytics?.totalUsers || 0}</div>
               </CardContent>
             </Card>
-
             <Card>
-              <CardHeader>
-                <CardTitle>Study Materials</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Study Materials</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {materials?.map((material) => (
-                    <div
-                      key={material.id}
-                      className="p-4 border rounded-lg hover:border-primary transition-colors"
-                    >
-                      <h3 className="font-bold">{material.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Subject: {material.subject} • Difficulty: {material.difficulty}
-                      </p>
-                    </div>
-                  ))}
-                  {(!materials || materials.length === 0) && (
-                    <div className="text-center py-4 text-muted-foreground">
-                      No study materials available.
-                    </div>
-                  )}
-                </div>
+                <div className="text-2xl font-bold">{materials?.length || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
+                <Brain className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analytics?.activeSessions || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg. Performance</CardTitle>
+                <BarChart2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analytics?.averagePerformance || '0%'}</div>
               </CardContent>
             </Card>
           </div>
+
+          <Tabs defaultValue="materials" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="materials">Study Materials</TabsTrigger>
+              <TabsTrigger value="users">User Management</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="materials" className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Add Study Material</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form
+                      onSubmit={form.handleSubmit((data) => createMaterialMutation.mutate(data))}
+                      className="space-y-4"
+                    >
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Title</label>
+                        <Input {...form.register("title")} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Subject</label>
+                        <Input {...form.register("subject")} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Content</label>
+                        <Textarea {...form.register("content")} rows={6} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Difficulty (1-5)</label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="5"
+                          {...form.register("difficulty", { valueAsNumber: true })}
+                        />
+                      </div>
+                      <Button type="submit" disabled={createMaterialMutation.isPending}>
+                        {createMaterialMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Add Material
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Study Materials List</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {materials?.map((material) => (
+                        <div
+                          key={material.id}
+                          className="p-4 border rounded-lg hover:border-primary transition-colors"
+                        >
+                          <h3 className="font-bold">{material.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Subject: {material.subject} • Difficulty: {material.difficulty}
+                          </p>
+                        </div>
+                      ))}
+                      {(!materials || materials.length === 0) && (
+                        <div className="text-center py-4 text-muted-foreground">
+                          No study materials available.
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="users">
+              <Card>
+                <CardHeader>
+                  <CardTitle>User Management</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <table className="min-w-full divide-y divide-border">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <th className="px-4 py-3 text-left text-sm font-medium">Username</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium">Role</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium">Last Active</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {analytics?.users?.map((user) => (
+                          <tr key={user.id}>
+                            <td className="px-4 py-3 text-sm">{user.username}</td>
+                            <td className="px-4 py-3 text-sm">{user.isAdmin ? 'Admin' : 'Student'}</td>
+                            <td className="px-4 py-3 text-sm">{new Date(user.lastActive).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <Button variant="ghost" size="sm">View Details</Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="analytics">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Performance Analytics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-8">
+                    {analytics?.performanceMetrics?.map((metric, index) => (
+                      <div key={index} className="space-y-2">
+                        <h3 className="font-medium">{metric.title}</h3>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary" 
+                            style={{ width: `${metric.value}%` }}
+                          />
+                        </div>
+                        <p className="text-sm text-muted-foreground">{metric.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>
