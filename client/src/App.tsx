@@ -12,6 +12,7 @@ import ChatPage from "@/pages/chat-page";
 import QuizPage from "@/pages/quiz-page";
 import SettingsPage from "@/pages/settings-page";
 import DocumentsPage from "@/pages/documents-page";
+import AnalyticsPage from "@/pages/analytics-page";
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
       <ProtectedRoute path="/quiz" component={QuizPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/documents" component={DocumentsPage} />
+      <ProtectedRoute path="/analytics" component={AnalyticsPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

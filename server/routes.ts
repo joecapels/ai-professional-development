@@ -4,6 +4,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { StudyMaterial, Progress, type LearningPreferences } from "@shared/schema";
 import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat } from "./openai.js";
+import { generateAdvancedAnalytics, generatePersonalizedStudyPlan } from "./analytics";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -119,7 +120,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  // Add these routes in the registerRoutes function
   app.post("/api/documents", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const document = await storage.saveDocument({
@@ -142,6 +142,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.sendStatus(404);
     }
     res.json(document);
+  });
+
+  // Add these routes in the registerRoutes function
+  app.get("/api/analytics", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const analytics = await generateAdvancedAnalytics(req.user.id);
+    res.json(analytics);
+  });
+
+  app.get("/api/study-plan", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const analytics = await generateAdvancedAnalytics(req.user.id);
+    const studyPlan = await generatePersonalizedStudyPlan(req.user.id, analytics.performanceMetrics);
+    res.json(studyPlan);
   });
 
   // Helper function to calculate quiz score
