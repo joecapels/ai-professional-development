@@ -16,6 +16,8 @@ type SortOption = "newest" | "oldest" | "title";
 interface DocumentTypeConfig {
   color: string;
   darkColor: string;
+  gradient: string;
+  darkGradient: string;
   icon: JSX.Element;
   label: string;
 }
@@ -24,18 +26,24 @@ const documentTypes: Record<string, DocumentTypeConfig> = {
   chat: {
     color: "bg-blue-500",
     darkColor: "dark:bg-blue-600",
+    gradient: "bg-gradient-to-br from-blue-500/20 to-blue-600/10",
+    darkGradient: "dark:from-blue-500/30 dark:to-blue-600/20",
     icon: <MessageSquare className="h-5 w-5" />,
     label: "Chat Conversations"
   },
   quiz: {
     color: "bg-green-500",
     darkColor: "dark:bg-green-600",
+    gradient: "bg-gradient-to-br from-green-500/20 to-green-600/10",
+    darkGradient: "dark:from-green-500/30 dark:to-green-600/20",
     icon: <Brain className="h-5 w-5" />,
     label: "Quiz Results"
   },
   notes: {
     color: "bg-orange-500",
     darkColor: "dark:bg-orange-600",
+    gradient: "bg-gradient-to-br from-orange-500/20 to-orange-600/10",
+    darkGradient: "dark:from-orange-500/30 dark:to-orange-600/20",
     icon: <FileText className="h-5 w-5" />,
     label: "Study Notes"
   }
@@ -43,7 +51,7 @@ const documentTypes: Record<string, DocumentTypeConfig> = {
 
 const getDocumentPreviewBackground = (type: string) => {
   const config = documentTypes[type] || documentTypes.notes;
-  return `${config.color}/10 ${config.darkColor}/20`;
+  return `${config.gradient} ${config.darkGradient}`;
 };
 
 const getDocumentStripColor = (type: string) => {
@@ -62,9 +70,19 @@ export default function DocumentsPage() {
   const [selectedDocument, setSelectedDocument] = useState<SavedDocument | null>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [showLegend, setShowLegend] = useState(false);
+  const [newDocumentId, setNewDocumentId] = useState<number | null>(null);
 
   const { data: documents, isLoading } = useQuery<SavedDocument[]>({
     queryKey: ["/api/documents"],
+    onSuccess: (data) => {
+      if (data && data.length > 0) {
+        const latestDoc = data[0];
+        if (!documents || latestDoc.id !== documents[0]?.id) {
+          setNewDocumentId(latestDoc.id);
+          setTimeout(() => setNewDocumentId(null), 2000); // Remove pulse after 2 seconds
+        }
+      }
+    }
   });
 
   const filteredDocuments = documents?.filter((doc) => {
@@ -180,15 +198,27 @@ export default function DocumentsPage() {
               <motion.div
                 key={doc.id}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                animate={{ 
+                  opacity: 1, 
+                  y: 0,
+                  scale: newDocumentId === doc.id ? [1, 1.02, 1] : 1
+                }}
+                transition={newDocumentId === doc.id ? {
+                  scale: {
+                    repeat: Infinity,
+                    duration: 1,
+                    ease: "easeInOut"
+                  }
+                } : { 
+                  duration: 0.3 
+                }}
                 onHoverStart={() => setHoveredId(doc.id)}
                 onHoverEnd={() => setHoveredId(null)}
               >
                 <Card
                   className={`group hover:border-primary transition-all duration-300 overflow-hidden ${
                     hoveredId === doc.id ? 'shadow-lg scale-[1.02]' : 'shadow-md'
-                  }`}
+                  } ${newDocumentId === doc.id ? 'ring-2 ring-primary ring-opacity-50' : ''}`}
                 >
                   <div className={`h-1 ${getDocumentStripColor(doc.type)}`} />
                   <CardHeader className="pb-3">
@@ -230,11 +260,11 @@ export default function DocumentsPage() {
                         </div>
                       )}
                       <motion.div 
-                        className={`mt-4 overflow-hidden ${
+                        className={`mt-4 overflow-hidden rounded-lg ${
                           hoveredId === doc.id ? 'max-h-48' : 'max-h-32'
                         } transition-all duration-300`}
                       >
-                        <div className={`p-4 ${getDocumentPreviewBackground(doc.type)} rounded-lg`}>
+                        <div className={`p-4 ${getDocumentPreviewBackground(doc.type)}`}>
                           <pre className="whitespace-pre-wrap text-sm">
                             {doc.content.length > 200
                               ? `${doc.content.slice(0, 200)}...`
@@ -261,6 +291,27 @@ export default function DocumentsPage() {
                 </Card>
               </motion.div>
             ))}
+            {isLoading && (
+              <>
+                {[1, 2, 3].map((n) => (
+                  <Card key={n} className="group animate-pulse">
+                    <div className="h-1 bg-primary/20" />
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10" />
+                        <div className="h-6 w-32 bg-muted rounded" />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="h-4 w-24 bg-muted rounded" />
+                        <div className="h-32 bg-primary/5 rounded-lg" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
+            )}
             {(!sortedDocuments || sortedDocuments.length === 0) && (
               <div className="col-span-full text-center py-8 text-muted-foreground">
                 {searchQuery || selectedType !== "all"
