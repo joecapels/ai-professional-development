@@ -11,7 +11,7 @@ import { Redirect } from "wouter";
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
-  
+
   const loginForm = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
     defaultValues: { username: "", password: "" },
@@ -27,19 +27,19 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      <div className="flex-1 p-8">
-        <Card className="max-w-md mx-auto">
-          <CardHeader className="text-2xl font-bold text-center">
+    <div className="min-h-screen flex flex-col md:flex-row">
+      <div className="w-full md:w-1/2 p-4 md:p-8 flex items-center justify-center">
+        <Card className="w-full max-w-md mx-auto">
+          <CardHeader className="text-2xl font-bold text-center pb-2">
             Study AI Platform
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login">
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="register">Register</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="login">
                 <Form {...loginForm}>
                   <form onSubmit={loginForm.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-4">
@@ -50,7 +50,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Username</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input placeholder="Enter your username" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -63,7 +63,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" {...field} />
+                            <Input type="password" placeholder="Enter your password" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -86,7 +86,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Username</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input placeholder="Choose a username" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -99,7 +99,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" {...field} />
+                            <Input type="password" placeholder="Choose a password" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -115,20 +115,22 @@ export default function AuthPage() {
           </CardContent>
         </Card>
       </div>
-      
-      <div className="flex-1 bg-primary p-8 text-white flex items-center">
-        <div className="max-w-lg mx-auto">
-          <h1 className="text-4xl font-bold mb-6">Welcome to Study AI</h1>
-          <p className="text-lg mb-6">
+
+      <div className="w-full md:w-1/2 bg-primary p-4 md:p-8 text-primary-foreground flex items-center order-first md:order-last">
+        <div className="max-w-lg mx-auto space-y-6">
+          <h1 className="text-3xl md:text-4xl font-bold">Welcome to Study AI</h1>
+          <p className="text-base md:text-lg opacity-90">
             Your personalized AI-powered learning companion. Get smart recommendations,
             track your progress, and improve your study efficiency with our advanced
             learning platform.
           </p>
-          <img
-            src="https://images.unsplash.com/photo-1471107191679-f26174d2d41e"
-            alt="Study Environment"
-            className="rounded-lg shadow-xl"
-          />
+          <div className="relative aspect-video rounded-lg overflow-hidden shadow-xl">
+            <img
+              src="https://images.unsplash.com/photo-1471107191679-f26d11f03df4"
+              alt="Study Environment"
+              className="object-cover w-full h-full"
+            />
+          </div>
         </div>
       </div>
     </div>
