@@ -3,23 +3,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Save, Volume2, VolumeX } from "lucide-react";
+import { Loader2, Send, Save, Volume2, VolumeX, Code, ImageIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
+import { motion, AnimatePresence } from "framer-motion";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 interface Message {
   role: "user" | "assistant";
-  content: string;
+  content: string | {
+    text: string;
+    media?: {
+      type: "image" | "graph" | "code";
+      content: string;
+      language?: string;
+    }[];
+  };
 }
 
 export function StudyChat() {
@@ -43,8 +47,14 @@ export function StudyChat() {
       const res = await apiRequest("POST", "/api/chat", { message });
       return res.json();
     },
-    onSuccess: (response: { message: string }) => {
-      setMessages(prev => [...prev, { role: "assistant", content: response.message }]);
+    onSuccess: (response: { message: string; media?: { type: string; content: string; language?: string }[] }) => {
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: {
+          text: response.message,
+          media: response.media
+        }
+      }]);
     },
   });
 
@@ -64,13 +74,6 @@ export function StudyChat() {
       toast({ title: "Conversation saved successfully" });
       setSaveDialogOpen(false);
       setDocumentTitle("");
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to save conversation",
-        description: error.message,
-        variant: "destructive",
-      });
     },
   });
 
@@ -92,7 +95,7 @@ export function StudyChat() {
   const handleSave = () => {
     if (!documentTitle) return;
     const content = messages
-      .map((msg) => `${msg.role}: ${msg.content}`)
+      .map((msg) => `${msg.role}: ${typeof msg.content === 'string' ? msg.content : msg.content.text}`)
       .join("\n\n");
     saveDocumentMutation.mutate({
       title: documentTitle,
@@ -108,11 +111,100 @@ export function StudyChat() {
     }
   }, [speak, cancel, speaking]);
 
+  const renderMessage = (msg: Message, index: number) => {
+    const isAssistant = msg.role === "assistant";
+    const content = typeof msg.content === 'string' ? { text: msg.content } : msg.content;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        key={index}
+        className={`flex ${isAssistant ? "justify-start" : "justify-end"} mb-4`}
+      >
+        <div
+          className={`max-w-[85%] rounded-lg px-4 py-3 shadow-md ${
+            isAssistant
+              ? "bg-card border border-border mr-4"
+              : "bg-primary text-primary-foreground ml-4"
+          }`}
+        >
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <p className={`leading-relaxed ${isAssistant ? "text-foreground" : "text-primary-foreground"} font-sans text-sm md:text-base`}>
+                {content.text}
+              </p>
+              {isAssistant && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleSpeak(content.text)}
+                  className="flex-shrink-0 hover:bg-background/10"
+                  title={speaking ? "Stop speaking" : "Read aloud"}
+                >
+                  {speaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                </Button>
+              )}
+            </div>
+
+            {content.media && (
+              <div className="space-y-3 mt-3">
+                {content.media.map((item, mediaIndex) => (
+                  <div key={mediaIndex} className="rounded-md overflow-hidden">
+                    {item.type === 'code' && (
+                      <div className="relative">
+                        <div className="absolute right-2 top-2 z-10">
+                          <Code className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <SyntaxHighlighter
+                          language={item.language || 'javascript'}
+                          style={vscDarkPlus}
+                          customStyle={{ margin: 0, borderRadius: '0.5rem' }}
+                        >
+                          {item.content}
+                        </SyntaxHighlighter>
+                      </div>
+                    )}
+                    {(item.type === 'image' || item.type === 'graph') && (
+                      <div className="relative bg-muted rounded-md p-2">
+                        <div className="absolute right-2 top-2">
+                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <img
+                          src={item.content}
+                          alt="Content visualization"
+                          className="w-full h-auto rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
   return (
-    <Card className="flex flex-col h-[calc(100vh-12rem)] mx-auto max-w-3xl shadow-md">
-      <CardHeader className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+    <Card className="flex flex-col h-[calc(100vh-12rem)] mx-auto max-w-4xl shadow-lg border-border/40">
+      <CardHeader className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 px-6">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-primary">
+          <CardTitle className="text-xl font-semibold text-primary flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-5 h-5"
+            >
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
             AI Study Assistant
           </CardTitle>
           <div className="flex items-center gap-2">
@@ -137,49 +229,25 @@ export function StudyChat() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-4 p-4">
+
+      <CardContent className="flex-1 flex flex-col gap-4 p-6">
         <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-4">
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={`flex ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-[85%] rounded-lg px-4 py-2 shadow-sm ${
-                    msg.role === "user"
-                      ? "bg-primary/90 text-primary-foreground ml-4"
-                      : "bg-muted mr-4"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="leading-relaxed">{msg.content}</p>
-                    {msg.role === "assistant" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleSpeak(msg.content)}
-                        className="flex-shrink-0"
-                        title={speaking ? "Stop speaking" : "Read aloud"}
-                      >
-                        {speaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                      </Button>
-                    )}
-                  </div>
-                </div>
+          <AnimatePresence>
+            {messages.map((msg, i) => renderMessage(msg, i))}
+          </AnimatePresence>
+          {chatMutation.isPending && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-start"
+            >
+              <div className="bg-card rounded-lg px-4 py-3 mr-4 shadow-md">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
               </div>
-            ))}
-            {chatMutation.isPending && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-lg px-4 py-2 mr-4">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                </div>
-              </div>
-            )}
-          </div>
+            </motion.div>
+          )}
         </ScrollArea>
+
         <div className="sticky bottom-0 bg-background pt-4">
           <div className="flex flex-col gap-4">
             <div className="flex gap-2">
@@ -188,7 +256,7 @@ export function StudyChat() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="Ask any study-related question..."
-                className="flex-1 bg-muted"
+                className="flex-1 bg-muted border-border/40"
               />
               <Button
                 onClick={handleSend}
@@ -202,7 +270,7 @@ export function StudyChat() {
               <Button
                 variant="outline"
                 onClick={() => setSaveDialogOpen(true)}
-                className="w-full"
+                className="w-full border-border/40"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Save Conversation
