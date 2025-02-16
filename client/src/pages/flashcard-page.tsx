@@ -183,7 +183,6 @@ export default function FlashcardPage() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           transformStyle: 'preserve-3d',
-                          transform: 'rotateY(0deg)',
                         }}
                       >
                         <div>
