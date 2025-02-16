@@ -179,11 +179,36 @@ export async function analyzePerformance(progress: Progress[]): Promise<string> 
   }
 }
 
+interface LearningPreferences {
+  learningStyle: string;
+  pacePreference: string;
+  explanationDetail: string;
+  exampleFrequency: string;
+}
+
 // Add this function to the existing openai.ts file
-export async function handleStudyChat(message: string): Promise<string> {
+export async function handleStudyChat(
+  message: string,
+  preferences?: LearningPreferences | null
+): Promise<string> {
   try {
-    const prompt = `You are an AI study assistant. Help the student with their question:
-    "${message}"
+    const preferencesPrompt = preferences
+      ? `
+        Consider these learning preferences when responding:
+        - Learning Style: ${preferences.learningStyle}
+        - Pace: ${preferences.pacePreference}
+        - Detail Level: ${preferences.explanationDetail}
+        - Example Frequency: ${preferences.exampleFrequency}
+
+        Adapt your response style accordingly. For example:
+        - If visual learning style, use more descriptive language and suggest diagrams
+        - If comprehensive detail is preferred, provide in-depth explanations
+        - If many examples are preferred, include multiple relevant examples
+        `
+      : "";
+
+    const prompt = `You are an AI study assistant. ${preferencesPrompt}
+    Help the student with their question: "${message}"
 
     Respond with a JSON object in this format:
     {

@@ -1,5 +1,5 @@
 import { IStorage } from "./types";
-import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress } from "@shared/schema";
+import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences } from "@shared/schema";
 import { db, users, studyMaterials, progress } from "./db";
 import { eq } from "drizzle-orm";
 import session from "express-session";
@@ -54,6 +54,15 @@ export class DatabaseStorage implements IStorage {
   async createProgress(insertProgress: InsertProgress): Promise<Progress> {
     const [newProgress] = await db.insert(progress).values(insertProgress).returning();
     return newProgress;
+  }
+
+  async updateUserPreferences(userId: number, preferences: LearningPreferences): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ learningPreferences: preferences })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 }
 

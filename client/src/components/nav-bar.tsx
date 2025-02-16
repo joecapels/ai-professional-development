@@ -22,6 +22,11 @@ export function NavBar() {
                   Study Chat
                 </a>
               </Link>
+              <Link href="/settings">
+                <a className="text-foreground/60 hover:text-foreground transition-colors">
+                  Settings
+                </a>
+              </Link>
             </div>
           )}
         </div>

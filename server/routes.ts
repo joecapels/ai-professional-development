@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { StudyMaterial, Progress } from "@shared/schema";
+import { StudyMaterial, Progress, type LearningPreferences } from "@shared/schema";
 import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat } from "./openai.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -37,6 +37,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(progress);
   });
 
+  // Learning preferences routes
+  app.get("/api/preferences", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = await storage.getUser(req.user.id);
+    res.json(user?.learningPreferences || null);
+  });
+
+  app.post("/api/preferences", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const preferences: LearningPreferences = req.body;
+    const user = await storage.updateUserPreferences(req.user.id, preferences);
+    res.json(user.learningPreferences);
+  });
+
   // AI recommendations route
   app.get("/api/recommendations", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -58,7 +72,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { message } = req.body;
     if (!message) return res.status(400).json({ message: "Message is required" });
 
-    const response = await handleStudyChat(message);
+    const user = await storage.getUser(req.user.id);
+    const response = await handleStudyChat(message, user?.learningPreferences);
     res.json({ message: response });
   });
 

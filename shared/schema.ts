@@ -8,6 +8,12 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  learningPreferences: json("learning_preferences").$type<{
+    learningStyle: "visual" | "auditory" | "reading" | "kinesthetic";
+    pacePreference: "fast" | "moderate" | "slow";
+    explanationDetail: "basic" | "detailed" | "comprehensive";
+    exampleFrequency: "few" | "moderate" | "many";
+  }>(),
 });
 
 export const studyMaterials = pgTable("study_materials", {
@@ -33,6 +39,13 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
 });
 
+export const learningPreferencesSchema = z.object({
+  learningStyle: z.enum(["visual", "auditory", "reading", "kinesthetic"]),
+  pacePreference: z.enum(["fast", "moderate", "slow"]),
+  explanationDetail: z.enum(["basic", "detailed", "comprehensive"]),
+  exampleFrequency: z.enum(["few", "moderate", "many"]),
+});
+
 export const insertStudyMaterialSchema = createInsertSchema(studyMaterials);
 export const insertProgressSchema = createInsertSchema(progress);
 
@@ -42,3 +55,4 @@ export type Progress = typeof progress.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertStudyMaterial = z.infer<typeof insertStudyMaterialSchema>;
 export type InsertProgress = z.infer<typeof insertProgressSchema>;
+export type LearningPreferences = z.infer<typeof learningPreferencesSchema>;
