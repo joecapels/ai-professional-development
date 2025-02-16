@@ -4,82 +4,6 @@ import { z } from "zod";
 
 // Keep existing imports and type definitions
 
-// Add content format types
-export const contentFormat = [
-  "text",
-  "audio",
-  "video",
-  "interactive",
-  "mixed"
-] as const;
-
-// Add content delivery preferences
-export const contentDeliveryPreference = [
-  "sequential",
-  "parallel",
-  "adaptive"
-] as const;
-
-// Add multimedia content table
-export const multimodalContent = pgTable("multimodal_content", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  description: text("description"),
-  primaryFormat: text("primary_format").$type<typeof contentFormat[number]>().notNull(),
-  content: json("content").$type<{
-    text?: string;
-    audioUrl?: string;
-    videoUrl?: string;
-    interactiveConfig?: Record<string, unknown>;
-    transcripts?: { [key: string]: string };
-  }>().notNull(),
-  metadata: json("metadata").$type<{
-    duration?: number;
-    language?: string;
-    accessibility?: {
-      closedCaptions?: boolean;
-      audioDescription?: boolean;
-      textToSpeech?: boolean;
-    };
-    aiEnhancements?: {
-      summary?: string;
-      keyPoints?: string[];
-      difficulty?: number;
-    };
-  }>(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-// Add content delivery preferences to user learning preferences
-export type ExtendedLearningPreferences = {
-  contentDelivery: typeof contentDeliveryPreference[number];
-  preferredFormats: typeof contentFormat[number][];
-  accessibilityNeeds?: {
-    requiresClosedCaptions?: boolean;
-    requiresAudioDescription?: boolean;
-    requiresTextToSpeech?: boolean;
-    highContrast?: boolean;
-    fontSize?: number;
-  };
-} & z.infer<typeof learningPreferencesSchema>;
-
-// Update users table with extended learning preferences
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  isAdmin: boolean("is_admin").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  learningPreferences: json("learning_preferences").$type<ExtendedLearningPreferences>(),
-});
-
-// Add schemas for the new content type
-export const insertMultimodalContentSchema = createInsertSchema(multimodalContent);
-export type MultimodalContent = typeof multimodalContent.$inferSelect;
-export type InsertMultimodalContent = z.infer<typeof insertMultimodalContentSchema>;
-
 export const gradeLevel = [
   "elementary_1_3",
   "elementary_4_6",
@@ -138,6 +62,23 @@ export const researchArea = [
   "architecture",
   "law"
 ] as const;
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  isAdmin: boolean("is_admin").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  learningPreferences: json("learning_preferences").$type<{
+    learningStyle: "visual" | "auditory" | "reading" | "kinesthetic";
+    pacePreference: "fast" | "moderate" | "slow";
+    explanationDetail: "basic" | "detailed" | "comprehensive";
+    exampleFrequency: "few" | "moderate" | "many";
+    chatbotPersonality: "encouraging" | "socratic" | "professional" | "friendly";
+    gradeLevel: typeof gradeLevel[number];
+    researchAreas: typeof researchArea[number][];
+  }>(),
+});
 
 export const studyMaterials = pgTable("study_materials", {
   id: serial("id").primaryKey(),
