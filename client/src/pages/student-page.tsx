@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon, Brain, Clock, LineChart, BookOpen, MessageSquare, Quote } from "lucide-react";
+import { InfoIcon, Brain, Clock, LineChart, BookOpen, MessageSquare, Quote, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { NavBar } from "@/components/nav-bar";
 import type { StudyMaterial, Progress as ProgressType, SavedDocument, QuizResult } from "@shared/schema";
@@ -10,8 +10,9 @@ import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { MoodTracker } from "@/components/mood-tracker";
 import { format } from "date-fns";
+import { motion } from "framer-motion";
 
-// Motivational quotes array
+// Motivational quotes array remains unchanged
 const motivationalQuotes = [
   {
     text: "Education is not preparation for life; education is life itself.",
@@ -67,7 +68,7 @@ export default function StudentPage() {
       <div className="min-h-screen">
         <NavBar />
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -93,228 +94,304 @@ export default function StudentPage() {
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
-      <main className="container py-8">
+      <main className="container py-8 px-4 sm:px-6 lg:px-8">
         {user?.username === "joe" && (
-          <Alert className="mb-6">
-            <InfoIcon className="h-4 w-4" />
+          <Alert className="mb-6 bg-primary/5 border-primary/20">
+            <InfoIcon className="h-4 w-4 text-primary" />
             <AlertDescription>
               You are viewing demo data. As you use the platform, this section will be populated with your actual learning progress and insights.
             </AlertDescription>
           </Alert>
         )}
 
-        <h1 className="text-4xl font-bold mb-4">Welcome back, {user?.username}!</h1>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-6"
+        >
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-8 w-8 text-primary" />
+            <h1 className="text-4xl font-bold">Welcome back, {user?.username}!</h1>
+          </div>
 
-        {/* Motivational Quote Card */}
-        <Card className="mb-8 bg-primary/5 border-primary/20">
-          <CardContent className="pt-6">
-            <div className="flex gap-4 items-start">
-              <Quote className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
-              <div>
-                <p className="text-lg font-medium italic mb-2">{randomQuote.text}</p>
-                <p className="text-sm text-muted-foreground">― {randomQuote.author}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Mood Tracker */}
-        <Card className="mb-8">
-          <MoodTracker />
-        </Card>
-
-        {/* Chat Statistics Card */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              AI Study Chat Stats
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Total Chats</p>
-                <p className="text-2xl font-bold">{totalChats}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Latest Chat</p>
-                {latestChat ? (
+          {/* Motivational Quote Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+              <CardContent className="pt-6">
+                <div className="flex gap-4 items-start">
+                  <Quote className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
                   <div>
-                    <p className="text-lg font-semibold truncate">{latestChat.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(latestChat.createdAt), "MMM d, yyyy")}
-                    </p>
+                    <p className="text-lg font-medium italic mb-2">{randomQuote.text}</p>
+                    <p className="text-sm text-muted-foreground">― {randomQuote.author}</p>
                   </div>
-                ) : (
-                  <p className="text-muted-foreground">No chats yet</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-        {/* Quiz Statistics Card */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-primary" />
-              Quiz Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Total Quizzes</p>
-                <p className="text-2xl font-bold">{totalQuizzes}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Average Score</p>
-                <p className="text-2xl font-bold">{averageScore}%</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Latest Quiz</p>
-                {latestQuiz ? (
-                  <div>
-                    <p className="text-2xl font-bold">{latestQuiz.score}%</p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(latestQuiz.completedAt), "MMM d, yyyy")}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">No quizzes taken yet</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-
-        {/* Feature Cards Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-          {/* AI Learning Assistant */}
-          <Card
-            className="hover:border-primary cursor-pointer transition-colors"
-            onClick={() => setLocation("/chat")}
+          {/* Mood Tracker */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
           >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-primary" />
-                AI Learning Assistant
-              </CardTitle>
-              <CardDescription>
-                Get personalized help and explanations from our AI tutor
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Ask questions, get explanations, and receive instant feedback tailored to your learning style
-              </p>
-            </CardContent>
-          </Card>
+            <Card>
+              <MoodTracker />
+            </Card>
+          </motion.div>
 
-          {/* Real-time Study Tracking */}
-          <Card
-            className="hover:border-primary cursor-pointer transition-colors"
-            onClick={() => setLocation("/study-tracker")}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" />
-                Study Tracking
-              </CardTitle>
-              <CardDescription>
-                Track your study sessions in real-time
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Monitor focus time, take breaks, and build consistent study habits
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Analytics & Insights */}
-          <Card
-            className="hover:border-primary cursor-pointer transition-colors"
-            onClick={() => setLocation("/analytics")}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LineChart className="h-5 w-5 text-primary" />
-                Analytics & Insights
-              </CardTitle>
-              <CardDescription>
-                Visualize your learning progress
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Get detailed insights into your performance and personalized recommendations
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Progress Section */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Recent Documents */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
-                Recent Documents
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {documents?.slice(0, 10).map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center justify-between hover:bg-muted p-2 rounded-lg cursor-pointer"
-                    onClick={() => setLocation("/documents")}
-                  >
-                    <div>
-                      <p className="font-medium">{doc.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {doc.type} • {format(new Date(doc.createdAt), "MMM d, yyyy")}
-                      </p>
+          {/* Stats Grid */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Chat Statistics Card */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+            >
+              <Card className="h-full bg-gradient-to-br from-blue-500/5 to-blue-600/10 hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <MessageSquare className="h-5 w-5" />
+                    AI Study Chat Stats
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Total Chats</p>
+                      <p className="text-2xl font-bold">{totalChats}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Latest Chat</p>
+                      {latestChat ? (
+                        <div>
+                          <p className="text-lg font-semibold truncate">{latestChat.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(latestChat.createdAt), "MMM d, yyyy")}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">No chats yet</p>
+                      )}
                     </div>
                   </div>
-                ))}
-                {(!documents || documents.length === 0) && (
-                  <p className="text-sm text-muted-foreground">
-                    No documents created yet
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          {/* AI Recommendations */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                AI Recommendations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {recommendations?.slice(0, 3).map((rec, i) => (
-                  <div key={i} className="p-2 rounded-lg bg-muted">
-                    <p className="text-sm">{rec}</p>
+            {/* Quiz Statistics Card */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+            >
+              <Card className="h-full bg-gradient-to-br from-green-500/5 to-green-600/10 hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <Brain className="h-5 w-5" />
+                    Quiz Performance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Total Quizzes</p>
+                      <p className="text-2xl font-bold">{totalQuizzes}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Average Score</p>
+                      <p className="text-2xl font-bold">{averageScore}%</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Latest Quiz</p>
+                      {latestQuiz ? (
+                        <div>
+                          <p className="text-2xl font-bold">{latestQuiz.score}%</p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(latestQuiz.completedAt), "MMM d, yyyy")}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">No quizzes taken yet</p>
+                      )}
+                    </div>
                   </div>
-                ))}
-                {(!recommendations || recommendations.length === 0) && (
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Feature Cards Grid */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {/* AI Learning Assistant */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <Card
+                className="bg-gradient-to-br from-violet-500/5 to-violet-600/10 hover:shadow-lg cursor-pointer transition-all"
+                onClick={() => setLocation("/chat")}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-violet-600 dark:text-violet-400">
+                    <Brain className="h-5 w-5" />
+                    AI Learning Assistant
+                  </CardTitle>
+                  <CardDescription>
+                    Get personalized help and explanations from our AI tutor
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Complete some lessons to get personalized recommendations
+                    Ask questions, get explanations, and receive instant feedback tailored to your learning style
                   </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Real-time Study Tracking */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 0.5 }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <Card
+                className="bg-gradient-to-br from-orange-500/5 to-orange-600/10 hover:shadow-lg cursor-pointer transition-all"
+                onClick={() => setLocation("/study-tracker")}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                    <Clock className="h-5 w-5" />
+                    Study Tracking
+                  </CardTitle>
+                  <CardDescription>
+                    Track your study sessions in real-time
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Monitor focus time, take breaks, and build consistent study habits
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Analytics & Insights */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.5 }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <Card
+                className="bg-gradient-to-br from-cyan-500/5 to-cyan-600/10 hover:shadow-lg cursor-pointer transition-all"
+                onClick={() => setLocation("/analytics")}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
+                    <LineChart className="h-5 w-5" />
+                    Analytics & Insights
+                  </CardTitle>
+                  <CardDescription>
+                    Visualize your learning progress
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Get detailed insights into your performance and personalized recommendations
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Recent Progress Section */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Recent Documents */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.9, duration: 0.5 }}
+            >
+              <Card className="h-full bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                    Recent Documents
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {documents?.slice(0, 5).map((doc) => (
+                      <motion.div
+                        key={doc.id}
+                        whileHover={{ x: 4 }}
+                        className="flex items-center justify-between hover:bg-primary/5 p-2 rounded-lg cursor-pointer"
+                        onClick={() => setLocation("/documents")}
+                      >
+                        <div>
+                          <p className="font-medium">{doc.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {doc.type} • {format(new Date(doc.createdAt), "MMM d, yyyy")}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                    {(!documents || documents.length === 0) && (
+                      <p className="text-sm text-muted-foreground">
+                        No documents created yet
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* AI Recommendations */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1, duration: 0.5 }}
+            >
+              <Card className="h-full bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                    AI Recommendations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {recommendations?.slice(0, 3).map((rec, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 * i }}
+                        className="p-3 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10"
+                      >
+                        <p className="text-sm">{rec}</p>
+                      </motion.div>
+                    ))}
+                    {(!recommendations || recommendations.length === 0) && (
+                      <p className="text-sm text-muted-foreground">
+                        Complete some lessons to get personalized recommendations
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </motion.div>
       </main>
     </div>
   );
