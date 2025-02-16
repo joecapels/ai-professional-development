@@ -303,3 +303,46 @@ export async function generateMoodSuggestion(mood: string): Promise<string> {
     return "Keep going, you're doing great!";
   }
 }
+
+// Add this function to the existing openai.ts file
+export async function generateFlashcardsFromContent(content: string): Promise<{ front: string; back: string; difficulty: number }[]> {
+  try {
+    const prompt = `Generate a set of flashcards from the following content. Each flashcard should have a front (question/concept) and back (answer/explanation).
+    The flashcards should cover key concepts and be suitable for effective learning.
+    Ensure the cards are clear, concise, and focus on important information.
+
+    Content to process:
+    ${content}
+
+    Respond with a JSON object in this format:
+    {
+      "flashcards": [
+        {
+          "front": "question or concept",
+          "back": "answer or explanation",
+          "difficulty": number between 1-5
+        }
+      ]
+    }`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No content in response");
+    }
+
+    const result = JSON.parse(content);
+    return result.flashcards || [];
+  } catch (error) {
+    console.error("Error generating flashcards:", error);
+    throw new Error("Failed to generate flashcards from content");
+  }
+}

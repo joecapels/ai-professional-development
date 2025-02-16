@@ -5,7 +5,7 @@ import type { IncomingMessage } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { StudyMaterial, Progress, type LearningPreferences, type StudySessionMessage, studySessionMessageSchema } from "@shared/schema";
-import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat, generateMoodSuggestion } from "./openai";
+import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat, generateMoodSuggestion, generateFlashcardsFromContent } from "./openai";
 import { generateAdvancedAnalytics, generatePersonalizedStudyPlan } from "./analytics";
 import session from "express-session";
 import { pool } from "./db";
@@ -304,6 +304,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error processing mood:", error);
       res.status(500).json({ error: "Failed to process mood" });
+    }
+  });
+
+  // Flashcard routes
+  app.get("/api/flashcards", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const flashcards = await storage.getFlashcardsByUser(req.user.id);
+    res.json(flashcards);
+  });
+
+  app.post("/api/flashcards/generate", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const { documentIds } = req.body;
+
+      if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
+        return res.status(400).json({ error: "Document IDs are required" });
+      }
+
+      // Fetch the documents content
+      const documents = await Promise.all(
+        documentIds.map(id => storage.getDocument(id))
+      );
+
+      // Filter out any null results and documents that don't belong to the user
+      const validDocuments = documents.filter(
+        doc => doc && doc.userId === req.user.id
+      );
+
+      if (validDocuments.length === 0) {
+        return res.status(404).json({ error: "No valid documents found" });
+      }
+
+      // Combine all document content for processing
+      const combinedContent = validDocuments
+        .map(doc => doc.content)
+        .join("\n\n");
+
+      // Generate flashcards using OpenAI
+      const flashcards = await generateFlashcardsFromContent(combinedContent);
+
+      // Save the generated flashcards
+      const savedFlashcards = await storage.saveFlashcards(
+        flashcards.map(card => ({
+          ...card,
+          userId: req.user.id,
+          documentIds: documentIds,
+        }))
+      );
+
+      res.json(savedFlashcards);
+    } catch (error: any) {
+      console.error("Error generating flashcards:", error);
+      res.status(500).json({ error: "Failed to generate flashcards" });
     }
   });
 
