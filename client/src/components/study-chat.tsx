@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Save } from "lucide-react";
+import { Loader2, Send, Save, Volume2, VolumeX } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 
 interface Message {
   role: "user" | "assistant";
@@ -20,6 +28,15 @@ export function StudyChat() {
   const [input, setInput] = useState("");
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [documentTitle, setDocumentTitle] = useState("");
+
+  const {
+    voices,
+    speaking,
+    selectedVoice,
+    setSelectedVoice,
+    speak,
+    cancel
+  } = useSpeechSynthesis();
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
@@ -83,12 +100,42 @@ export function StudyChat() {
     });
   };
 
+  const handleSpeak = useCallback((text: string) => {
+    if (speaking) {
+      cancel();
+    } else {
+      speak(text);
+    }
+  }, [speak, cancel, speaking]);
+
   return (
     <Card className="flex flex-col h-[calc(100vh-12rem)] mx-auto max-w-3xl shadow-md">
       <CardHeader className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <CardTitle className="text-lg font-semibold text-primary">
-          AI Study Assistant
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold text-primary">
+            AI Study Assistant
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Select
+              value={selectedVoice?.name}
+              onValueChange={(value) => {
+                const voice = voices.find(v => v.name === value);
+                setSelectedVoice(voice || null);
+              }}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select a voice" />
+              </SelectTrigger>
+              <SelectContent>
+                {voices.map((voice) => (
+                  <SelectItem key={voice.name} value={voice.name}>
+                    {`${voice.name} (${voice.lang})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-4 p-4">
         <ScrollArea className="flex-1 pr-4">
@@ -107,7 +154,20 @@ export function StudyChat() {
                       : "bg-muted mr-4"
                   }`}
                 >
-                  <p className="leading-relaxed">{msg.content}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="leading-relaxed">{msg.content}</p>
+                    {msg.role === "assistant" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleSpeak(msg.content)}
+                        className="flex-shrink-0"
+                        title={speaking ? "Stop speaking" : "Read aloud"}
+                      >
+                        {speaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
