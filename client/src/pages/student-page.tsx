@@ -1,16 +1,12 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { StudyMaterial, Progress as ProgressType } from "@shared/schema";
 import { Loader2 } from "lucide-react";
-import { StudyChat } from "@/components/study-chat";
+import { NavBar } from "@/components/nav-bar";
 
 export default function StudentPage() {
-  const { user, logoutMutation } = useAuth();
-
   const { data: materials, isLoading: materialsLoading } = useQuery<StudyMaterial[]>({
     queryKey: ["/api/materials"],
   });
@@ -47,18 +43,7 @@ export default function StudentPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="border-b p-4">
-        <div className="container flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Study AI</h1>
-          <div className="flex items-center gap-4">
-            <span>Welcome, {user?.username}</span>
-            <Button variant="outline" onClick={() => logoutMutation.mutate()}>
-              Logout
-            </Button>
-          </div>
-        </div>
-      </nav>
-
+      <NavBar />
       <main className="container py-8">
         <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
           <Card className="lg:col-span-2">
@@ -88,8 +73,6 @@ export default function StudentPage() {
           </Card>
 
           <div className="space-y-6">
-            <StudyChat />
-
             <Card>
               <CardHeader>
                 <CardTitle>Your Progress</CardTitle>
