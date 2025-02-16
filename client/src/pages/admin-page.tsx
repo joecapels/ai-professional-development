@@ -239,7 +239,7 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                          {mergedAnalytics.users.map((user) => (
+                          {mergedAnalytics.users?.map((user) => (
                             <tr key={user.id}>
                               <td className="px-4 py-3 text-sm">{user.username}</td>
                               <td className="px-4 py-3 text-sm">{user.isAdmin ? 'Admin' : 'Student'}</td>
@@ -249,6 +249,13 @@ export default function AdminPage() {
                               </td>
                             </tr>
                           ))}
+                          {(!mergedAnalytics.users || mergedAnalytics.users.length === 0) && (
+                            <tr>
+                              <td colSpan={4} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                                No users found.
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
