@@ -1,7 +1,7 @@
 import { IStorage } from "./types";
-import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult } from "@shared/schema";
-import { db, users, studyMaterials, progress, quizzes, quizResults } from "./db";
-import { eq } from "drizzle-orm";
+import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument } from "@shared/schema";
+import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments } from "./db";
+import { eq, desc } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -102,6 +102,36 @@ export class DatabaseStorage implements IStorage {
 
   async getQuizResultsByUser(userId: number): Promise<QuizResult[]> {
     return await db.select().from(quizResults).where(eq(quizResults.userId, userId));
+  }
+
+  async saveDocument(document: InsertDocument): Promise<SavedDocument> {
+    const [newDocument] = await db
+      .insert(savedDocuments)
+      .values({
+        userId: document.userId,
+        title: document.title,
+        content: document.content,
+        type: document.type,
+        metadata: document.metadata || {},
+      })
+      .returning();
+    return newDocument;
+  }
+
+  async getDocumentsByUser(userId: number): Promise<SavedDocument[]> {
+    return await db
+      .select()
+      .from(savedDocuments)
+      .where(eq(savedDocuments.userId, userId))
+      .orderBy(desc(savedDocuments.createdAt));
+  }
+
+  async getDocument(id: number): Promise<SavedDocument | undefined> {
+    const [document] = await db
+      .select()
+      .from(savedDocuments)
+      .where(eq(savedDocuments.id, id));
+    return document;
   }
 }
 

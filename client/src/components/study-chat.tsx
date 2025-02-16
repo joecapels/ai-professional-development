@@ -6,6 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Send } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Message {
   role: "user" | "assistant";
@@ -13,8 +15,11 @@ interface Message {
 }
 
 export function StudyChat() {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [documentTitle, setDocumentTitle] = useState("");
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
@@ -26,13 +31,39 @@ export function StudyChat() {
     },
   });
 
+  const saveDocumentMutation = useMutation({
+    mutationFn: async (data: { title: string; content: string }) => {
+      const res = await apiRequest("POST", "/api/documents", {
+        title: data.title,
+        content: data.content,
+        type: "chat",
+        metadata: {
+          timestamp: new Date().toISOString(),
+        },
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Conversation saved successfully" });
+      setSaveDialogOpen(false);
+      setDocumentTitle("");
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to save conversation",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSend = () => {
     if (!input.trim()) return;
-    
+
     const userMessage = { role: "user" as const, content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
-    
+
     chatMutation.mutate(input);
   };
 
@@ -41,6 +72,19 @@ export function StudyChat() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleSave = () => {
+    if (!documentTitle) return;
+
+    const content = messages
+      .map((msg) => `${msg.role}: ${msg.content}`)
+      .join("\n\n");
+
+    saveDocumentMutation.mutate({
+      title: documentTitle,
+      content,
+    });
   };
 
   return (
@@ -94,6 +138,42 @@ export function StudyChat() {
           </Button>
         </div>
       </CardContent>
+      {messages.length > 0 && (
+        <div className="px-4 pb-4">
+          <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full">
+                Save Conversation
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Save Chat Conversation</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Title</label>
+                  <Input
+                    value={documentTitle}
+                    onChange={(e) => setDocumentTitle(e.target.value)}
+                    placeholder="Enter a title for this conversation"
+                  />
+                </div>
+                <Button
+                  onClick={handleSave}
+                  disabled={saveDocumentMutation.isPending || !documentTitle}
+                  className="w-full"
+                >
+                  {saveDocumentMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Save
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
     </Card>
   );
 }

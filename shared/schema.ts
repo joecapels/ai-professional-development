@@ -62,6 +62,20 @@ export const quizResults = pgTable("quiz_results", {
   completedAt: timestamp("completed_at").notNull().defaultNow(),
 });
 
+export const savedDocuments = pgTable("saved_documents", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  type: text("type").notNull(), // "chat", "quiz", etc.
+  metadata: json("metadata").$type<{
+    subject?: string;
+    aiPersonality?: string;
+    timestamp?: string;
+  }>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -79,6 +93,7 @@ export const insertStudyMaterialSchema = createInsertSchema(studyMaterials);
 export const insertProgressSchema = createInsertSchema(progress);
 export const insertQuizSchema = createInsertSchema(quizzes);
 export const insertQuizResultSchema = createInsertSchema(quizResults);
+export const insertDocumentSchema = createInsertSchema(savedDocuments);
 
 export type User = typeof users.$inferSelect;
 export type StudyMaterial = typeof studyMaterials.$inferSelect;
@@ -91,3 +106,5 @@ export type Quiz = typeof quizzes.$inferSelect;
 export type QuizResult = typeof quizResults.$inferSelect;
 export type InsertQuiz = z.infer<typeof insertQuizSchema>;
 export type InsertQuizResult = z.infer<typeof insertQuizResultSchema>;
+export type SavedDocument = typeof savedDocuments.$inferSelect;
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;

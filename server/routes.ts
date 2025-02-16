@@ -119,6 +119,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Add these routes in the registerRoutes function
+  app.post("/api/documents", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const document = await storage.saveDocument({
+      ...req.body,
+      userId: req.user.id,
+    });
+    res.json(document);
+  });
+
+  app.get("/api/documents", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const documents = await storage.getDocumentsByUser(req.user.id);
+    res.json(documents);
+  });
+
+  app.get("/api/documents/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const document = await storage.getDocument(parseInt(req.params.id));
+    if (!document || document.userId !== req.user.id) {
+      return res.sendStatus(404);
+    }
+    res.json(document);
+  });
+
   // Helper function to calculate quiz score
   function calculateScore(answers: { isCorrect: boolean }[]): number {
     const correctAnswers = answers.filter(a => a.isCorrect).length;

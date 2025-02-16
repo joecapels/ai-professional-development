@@ -31,6 +31,9 @@ export function NavBar() {
               <Link href="/quiz">
                 <span className={getNavClass("/quiz")}>Take Quiz</span>
               </Link>
+              <Link href="/documents">
+                <span className={getNavClass("/documents")}>Documents</span>
+              </Link>
               <Link href="/settings">
                 <span className={getNavClass("/settings")}>Settings</span>
               </Link>
