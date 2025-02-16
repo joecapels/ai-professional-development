@@ -9,10 +9,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import type { StudyMaterial } from "@shared/schema";
+import { NavBar } from "@/components/nav-bar";
 
 export default function AdminPage() {
   const { toast } = useToast();
-  const { user, logoutMutation } = useAuth();
+  const { user } = useAuth();
 
   const { data: materials, isLoading } = useQuery<StudyMaterial[]>({
     queryKey: ["/api/materials"],
@@ -48,26 +49,18 @@ export default function AdminPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen">
+        <NavBar />
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="border-b p-4">
-        <div className="container flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Study AI Admin</h1>
-          <div className="flex items-center gap-4">
-            <span>Welcome, {user?.username}</span>
-            <Button variant="outline" onClick={() => logoutMutation.mutate()}>
-              Logout
-            </Button>
-          </div>
-        </div>
-      </nav>
-
+      <NavBar />
       <main className="container py-8">
         <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
           <Card>
