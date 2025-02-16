@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,6 +18,7 @@ interface Flashcard {
 }
 
 export default function FlashcardPage() {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const [flipped, setFlipped] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -44,10 +45,12 @@ export default function FlashcardPage() {
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/flashcards"] });
       toast({ title: "New flashcards generated successfully" });
       setIsGenerating(false);
+      setSelectedDocs([]); // Reset selection after successful generation
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Failed to generate flashcards",
         description: error.message,
@@ -127,10 +130,10 @@ export default function FlashcardPage() {
               )}
               <Button
                 onClick={() => generateCardsMutation.mutate()}
-                disabled={generateCardsMutation.isPending || selectedDocs.length === 0}
+                disabled={isGenerating || selectedDocs.length === 0}
                 className="mt-4 bg-primary hover:bg-primary/90"
               >
-                {generateCardsMutation.isPending ? (
+                {isGenerating ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (
                   <Sparkles className="h-4 w-4 mr-2" />
