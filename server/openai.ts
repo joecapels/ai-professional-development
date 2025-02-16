@@ -305,14 +305,14 @@ export async function generateMoodSuggestion(mood: string): Promise<string> {
 }
 
 // Add this function to the existing openai.ts file
-export async function generateFlashcardsFromContent(content: string): Promise<{ front: string; back: string; difficulty: number }[]> {
+export async function generateFlashcardsFromContent(contentText: string): Promise<{ front: string; back: string; difficulty: number }[]> {
   try {
     const prompt = `Generate a set of flashcards from the following content. Each flashcard should have a front (question/concept) and back (answer/explanation).
     The flashcards should cover key concepts and be suitable for effective learning.
     Ensure the cards are clear, concise, and focus on important information.
 
     Content to process:
-    ${content}
+    ${contentText}
 
     Respond with a JSON object in this format:
     {
@@ -334,12 +334,12 @@ export async function generateFlashcardsFromContent(content: string): Promise<{ 
       response_format: { type: "json_object" }
     });
 
-    const content = response.choices[0].message.content;
-    if (!content) {
+    const responseContent = response.choices[0].message.content;
+    if (!responseContent) {
       throw new Error("No content in response");
     }
 
-    const result = JSON.parse(content);
+    const result = JSON.parse(responseContent);
     return result.flashcards || [];
   } catch (error) {
     console.error("Error generating flashcards:", error);
