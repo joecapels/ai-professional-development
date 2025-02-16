@@ -61,65 +61,77 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
-      <main className="container py-8">
-        <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Add Study Material</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form
-                onSubmit={form.handleSubmit((data) => createMaterialMutation.mutate(data))}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block mb-2">Title</label>
-                  <Input {...form.register("title")} />
-                </div>
-                <div>
-                  <label className="block mb-2">Subject</label>
-                  <Input {...form.register("subject")} />
-                </div>
-                <div>
-                  <label className="block mb-2">Content</label>
-                  <Textarea {...form.register("content")} rows={6} />
-                </div>
-                <div>
-                  <label className="block mb-2">Difficulty (1-5)</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="5"
-                    {...form.register("difficulty", { valueAsNumber: true })}
-                  />
-                </div>
-                <Button type="submit" disabled={createMaterialMutation.isPending}>
-                  Add Material
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+      <main className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Study Materials</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {materials?.map((material) => (
-                  <div
-                    key={material.id}
-                    className="p-4 border rounded-lg"
-                  >
-                    <h3 className="font-bold">{material.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Subject: {material.subject} | Difficulty: {material.difficulty}
-                    </p>
+          <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Add Study Material</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form
+                  onSubmit={form.handleSubmit((data) => createMaterialMutation.mutate(data))}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Title</label>
+                    <Input {...form.register("title")} />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Subject</label>
+                    <Input {...form.register("subject")} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Content</label>
+                    <Textarea {...form.register("content")} rows={6} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Difficulty (1-5)</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="5"
+                      {...form.register("difficulty", { valueAsNumber: true })}
+                    />
+                  </div>
+                  <Button type="submit" disabled={createMaterialMutation.isPending}>
+                    {createMaterialMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Add Material
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Study Materials</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {materials?.map((material) => (
+                    <div
+                      key={material.id}
+                      className="p-4 border rounded-lg hover:border-primary transition-colors"
+                    >
+                      <h3 className="font-bold">{material.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Subject: {material.subject} • Difficulty: {material.difficulty}
+                      </p>
+                    </div>
+                  ))}
+                  {(!materials || materials.length === 0) && (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No study materials available.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
     </div>

@@ -24,49 +24,54 @@ export default function DocumentsPage() {
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
-      <main className="container py-8">
-        <h1 className="text-3xl font-bold mb-8">Saved Documents</h1>
-        <div className="grid gap-6">
-          {documents?.map((doc) => (
-            <Card key={doc.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle>{doc.title}</CardTitle>
-                  <div className="text-sm text-muted-foreground">
-                    {format(new Date(doc.createdAt), "PPp")}
+      <main className="container max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          <h1 className="text-3xl font-bold">Saved Documents</h1>
+
+          <div className="grid gap-6">
+            {documents?.map((doc) => (
+              <Card key={doc.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-xl">{doc.title}</CardTitle>
+                    <div className="text-sm text-muted-foreground">
+                      {format(new Date(doc.createdAt), "PPp")}
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Type:</span>
-                    <span className="text-sm text-muted-foreground capitalize">
-                      {doc.type}
-                    </span>
-                  </div>
-                  {doc.metadata?.subject && (
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">Subject:</span>
-                      <span className="text-sm text-muted-foreground">
-                        {doc.metadata.subject}
+                      <span className="text-sm font-medium">Type:</span>
+                      <span className="text-sm text-muted-foreground capitalize">
+                        {doc.type}
                       </span>
                     </div>
-                  )}
-                  <div className="mt-4 p-4 bg-muted rounded-lg">
-                    <pre className="whitespace-pre-wrap text-sm">
-                      {doc.content}
-                    </pre>
+                    {doc.metadata?.subject && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">Subject:</span>
+                        <span className="text-sm text-muted-foreground">
+                          {doc.metadata.subject}
+                        </span>
+                      </div>
+                    )}
+                    <div className="mt-4">
+                      <div className="p-4 bg-muted rounded-lg">
+                        <pre className="whitespace-pre-wrap text-sm">
+                          {doc.content}
+                        </pre>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {documents?.length === 0 && (
-            <div className="text-center text-muted-foreground">
-              No saved documents yet.
-            </div>
-          )}
+                </CardContent>
+              </Card>
+            ))}
+            {(!documents || documents.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground">
+                No saved documents yet.
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>

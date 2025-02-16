@@ -69,16 +69,22 @@ export default function AnalyticsPage() {
 
   if (analyticsLoading || planLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen">
+        <NavBar />
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
       </div>
     );
   }
 
   if (!analytics || !studyPlan) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>No analytics data available</p>
+      <div className="min-h-screen">
+        <NavBar />
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <p>No analytics data available</p>
+        </div>
       </div>
     );
   }
@@ -88,150 +94,155 @@ export default function AnalyticsPage() {
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
-      <main className="container py-8">
-        {user?.username === "joe" && (
-          <Alert className="mb-6">
-            <InfoIcon className="h-4 w-4" />
-            <AlertDescription>
-              You are viewing demo analytics data. As you use the platform, this section will be populated with your actual learning progress and personalized insights.
-            </AlertDescription>
-          </Alert>
-        )}
-        <div className="grid gap-6">
-          {/* Overall Performance */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Overall Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={performanceMetrics.learningTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="period" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line
-                      type="monotone"
-                      dataKey="score"
-                      stroke="hsl(var(--primary))"
-                      activeDot={{ r: 8 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+      <main className="container max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          <h1 className="text-3xl font-bold">Learning Analytics</h1>
 
-          {/* Subject Performance Radar */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Subject Performance Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart
-                    cx="50%"
-                    cy="50%"
-                    outerRadius="80%"
-                    data={subjectPerformance}
-                  >
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="subject" />
-                    <PolarRadiusAxis />
-                    <Radar
-                      name="Score"
-                      dataKey="averageScore"
-                      stroke="hsl(var(--primary))"
-                      fill="hsl(var(--primary))"
-                      fillOpacity={0.6}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+          {user?.username === "joe" && (
+            <Alert>
+              <InfoIcon className="h-4 w-4" />
+              <AlertDescription>
+                You are viewing demo analytics data. As you use the platform, this section will be populated with your actual learning progress and personalized insights.
+              </AlertDescription>
+            </Alert>
+          )}
 
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Strengths and Improvements */}
+          <div className="grid gap-6">
+            {/* Overall Performance */}
             <Card>
               <CardHeader>
-                <CardTitle>Analysis</CardTitle>
+                <CardTitle>Overall Performance</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="font-semibold mb-2">Strength Areas</h3>
-                    <ul className="list-disc pl-4 space-y-1">
-                      {performanceMetrics.strengthAreas.map((area, i) => (
-                        <li key={i} className="text-sm">{area}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2">Areas for Improvement</h3>
-                    <ul className="list-disc pl-4 space-y-1">
-                      {performanceMetrics.improvementAreas.map((area, i) => (
-                        <li key={i} className="text-sm">{area}</li>
-                      ))}
-                    </ul>
-                  </div>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={performanceMetrics.learningTrends}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="period" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="score"
+                        stroke="hsl(var(--primary))"
+                        activeDot={{ r: 8 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Study Plan */}
+            {/* Subject Performance Radar */}
             <Card>
               <CardHeader>
-                <CardTitle>Personalized Study Plan</CardTitle>
+                <CardTitle>Subject Performance Analysis</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="font-semibold mb-2">Daily Goals</h3>
-                    <ul className="list-disc pl-4 space-y-1">
-                      {studyPlan.dailyGoals.map((goal, i) => (
-                        <li key={i} className="text-sm">{goal}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2">Focus Areas</h3>
-                    <ul className="list-disc pl-4 space-y-1">
-                      {studyPlan.focusAreas.map((area, i) => (
-                        <li key={i} className="text-sm">{area}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2">Milestones</h3>
-                    <ul className="list-disc pl-4 space-y-1">
-                      {studyPlan.milestones.map((milestone, i) => (
-                        <li key={i} className="text-sm">
-                          {milestone.description} (Target: {new Date(milestone.targetDate).toLocaleDateString()})
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                <div className="h-[400px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart
+                      cx="50%"
+                      cy="50%"
+                      outerRadius="80%"
+                      data={subjectPerformance}
+                    >
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="subject" />
+                      <PolarRadiusAxis />
+                      <Radar
+                        name="Score"
+                        dataKey="averageScore"
+                        stroke="hsl(var(--primary))"
+                        fill="hsl(var(--primary))"
+                        fillOpacity={0.6}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
                 </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Strengths and Improvements */}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle>Analysis</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="font-semibold mb-2">Strength Areas</h3>
+                      <ul className="list-disc pl-4 space-y-1">
+                        {performanceMetrics.strengthAreas.map((area, i) => (
+                          <li key={i} className="text-sm">{area}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Areas for Improvement</h3>
+                      <ul className="list-disc pl-4 space-y-1">
+                        {performanceMetrics.improvementAreas.map((area, i) => (
+                          <li key={i} className="text-sm">{area}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Study Plan */}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle>Personalized Study Plan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="font-semibold mb-2">Daily Goals</h3>
+                      <ul className="list-disc pl-4 space-y-1">
+                        {studyPlan.dailyGoals.map((goal, i) => (
+                          <li key={i} className="text-sm">{goal}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Focus Areas</h3>
+                      <ul className="list-disc pl-4 space-y-1">
+                        {studyPlan.focusAreas.map((area, i) => (
+                          <li key={i} className="text-sm">{area}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">Milestones</h3>
+                      <ul className="list-disc pl-4 space-y-1">
+                        {studyPlan.milestones.map((milestone, i) => (
+                          <li key={i} className="text-sm">
+                            {milestone.description} (Target: {new Date(milestone.targetDate).toLocaleDateString()})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recommendations */}
+            <Card>
+              <CardHeader>
+                <CardTitle>AI-Generated Recommendations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc pl-4 space-y-2">
+                  {nextStepRecommendations.map((rec, i) => (
+                    <li key={i} className="text-sm">{rec}</li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
           </div>
-
-          {/* Recommendations */}
-          <Card>
-            <CardHeader>
-              <CardTitle>AI-Generated Recommendations</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc pl-4 space-y-2">
-                {nextStepRecommendations.map((rec, i) => (
-                  <li key={i} className="text-sm">{rec}</li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
         </div>
       </main>
     </div>
