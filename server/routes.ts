@@ -77,6 +77,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ message: response });
   });
 
+  // Add quiz routes here
+  app.post("/api/quizzes", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const { subject, difficulty } = req.body;
+    const questions = await generatePracticeQuestions(subject, difficulty);
+
+    const quiz = await storage.createQuiz({
+      userId: req.user.id,
+      subject,
+      difficulty,
+      questions,
+    });
+
+    res.json(quiz);
+  });
+
+  app.post("/api/quiz-results", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const result = await storage.createQuizResult({
+      ...req.body,
+      userId: req.user.id,
+      score: calculateScore(req.body.answers),
+    });
+
+    res.json(result);
+  });
+
+  app.get("/api/quizzes", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const quizzes = await storage.getQuizzesByUser(req.user.id);
+    res.json(quizzes);
+  });
+
+  app.get("/api/quiz-results", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const results = await storage.getQuizResultsByUser(req.user.id);
+    res.json(results);
+  });
+
+
+  // Helper function to calculate quiz score
+  function calculateScore(answers: { isCorrect: boolean }[]): number {
+    const correctAnswers = answers.filter(a => a.isCorrect).length;
+    return Math.round((correctAnswers / answers.length) * 100);
+  }
+
   const httpServer = createServer(app);
   return httpServer;
 }
