@@ -47,6 +47,7 @@ export function NavBar() {
                   <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
                   <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
                   <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
+                  <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
                   <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
                 </>
               ) : (
@@ -79,6 +80,7 @@ export function NavBar() {
                   <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
                   <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
                   <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
+                  <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
                   <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
                 </>
               ) : (
