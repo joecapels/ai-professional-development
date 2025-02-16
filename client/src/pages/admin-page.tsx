@@ -10,10 +10,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import type { StudyMaterial } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
+import { useLocation } from "wouter";
 
 export default function AdminPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Redirect if not admin
+  if (user && !user.isAdmin) {
+    setLocation("/");
+    return null;
+  }
 
   const { data: materials, isLoading } = useQuery<StudyMaterial[]>({
     queryKey: ["/api/materials"],
