@@ -61,8 +61,8 @@ export default function FlashcardPage() {
   });
 
   const toggleDocument = (docId: number) => {
-    setSelectedDocs(prev => 
-      prev.includes(docId) 
+    setSelectedDocs(prev =>
+      prev.includes(docId)
         ? prev.filter(id => id !== docId)
         : [...prev, docId]
     );
@@ -110,12 +110,12 @@ export default function FlashcardPage() {
             <div className="space-y-4">
               {documents?.map((doc) => (
                 <div key={doc.id} className="flex items-center space-x-3">
-                  <Checkbox 
+                  <Checkbox
                     id={`doc-${doc.id}`}
                     checked={selectedDocs.includes(doc.id)}
                     onCheckedChange={() => toggleDocument(doc.id)}
                   />
-                  <label 
+                  <label
                     htmlFor={`doc-${doc.id}`}
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
@@ -161,27 +161,62 @@ export default function FlashcardPage() {
                     damping: 30
                   }}
                   style={{
+                    position: 'absolute',
+                    width: '100%',
+                    height: '100%',
                     transformStyle: "preserve-3d",
-                    backfaceVisibility: "hidden"
                   }}
                   className="absolute inset-0"
                 >
                   <Card
-                    className={`h-full w-full cursor-pointer bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-lg transition-all transform-gpu
-                      ${flipped ? "rotate-y-180" : ""}`}
+                    className="h-full w-full cursor-pointer bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-lg transition-all transform-gpu"
                     onClick={() => setFlipped(!flipped)}
                   >
-                    <CardContent className="flex items-center justify-center h-full p-8">
+                    <CardContent className="flex items-center justify-center h-full p-8 relative">
                       <motion.div
-                        className="text-center"
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.1 }}
+                        className="text-center w-full h-full"
+                        style={{
+                          backfaceVisibility: 'hidden',
+                          position: 'absolute',
+                          inset: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transformStyle: 'preserve-3d',
+                          transform: 'rotateY(0deg)',
+                        }}
                       >
-                        <p className="text-xl">{flipped ? flashcards[currentCardIndex].back : flashcards[currentCardIndex].front}</p>
-                        <p className="text-sm text-muted-foreground mt-4">
-                          Click to {flipped ? "hide" : "show"} answer
-                        </p>
+                        <div>
+                          <p className="text-xl font-medium">
+                            {flashcards[currentCardIndex].front}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-4">
+                            Click to show answer
+                          </p>
+                        </div>
+                      </motion.div>
+
+                      <motion.div
+                        className="text-center w-full h-full"
+                        style={{
+                          backfaceVisibility: 'hidden',
+                          position: 'absolute',
+                          inset: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transformStyle: 'preserve-3d',
+                          transform: 'rotateY(180deg)',
+                        }}
+                      >
+                        <div>
+                          <p className="text-xl font-medium">
+                            {flashcards[currentCardIndex].back}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-4">
+                            Click to hide answer
+                          </p>
+                        </div>
                       </motion.div>
                     </CardContent>
                   </Card>
