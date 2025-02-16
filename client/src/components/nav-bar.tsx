@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { Menu, X, LayoutDashboard, MessageSquare, ScrollText, BarChart2, Settings, Users } from "lucide-react";
+import { Menu, X, LayoutDashboard, MessageSquare, ScrollText, BarChart2, Settings, Users, LineChart, Gauge } from "lucide-react";
 import { useState } from "react";
 
 export function NavBar() {
@@ -22,10 +22,16 @@ export function NavBar() {
 
   const renderAdminNav = () => (
     <>
+      <Link href="/admin">
+        <span className={getNavClass("/admin")}>
+          <Users size={18} />
+          Advanced Admin
+        </span>
+      </Link>
       <Link href="/">
         <span className={getNavClass("/")}>
-          <Users size={18} />
-          Admin Dashboard
+          <Gauge size={18} />
+          Dashboard
         </span>
       </Link>
       <Link href="/materials">
