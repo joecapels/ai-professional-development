@@ -50,9 +50,9 @@ export function NavBar() {
           </button>
 
           {/* Desktop navigation */}
-          <div className="hidden md:flex items-center gap-1">
-            {user ? (
-              !user.isAdmin ? (
+          {user && (
+            <div className="hidden md:flex items-center gap-1">
+              {!user.isAdmin ? (
                 <>
                   <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
                   <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
@@ -61,28 +61,13 @@ export function NavBar() {
                   <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
                   <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
                   <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
-                  {user.isPowerUser && (
-                    <Link href="/one-ring">
-                      <span className={`${getNavClass("/one-ring")} font-bold text-yellow-500 hover:text-yellow-600`}>
-                        The One Ring
-                      </span>
-                    </Link>
-                  )}
                   <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
                 </>
               ) : (
                 <Link href="/"><span className={getNavClass("/")}>Admin Dashboard</span></Link>
-              )
-            ) : (
-              <Link href="/power-login">
-                <span className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                  Power User Access
-                </span>
-              </Link>
-            )}
+              )}
 
-            {/* User section */}
-            {user && (
+              {/* User section */}
               <div className="flex items-center gap-4 ml-4 pl-4 border-l">
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
@@ -97,9 +82,7 @@ export function NavBar() {
                   </Avatar>
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">{user.username}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {user.isPowerUser ? 'Power User' : 'Student'}
-                    </span>
+                    <span className="text-xs text-muted-foreground">Student</span>
                   </div>
                 </div>
 
@@ -112,68 +95,49 @@ export function NavBar() {
                   Logout
                 </Button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Mobile navigation */}
-        {isMenuOpen && (
+        {isMenuOpen && user && (
           <div className="md:hidden py-4 space-y-2">
-            {user ? (
-              !user.isAdmin ? (
-                <>
-                  <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
-                  <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
-                  <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
-                  <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
-                  <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
-                  <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
-                  <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
-                  {user.isPowerUser && (
-                    <Link href="/one-ring">
-                      <span className={`${getNavClass("/one-ring")} font-bold text-yellow-500 hover:text-yellow-600`}>
-                        The One Ring
-                      </span>
-                    </Link>
-                  )}
-                  <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
-                </>
-              ) : (
-                <Link href="/"><span className={getNavClass("/")}>Admin Dashboard</span></Link>
-              )
+            {!user.isAdmin ? (
+              <>
+                <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
+                <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
+                <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
+                <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
+                <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
+                <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
+                <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
+                <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
+              </>
             ) : (
-              <Link href="/power-login">
-                <span className="block px-3 py-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
-                  Power User Access
-                </span>
-              </Link>
+              <Link href="/"><span className={getNavClass("/")}>Admin Dashboard</span></Link>
             )}
 
-            {user && (
-              <div className="pt-4 mt-4 border-t flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {user.username.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{user.username}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {user.isPowerUser ? 'Power User' : 'Student'}
-                    </span>
-                  </div>
+            <div className="pt-4 mt-4 border-t flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {user.username.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{user.username}</span>
+                  <span className="text-xs text-muted-foreground">Student</span>
                 </div>
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  onClick={() => logoutMutation.mutate()}
-                  disabled={logoutMutation.isPending}
-                >
-                  Logout
-                </Button>
               </div>
-            )}
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+              >
+                Logout
+              </Button>
+            </div>
           </div>
         )}
       </div>

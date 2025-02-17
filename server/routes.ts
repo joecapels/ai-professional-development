@@ -119,210 +119,6 @@ async function registerBadgeRoutes(app: Express) {
   });
 }
 
-// Add power user routes before the registerRoutes function
-async function registerPowerUserRoutes(app: Express) {
-  app.post("/api/power/login", async (req, res) => {
-    const { username, password, powerKey } = req.body;
-
-    // Verify power user key
-    if (powerKey !== process.env.POWER_USER_KEY) {
-      return res.status(401).json({ message: "Invalid power user key" });
-    }
-
-    // Authenticate user
-    const user = await storage.getUserByUsername(username);
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // Set power user flag
-    req.login({ ...user, isPowerUser: true }, (err) => {
-      if (err) return res.status(500).json({ message: "Login failed" });
-      res.json({ ...user, isPowerUser: true });
-    });
-  });
-
-  app.get("/api/power/users/detailed", async (req, res) => {
-    if (!req.isAuthenticated() || !req.user?.isPowerUser) {
-      return res.status(403).json({ message: "Power user access required" });
-    }
-
-    try {
-      const users = await storage.getAllUsers();
-      const sessions = await storage.getAllStudySessions();
-
-      const userDetails = await Promise.all(users.map(async (user) => {
-        const userSessions = sessions.filter(s => s.userId === user.id);
-        const lastSession = userSessions[userSessions.length - 1];
-        const totalSessionTime = userSessions.reduce((sum, session) => {
-          return sum + (session.totalDuration || 0);
-        }, 0);
-
-        // In a real app, you would get these from your auth/session system
-        const mockIpAddress = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
-        const mockLocations = ['San Francisco, US', 'New York, US', 'London, UK', 'Tokyo, JP'];
-        const mockLocation = mockLocations[Math.floor(Math.random() * mockLocations.length)];
-
-        return {
-          id: user.id,
-          username: user.username,
-          subscriptionStatus: 'active', // Mock data - would come from subscription system
-          ipAddress: mockIpAddress,
-          lastActive: lastSession?.startTime || user.createdAt,
-          totalSessions: userSessions.length,
-          averageSessionLength: userSessions.length > 0 ? totalSessionTime / userSessions.length : 0,
-          lastLoginLocation: mockLocation,
-          createdAt: user.createdAt,
-          sessions: userSessions.map(session => ({
-            id: session.id,
-            startTime: session.startTime,
-            endTime: session.endTime,
-            duration: session.totalDuration || 0,
-            status: session.status
-          }))
-        };
-      }));
-
-      res.json(userDetails);
-    } catch (error) {
-      console.error("Error fetching detailed user data:", error);
-      res.status(500).json({ message: "Failed to fetch user details" });
-    }
-  });
-
-  app.get("/api/power/analytics", async (req, res) => {
-    if (!req.isAuthenticated() || !req.user?.isPowerUser) {
-      return res.status(403).json({ message: "Power user access required" });
-    }
-
-    try {
-      // Get all users
-      const users = await storage.getAllUsers();
-      const quizResults = await storage.getAllQuizResults();
-      const badges = await storage.getAllBadges();
-      const achievements = await storage.getAllAchievements();
-      const sessions = await storage.getAllStudySessions();
-
-      // Calculate analytics
-      const analytics = {
-        userMetrics: {
-          totalUsers: users.length,
-          activeUsers: sessions.filter(s => s.status === 'active').length,
-          newUsersToday: users.filter(u => {
-            const created = new Date(u.createdAt);
-            const today = new Date();
-            return created.toDateString() === today.toDateString();
-          }).length,
-          userGrowth: calculateUserGrowth(users),
-        },
-        learningMetrics: {
-          averageStudyTime: calculateAverageStudyTime(sessions),
-          totalQuizzesTaken: quizResults.length,
-          averageQuizScore: calculateAverageQuizScore(quizResults),
-          subjectDistribution: calculateSubjectDistribution(quizResults),
-        },
-        achievementMetrics: {
-          totalBadgesAwarded: achievements.length,
-          popularBadges: calculatePopularBadges(achievements, badges),
-          completionRates: calculateBadgeCompletionRates(achievements, badges, users.length),
-        },
-        engagementMetrics: {
-          averageSessionLength: calculateAverageSessionLength(sessions),
-          peakActivityHours: calculatePeakActivityHours(sessions),
-          featureUsage: calculateFeatureUsage(sessions, quizResults),
-        },
-      };
-
-      res.json(analytics);
-    } catch (error) {
-      console.error("Error generating analytics:", error);
-      res.status(500).json({ message: "Failed to generate analytics" });
-    }
-  });
-}
-
-// Helper functions for analytics calculations
-function calculateUserGrowth(users: any[]) {
-  const growth = users.reduce((acc, user) => {
-    const date = new Date(user.createdAt).toISOString().split('T')[0];
-    acc[date] = (acc[date] || 0) + 1;
-    return acc;
-  }, {});
-
-  return Object.entries(growth).map(([date, count]) => ({ date, count }));
-}
-
-function calculateAverageStudyTime(sessions: any[]) {
-  if (sessions.length === 0) return 0;
-  const totalTime = sessions.reduce((sum, session) => sum + session.duration, 0);
-  return Math.round(totalTime / sessions.length);
-}
-
-function calculateAverageQuizScore(results: any[]) {
-  if (results.length === 0) return 0;
-  const totalScore = results.reduce((sum, result) => sum + result.score, 0);
-  return Math.round(totalScore / results.length);
-}
-
-function calculateSubjectDistribution(quizResults: any[]) {
-  return Object.entries(
-    quizResults.reduce((acc, result) => {
-      acc[result.subject] = (acc[result.subject] || 0) + 1;
-      return acc;
-    }, {})
-  ).map(([subject, count]) => ({ subject, count }));
-}
-
-function calculatePopularBadges(achievements: any[], badges: any[]) {
-  const badgeCounts = achievements.reduce((acc, achievement) => {
-    acc[achievement.badgeId] = (acc[achievement.badgeId] || 0) + 1;
-    return acc;
-  }, {});
-
-  return badges
-    .map(badge => ({
-      name: badge.name,
-      count: badgeCounts[badge.id] || 0,
-    }))
-    .sort((a, b) => b.count - a.count);
-}
-
-function calculateBadgeCompletionRates(achievements: any[], badges: any[], totalUsers: number) {
-  return badges.map(badge => ({
-    badge: badge.name,
-    rate: (achievements.filter(a => a.badgeId === badge.id).length / totalUsers) * 100,
-  }));
-}
-
-function calculateAverageSessionLength(sessions: any[]) {
-  if (sessions.length === 0) return 0;
-  const completedSessions = sessions.filter(s => s.status === 'completed');
-  if (completedSessions.length === 0) return 0;
-  const totalLength = completedSessions.reduce((sum, session) => sum + session.duration, 0);
-  return Math.round(totalLength / completedSessions.length);
-}
-
-function calculatePeakActivityHours(sessions: any[]) {
-  const hourCounts = sessions.reduce((acc, session) => {
-    const hour = new Date(session.startTime).getHours();
-    acc[hour] = (acc[hour] || 0) + 1;
-    return acc;
-  }, {});
-
-  return Array.from({ length: 24 }, (_, hour) => ({
-    hour,
-    count: hourCounts[hour] || 0,
-  }));
-}
-
-function calculateFeatureUsage(sessions: any[], quizResults: any[]) {
-  return [
-    { feature: 'Study Sessions', usage: sessions.length },
-    { feature: 'Quizzes', usage: quizResults.length },
-    // Add more features as needed
-  ];
-}
-
 export async function registerRoutes(app: Express): Promise<Server> {
   // Update the session middleware configuration for better security
   const sessionMiddleware = session({
@@ -353,9 +149,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.use(sessionMiddleware);
   setupAuth(app);
-  await registerPowerUserRoutes(app);
-  await registerBadgeRoutes(app); // Register the new badge routes.
-
   const httpServer = createServer(app);
 
   // Set up WebSocket server with session handling
@@ -416,8 +209,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ws.send(JSON.stringify({ type: 'session_started', sessionId: session.id }));
             } catch (error) {
               console.error('Error starting study session:', error);
-              ws.send(JSON.stringify({
-                type: 'error',
+              ws.send(JSON.stringify({ 
+                type: 'error', 
                 message: 'Failed to start study session',
                 details: process.env.NODE_ENV === 'development' ? error : undefined
               }));
@@ -757,6 +550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  await registerBadgeRoutes(app); // Register the new badge routes.
 
   // Study session completion with badge check
   app.post("/api/study-sessions/:id/complete", async (req, res) => {
