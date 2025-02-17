@@ -3,6 +3,7 @@ import { Badge, UserAchievement } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
 import { AnimatedBadge } from "@/components/animated-badge";
 import { useToast } from "@/hooks/use-toast";
+import { useLoading } from "@/hooks/use-loading";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -11,13 +12,18 @@ import { Progress } from "@/components/ui/progress";
 
 export default function BadgesPage() {
   const { toast } = useToast();
+  const { showLoading, hideLoading } = useLoading();
 
   const { data: badges, isLoading: loadingBadges, error: badgesError } = useQuery<Badge[]>({
     queryKey: ["/api/badges"],
+    onLoadStart: showLoading,
+    onLoadEnd: hideLoading,
   });
 
   const { data: achievements, isLoading: loadingAchievements, error: achievementsError } = useQuery<(UserAchievement & { badge: Badge })[]>({
     queryKey: ["/api/achievements"],
+    onLoadStart: showLoading,
+    onLoadEnd: hideLoading,
   });
 
   const getBadgeProgress = (badgeId: number) => {

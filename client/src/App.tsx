@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
+import { LoadingProvider } from "@/hooks/use-loading";
 import { ProtectedRoute } from "@/lib/protected-route";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -15,7 +16,6 @@ import DocumentsPage from "@/pages/documents-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import FlashcardPage from "@/pages/flashcard-page";
 import BadgesPage from "@/pages/badges-page";
-
 
 function Router() {
   return (
@@ -38,10 +38,12 @@ export default function App() {
   return (
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Router />
-          <Toaster />
-        </AuthProvider>
+        <LoadingProvider>
+          <AuthProvider>
+            <Router />
+            <Toaster />
+          </AuthProvider>
+        </LoadingProvider>
       </QueryClientProvider>
     </React.StrictMode>
   );
