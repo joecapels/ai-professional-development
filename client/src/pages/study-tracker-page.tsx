@@ -63,8 +63,10 @@ export default function StudyTrackerPage() {
       ws.onopen = () => {
         ws.send(JSON.stringify({
           type: 'start',
+          timestamp: new Date().toISOString(),
           data: {
-            subject: 'General'
+            subject: 'General',
+            startTime: new Date().toISOString()
           }
         }));
       };
@@ -86,14 +88,20 @@ export default function StudyTrackerPage() {
         }
       };
 
-      ws.onerror = () => {
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
         toast({
           title: "Connection Error",
           description: "Failed to connect to study session. Please try again.",
           variant: "destructive",
         });
       };
+
+      ws.onclose = () => {
+        console.log('WebSocket connection closed');
+      };
     } catch (error) {
+      console.error('Error starting session:', error);
       toast({
         title: "Error",
         description: "Failed to start study session. Please try again.",
