@@ -4,19 +4,11 @@ import { WebSocket, WebSocketServer } from 'ws';
 import type { IncomingMessage } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import path from "path";
-import express from "express";
-import type { LearningPreferences, type StudySessionMessage, studySessionMessageSchema } from "@shared/schema";
+import { StudyMaterial, Progress, type LearningPreferences, type StudySessionMessage, studySessionMessageSchema } from "@shared/schema";
 import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat, generateMoodSuggestion, generateFlashcardsFromContent } from "./openai";
 import { generateAdvancedAnalytics, generatePersonalizedStudyPlan } from "./analytics";
 import session from "express-session";
 import { pool } from "./db";
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-// Get __dirname equivalent in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Extend the IncomingMessage type to include session
 interface WebSocketRequestWithSession extends IncomingMessage {
@@ -142,9 +134,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
     name: 'sid' // Set a specific cookie name
   });
-
-  // Serve static files from the public directory
-  app.use(express.static(path.join(__dirname, '../public')));
 
   app.use(sessionMiddleware);
   setupAuth(app);
@@ -565,9 +554,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch study statistics" });
     }
   });
-
-  // Update the createInitialBadges function in storage class
-  await storage.createInitialBadges();
 
   return httpServer;
 }

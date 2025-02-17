@@ -20,7 +20,6 @@ import StudyTrackerPage from "@/pages/study-tracker-page";
 function Router() {
   return (
     <Switch>
-      <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/chat" component={ChatPage} />
       <ProtectedRoute path="/quiz" component={QuizPage} />
@@ -30,6 +29,7 @@ function Router() {
       <ProtectedRoute path="/flashcards" component={FlashcardPage} />
       <ProtectedRoute path="/badges" component={BadgesPage} />
       <ProtectedRoute path="/study-tracker" component={StudyTrackerPage} />
+      <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
   );

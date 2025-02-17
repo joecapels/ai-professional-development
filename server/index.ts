@@ -13,7 +13,6 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
 });
 
@@ -33,9 +32,14 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse && process.env.NODE_ENV === 'development') {
+      if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
+
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+
       log(logLine);
     }
   });
@@ -57,19 +61,10 @@ app.use((req, res, next) => {
   // Global error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = process.env.NODE_ENV === 'production' 
-      ? 'Internal Server Error' 
-      : err.message || 'Internal Server Error';
+    const message = err.message || "Internal Server Error";
 
-    log(`Error: ${status} - ${err.message || 'Unknown error'}`);
-
-    // Don't send stack traces in production
-    const response = {
-      message,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    };
-
-    res.status(status).json(response);
+    log(`Error: ${status} - ${message}`);
+    res.status(status).json({ message });
   });
 
   // Setup static file serving or Vite based on environment
@@ -103,12 +98,12 @@ app.use((req, res, next) => {
   process.on('SIGINT', shutdown);
 
   // Server startup with retry logic
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 5000;
   const MAX_RETRIES = 3;
   let retries = 0;
 
   const startServer = () => {
-    server.listen(PORT, () => {
+    server.listen(PORT, "0.0.0.0", () => {
       log(`Server running in ${app.get("env")} mode on port ${PORT}`);
       log('Required environment variables:', [
         'DATABASE_URL',
