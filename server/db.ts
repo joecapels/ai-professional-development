@@ -21,5 +21,7 @@ export const {
   quizResults, 
   savedDocuments, 
   studySessions,
-  flashcards 
+  flashcards,
+  badges,
+  userAchievements
 } = schema;

@@ -26,6 +26,100 @@ const activeSessions = new Map<number, {
   sessionData: any;
 }>();
 
+// Add new routes before the registerRoutes function
+
+// Badge management routes
+async function registerBadgeRoutes(app: Express) {
+app.get("/api/badges", async (req, res) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  const badges = await storage.getAllBadges();
+  res.json(badges);
+});
+
+app.post("/api/badges", async (req, res) => {
+  if (!req.isAuthenticated() || !req.user?.isAdmin) return res.sendStatus(403);
+  try {
+    const badge = await storage.createBadge(req.body);
+    res.json(badge);
+  } catch (error) {
+    console.error("Error creating badge:", error);
+    res.status(500).json({ error: "Failed to create badge" });
+  }
+});
+
+// User achievement routes
+app.get("/api/achievements", async (req, res) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  try {
+    const achievements = await storage.getUserAchievements(req.user.id);
+    const achievementsWithBadges = await Promise.all(
+      achievements.map(async (achievement) => {
+        const badge = await storage.getBadge(achievement.badgeId);
+        return { ...achievement, badge };
+      })
+    );
+    res.json(achievementsWithBadges);
+  } catch (error) {
+    console.error("Error fetching achievements:", error);
+    res.status(500).json({ error: "Failed to fetch achievements" });
+  }
+});
+
+app.post("/api/achievements/:badgeId", async (req, res) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  try {
+    const badgeId = parseInt(req.params.badgeId);
+    const badge = await storage.getBadge(badgeId);
+
+    if (!badge) {
+      return res.status(404).json({ error: "Badge not found" });
+    }
+
+    // Check if user already has this badge
+    const existingAchievement = await storage.getUserBadgeProgress(req.user.id, badgeId);
+    if (existingAchievement) {
+      return res.status(400).json({ error: "Badge already awarded" });
+    }
+
+    const achievement = await storage.awardBadge({
+      userId: req.user.id,
+      badgeId,
+      progress: {
+        current: 0,
+        target: badge.criteria?.threshold || 1,
+        lastUpdated: new Date().toISOString()
+      }
+    });
+
+    res.json(achievement);
+  } catch (error) {
+    console.error("Error awarding badge:", error);
+    res.status(500).json({ error: "Failed to award badge" });
+  }
+});
+
+// Update achievement progress
+app.patch("/api/achievements/:badgeId/progress", async (req, res) => {
+  if (!req.isAuthenticated()) return res.sendStatus(401);
+  try {
+    const badgeId = parseInt(req.params.badgeId);
+    const { current, target } = req.body;
+
+    await storage.updateAchievementProgress(req.user.id, badgeId, {
+      current,
+      target,
+      lastUpdated: new Date().toISOString()
+    });
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error updating achievement progress:", error);
+    res.status(500).json({ error: "Failed to update achievement progress" });
+  }
+});
+}
+
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up session middleware with updated configuration
   app.use(
@@ -361,6 +455,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to generate flashcards" });
     }
   });
+
+  await registerBadgeRoutes(app); // Register the new badge routes.
 
   // Helper function to calculate quiz score
   function calculateScore(answers: { isCorrect: boolean }[]): number {

@@ -1,6 +1,6 @@
 import { IStorage } from "./types";
-import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument, Flashcard, InsertFlashcard } from "@shared/schema";
-import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments, studySessions, flashcards } from "./db";
+import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument, Flashcard, InsertFlashcard, Badge, InsertBadge, UserAchievement, InsertUserAchievement } from "@shared/schema";
+import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments, studySessions, flashcards, badges, userAchievements } from "./db";
 import { eq, desc } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -53,10 +53,10 @@ export class DatabaseStorage implements IStorage {
 
   async createProgress(progressData: InsertProgress): Promise<Progress> {
     const [newProgress] = await db.insert(progress).values({
-      userId: progressData.userId,
-      materialId: progressData.materialId,
+      material_id: progressData.materialId,
       score: progressData.score,
-      aiRecommendations: progressData.aiRecommendations || []
+      user_id: progressData.userId,
+      ai_recommendations: progressData.aiRecommendations || []
     }).returning();
     return newProgress;
   }
@@ -72,9 +72,9 @@ export class DatabaseStorage implements IStorage {
 
   async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
     const [newQuiz] = await db.insert(quizzes).values({
-      userId: quizData.userId,
       subject: quizData.subject,
       difficulty: quizData.difficulty,
+      user_id: quizData.userId,
       questions: quizData.questions || []
     }).returning();
     return newQuiz;
@@ -91,9 +91,9 @@ export class DatabaseStorage implements IStorage {
 
   async createQuizResult(resultData: InsertQuizResult): Promise<QuizResult> {
     const [newResult] = await db.insert(quizResults).values({
-      userId: resultData.userId,
-      quizId: resultData.quizId,
+      quiz_id: resultData.quizId,
       score: resultData.score,
+      user_id: resultData.userId,
       answers: resultData.answers || []
     }).returning();
     return newResult;
@@ -105,10 +105,10 @@ export class DatabaseStorage implements IStorage {
 
   async saveDocument(document: InsertDocument): Promise<SavedDocument> {
     const [newDocument] = await db.insert(savedDocuments).values({
-      userId: document.userId,
       title: document.title,
       content: document.content,
       type: document.type,
+      user_id: document.userId,
       metadata: document.metadata || {}
     }).returning();
     return newDocument;
@@ -222,7 +222,71 @@ export class DatabaseStorage implements IStorage {
 
   async saveFlashcards(cards: (InsertFlashcard & { userId: number })[]): Promise<Flashcard[]> {
     if (cards.length === 0) return [];
-    return await db.insert(flashcards).values(cards).returning();
+
+    const cardsToInsert = cards.map(card => ({
+      front: card.front,
+      back: card.back,
+      difficulty: card.difficulty,
+      user_id: card.userId,
+      document_ids: card.documentIds || []
+    }));
+
+    return await db.insert(flashcards).values(cardsToInsert).returning();
+  }
+
+  async createBadge(badge: InsertBadge): Promise<Badge> {
+    const [newBadge] = await db.insert(badges).values({
+      name: badge.name,
+      description: badge.description,
+      type: badge.type,
+      rarity: badge.rarity,
+      image_url: badge.imageUrl,
+      criteria: badge.criteria || null,
+    }).returning();
+    return newBadge;
+  }
+
+  async getBadge(id: number): Promise<Badge | undefined> {
+    const [badge] = await db.select().from(badges).where(eq(badges.id, id));
+    return badge;
+  }
+
+  async getAllBadges(): Promise<Badge[]> {
+    return await db.select().from(badges);
+  }
+
+  async getUserAchievements(userId: number): Promise<UserAchievement[]> {
+    return await db
+      .select()
+      .from(userAchievements)
+      .where(eq(userAchievements.userId, userId))
+      .orderBy(desc(userAchievements.earnedAt));
+  }
+
+  async awardBadge(achievement: InsertUserAchievement): Promise<UserAchievement> {
+    const [newAchievement] = await db.insert(userAchievements).values(achievement).returning();
+    return newAchievement;
+  }
+
+  async updateAchievementProgress(
+    userId: number,
+    badgeId: number,
+    progress: { current: number; target: number; lastUpdated: string }
+  ): Promise<void> {
+    await db
+      .update(userAchievements)
+      .set({ progress })
+      .where(eq(userAchievements.userId, userId))
+      .where(eq(userAchievements.badgeId, badgeId));
+  }
+
+  async getUserBadgeProgress(userId: number, badgeId: number): Promise<UserAchievement | undefined> {
+    const [achievement] = await db
+      .select()
+      .from(userAchievements)
+      .where(eq(userAchievements.userId, userId))
+      .where(eq(userAchievements.badgeId, badgeId));
+    return achievement;
   }
 }
 

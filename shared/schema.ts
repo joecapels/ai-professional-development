@@ -2,8 +2,7 @@ import { pgTable, text, serial, integer, boolean, json, timestamp } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Keep existing imports and type definitions
-
+// Define constants first
 export const gradeLevel = [
   "elementary_1_3",
   "elementary_4_6",
@@ -63,6 +62,59 @@ export const researchArea = [
   "law"
 ] as const;
 
+// Add badge types
+export const badgeType = [
+  "quick_learner",
+  "study_streak",
+  "quiz_master",
+  "perfect_score",
+  "milestone_achiever",
+  "knowledge_explorer",
+  "consistent_learner",
+  "subject_expert",
+  "early_bird",
+  "night_owl"
+] as const;
+
+// Add badge rarity levels
+export const badgeRarity = [
+  "common",
+  "uncommon",
+  "rare",
+  "epic",
+  "legendary"
+] as const;
+
+// Add badges table
+export const badges = pgTable("badges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  type: text("type").$type<typeof badgeType[number]>().notNull(),
+  rarity: text("rarity").$type<typeof badgeRarity[number]>().notNull(),
+  imageUrl: text("image_url").notNull(),
+  criteria: json("criteria").$type<{
+    type: string;
+    threshold: number;
+    timeframe?: number; // in days
+  }>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Add user achievements table
+export const userAchievements = pgTable("user_achievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  badgeId: integer("badge_id").notNull().references(() => badges.id),
+  earnedAt: timestamp("earned_at").notNull().defaultNow(),
+  progress: json("progress").$type<{
+    current: number;
+    target: number;
+    lastUpdated: string;
+  }>(),
+});
+
+// Keep existing table definitions
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -210,6 +262,17 @@ export type Flashcard = typeof flashcards.$inferSelect;
 export type InsertFlashcard = z.infer<typeof insertFlashcardSchema>;
 
 
+// Add new schemas
+export const insertBadgeSchema = createInsertSchema(badges);
+export const insertUserAchievementSchema = createInsertSchema(userAchievements);
+
+// Add new types
+export type Badge = typeof badges.$inferSelect;
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
+
+// Keep existing types and exports
 export type User = typeof users.$inferSelect;
 export type StudyMaterial = typeof studyMaterials.$inferSelect;
 export type Progress = typeof progress.$inferSelect;
