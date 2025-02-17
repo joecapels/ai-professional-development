@@ -178,8 +178,8 @@ export class DatabaseStorage implements IStorage {
       return acc + (session.totalDuration || 0);
     }, 0);
 
-    const avgSessionLength = studySessions.length > 0 
-      ? Math.round(totalStudyTime / studySessions.length) 
+    const avgSessionLength = studySessions.length > 0
+      ? Math.round(totalStudyTime / studySessions.length)
       : 0;
 
     const quizStats = {
@@ -210,7 +210,7 @@ export class DatabaseStorage implements IStorage {
 
     orderedSessions.forEach(session => {
       const sessionDate = new Date(session.startTime);
-      if (!lastDate || 
+      if (!lastDate ||
           (sessionDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24) === 1) {
         currentStreak++;
         maxStreak = Math.max(maxStreak, currentStreak);
@@ -390,7 +390,7 @@ export class DatabaseStorage implements IStorage {
         description: "Complete your first study session",
         type: "quick_learner",
         rarity: "common",
-        imageUrl: "/badges/quick-learner.svg",
+        imageUrl: "/assets/badges/quick-learner.svg",
         criteria: {
           type: "study_sessions",
           threshold: 1
@@ -401,7 +401,7 @@ export class DatabaseStorage implements IStorage {
         description: "Score 100% on 3 quizzes",
         type: "quiz_master",
         rarity: "rare",
-        imageUrl: "/badges/quiz-master.svg",
+        imageUrl: "/assets/badges/quiz-master.svg",
         criteria: {
           type: "perfect_quizzes",
           threshold: 3
@@ -412,7 +412,7 @@ export class DatabaseStorage implements IStorage {
         description: "Study 5 different subjects",
         type: "knowledge_explorer",
         rarity: "uncommon",
-        imageUrl: "/badges/knowledge-explorer.svg",
+        imageUrl: "/assets/badges/knowledge-explorer.svg",
         criteria: {
           type: "unique_subjects",
           threshold: 5
@@ -423,7 +423,7 @@ export class DatabaseStorage implements IStorage {
         description: "Study for 7 consecutive days",
         type: "study_streak",
         rarity: "epic",
-        imageUrl: "/badges/study-streak.svg",
+        imageUrl: "/assets/badges/study-streak.svg",
         criteria: {
           type: "consecutive_days",
           threshold: 7
