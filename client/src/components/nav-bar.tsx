@@ -50,112 +50,126 @@ export function NavBar() {
           </button>
 
           {/* Desktop navigation */}
-          {user && (
-            <div className="hidden md:flex items-center gap-1">
-              {!user.isAdmin ? (
-                <>
-                  <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
-                  <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
-                  <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
-                  <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
-                  <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
-                  <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
-                  <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
-                  <Link href="/one-ring"><span className={getNavClass("/one-ring")}>The One Ring</span></Link>
-                  <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/admin"><span className={getNavClass("/admin")}>Admin Dashboard</span></Link>
-                  <Link href="/super-login"><span className={getNavClass("/super-login")}>Super User Access</span></Link>
-                </>
-              )}
-
-              {/* User section */}
-              <div className="flex items-center gap-4 ml-4 pl-4 border-l">
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full" />
-                </Button>
-
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {user.username.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{user.username}</span>
-                    <span className="text-xs text-muted-foreground">Student</span>
-                  </div>
-                </div>
-
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  onClick={() => logoutMutation.mutate()}
-                  disabled={logoutMutation.isPending}
-                >
-                  Logout
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Add Super User Login link when not logged in */}
-          {!user && (
+          <div className="hidden md:flex items-center gap-1">
+            {/* Super User Login link - always visible */}
             <Link href="/super-login">
-              <Button variant="outline" size="sm" className="hidden md:flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Super User Login
-              </Button>
+              <span className={getNavClass("/super-login")}>
+                <Shield className="inline-block h-4 w-4 mr-1" />
+                Super User
+              </span>
             </Link>
-          )}
+
+            {user && (
+              <>
+                {!user.isAdmin ? (
+                  <>
+                    <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
+                    <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
+                    <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
+                    <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
+                    <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
+                    <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
+                    <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
+                    <Link href="/one-ring"><span className={getNavClass("/one-ring")}>The One Ring</span></Link>
+                    <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/admin"><span className={getNavClass("/admin")}>Admin Dashboard</span></Link>
+                  </>
+                )}
+
+                {/* User section */}
+                <div className="flex items-center gap-4 ml-4 pl-4 border-l">
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full" />
+                  </Button>
+
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {user.username.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{user.username}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {user.isAdmin ? "Administrator" : "Student"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => logoutMutation.mutate()}
+                    disabled={logoutMutation.isPending}
+                  >
+                    Logout
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Mobile navigation */}
-        {isMenuOpen && user && (
+        {isMenuOpen && (
           <div className="md:hidden py-4 space-y-2">
-            {!user.isAdmin ? (
+            {/* Super User Login link - always visible in mobile */}
+            <Link href="/super-login">
+              <span className={getNavClass("/super-login")}>
+                <Shield className="inline-block h-4 w-4 mr-1" />
+                Super User
+              </span>
+            </Link>
+
+            {user && (
               <>
-                <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
-                <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
-                <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
-                <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
-                <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
-                <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
-                <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
-                <Link href="/one-ring"><span className={getNavClass("/one-ring")}>The One Ring</span></Link>
-                <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
-              </>
-            ) : (
-              <>
-                <Link href="/admin"><span className={getNavClass("/admin")}>Admin Dashboard</span></Link>
-                <Link href="/super-login"><span className={getNavClass("/super-login")}>Super User Access</span></Link>
+                {!user.isAdmin ? (
+                  <>
+                    <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
+                    <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
+                    <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
+                    <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
+                    <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
+                    <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
+                    <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
+                    <Link href="/one-ring"><span className={getNavClass("/one-ring")}>The One Ring</span></Link>
+                    <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/admin"><span className={getNavClass("/admin")}>Admin Dashboard</span></Link>
+                  </>
+                )}
+
+                <div className="pt-4 mt-4 border-t flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {user.username.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{user.username}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {user.isAdmin ? "Administrator" : "Student"}
+                      </span>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => logoutMutation.mutate()}
+                    disabled={logoutMutation.isPending}
+                  >
+                    Logout
+                  </Button>
+                </div>
               </>
             )}
-
-            <div className="pt-4 mt-4 border-t flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {user.username.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">{user.username}</span>
-                  <span className="text-xs text-muted-foreground">Student</span>
-                </div>
-              </div>
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={() => logoutMutation.mutate()}
-                disabled={logoutMutation.isPending}
-              >
-                Logout
-              </Button>
-            </div>
           </div>
         )}
       </div>
