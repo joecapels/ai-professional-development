@@ -144,4 +144,41 @@ export function setupAuth(app: Express) {
       next(error);
     }
   });
+
+  // Add super user registration endpoint
+  app.post("/api/super-register", async (req, res, next) => {
+    try {
+      const { username, password, isAdmin } = req.body;
+
+      // Validate admin flag is true
+      if (!isAdmin) {
+        return res.status(400).json({ message: "Must register as administrator" });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      // Create new admin user
+      const user = await storage.createUser({
+        username,
+        password: await hashPassword(password),
+        isAdmin: true
+      });
+
+      // Log them in automatically
+      req.login(user, (err) => {
+        if (err) return next(err);
+        res.status(201).json({
+          id: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin,
+        });
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
 }
