@@ -135,7 +135,8 @@ async function registerPowerUserRoutes(app: Express) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Set power user flag
+    // Set and store power user flag
+    await storage.setPowerUserStatus(user.id, true);
     req.login({ ...user, isPowerUser: true }, (err) => {
       if (err) return res.status(500).json({ message: "Login failed" });
       res.json({ ...user, isPowerUser: true });

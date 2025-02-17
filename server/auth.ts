@@ -67,7 +67,9 @@ export function setupAuth(app: Express) {
       if (!user) {
         return done(null, false);
       }
-      done(null, user);
+      // Check if user has power access in storage
+      const powerAccess = await storage.getPowerUserStatus(id);
+      done(null, { ...user, isPowerUser: powerAccess });
     } catch (error) {
       done(error);
     }
