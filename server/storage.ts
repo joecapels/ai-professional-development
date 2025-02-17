@@ -167,7 +167,17 @@ export class DatabaseStorage implements IStorage {
 
   async getStudySessionsByUser(userId: number) {
     return await db
-      .select()
+      .select({
+        id: studySessions.id,
+        userId: studySessions.userId,
+        subject: studySessions.subject,
+        status: studySessions.status,
+        startTime: studySessions.startTime,
+        endTime: studySessions.endTime,
+        totalDuration: studySessions.totalDuration,
+        breaks: studySessions.breaks,
+        metrics: studySessions.metrics
+      })
       .from(studySessions)
       .where(eq(studySessions.userId, userId))
       .orderBy(desc(studySessions.startTime));
