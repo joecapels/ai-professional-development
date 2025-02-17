@@ -59,7 +59,6 @@ export function NavBar() {
                   <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
                   <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
                   <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
-                  <Link href="/study-tracker"><span className={getNavClass("/study-tracker")}>Study Tracker</span></Link>
                   <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
                   <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
                 </>
@@ -109,7 +108,6 @@ export function NavBar() {
                 <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
                 <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
                 <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
-                <Link href="/study-tracker"><span className={getNavClass("/study-tracker")}>Study Tracker</span></Link>
                 <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
                 <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
               </>
