@@ -53,9 +53,9 @@ export class DatabaseStorage implements IStorage {
 
   async createProgress(progressData: InsertProgress): Promise<Progress> {
     const [newProgress] = await db.insert(progress).values({
-      userId: progressData.userId,
       materialId: progressData.materialId,
       score: progressData.score,
+      userId: progressData.userId,
       aiRecommendations: progressData.aiRecommendations || []
     }).returning();
     return newProgress;
@@ -72,9 +72,9 @@ export class DatabaseStorage implements IStorage {
 
   async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
     const [newQuiz] = await db.insert(quizzes).values({
-      userId: quizData.userId,
       subject: quizData.subject,
       difficulty: quizData.difficulty,
+      userId: quizData.userId,
       questions: quizData.questions || []
     }).returning();
     return newQuiz;
@@ -91,9 +91,9 @@ export class DatabaseStorage implements IStorage {
 
   async createQuizResult(resultData: InsertQuizResult): Promise<QuizResult> {
     const [newResult] = await db.insert(quizResults).values({
-      userId: resultData.userId,
       quizId: resultData.quizId,
       score: resultData.score,
+      userId: resultData.userId,
       answers: resultData.answers || []
     }).returning();
     return newResult;
@@ -236,8 +236,9 @@ export class DatabaseStorage implements IStorage {
 
   async createBadge(badge: InsertBadge): Promise<Badge> {
     const [newBadge] = await db.insert(badges).values({
-      type: badge.type,
+      name: badge.name,
       description: badge.description,
+      type: badge.type,
       rarity: badge.rarity,
       imageUrl: badge.imageUrl,
       criteria: badge.criteria || null,
@@ -290,6 +291,148 @@ export class DatabaseStorage implements IStorage {
         eq(userAchievements.badgeId, badgeId)
       ));
     return achievement;
+  }
+
+  // Add method to create initial badges
+  async createInitialBadges(): Promise<void> {
+    const initialBadges = [
+      {
+        name: "Quick Learner",
+        description: "Complete your first study session",
+        type: "quick_learner",
+        rarity: "common",
+        imageUrl: "/badges/quick-learner.svg",
+        criteria: {
+          type: "study_sessions",
+          threshold: 1
+        }
+      },
+      {
+        name: "Quiz Master",
+        description: "Score 100% on 3 quizzes",
+        type: "quiz_master",
+        rarity: "rare",
+        imageUrl: "/badges/quiz-master.svg",
+        criteria: {
+          type: "perfect_quizzes",
+          threshold: 3
+        }
+      },
+      {
+        name: "Knowledge Explorer",
+        description: "Study 5 different subjects",
+        type: "knowledge_explorer",
+        rarity: "uncommon",
+        imageUrl: "/badges/knowledge-explorer.svg",
+        criteria: {
+          type: "unique_subjects",
+          threshold: 5
+        }
+      },
+      {
+        name: "Study Streak",
+        description: "Study for 7 consecutive days",
+        type: "study_streak",
+        rarity: "epic",
+        imageUrl: "/badges/study-streak.svg",
+        criteria: {
+          type: "consecutive_days",
+          threshold: 7
+        }
+      }
+    ];
+
+    for (const badge of initialBadges) {
+      const existingBadge = await db
+        .select()
+        .from(badges)
+        .where(eq(badges.name, badge.name));
+
+      if (!existingBadge.length) {
+        await this.createBadge(badge);
+      }
+    }
+  }
+
+  // Add method to check and award badges based on user activity
+  async checkAndAwardBadges(userId: number): Promise<void> {
+    const allBadges = await this.getAllBadges();
+
+    for (const badge of allBadges) {
+      const existingAchievement = await this.getUserBadgeProgress(userId, badge.id);
+      if (existingAchievement?.progress?.current >= (badge.criteria?.threshold || 0)) {
+        continue;
+      }
+
+      let progress = { current: 0, target: badge.criteria?.threshold || 0, lastUpdated: new Date().toISOString() };
+
+      switch (badge.type) {
+        case "quick_learner": {
+          const sessions = await db
+            .select()
+            .from(studySessions)
+            .where(eq(studySessions.userId, userId));
+          progress.current = sessions.length;
+          break;
+        }
+        case "quiz_master": {
+          const results = await db
+            .select()
+            .from(quizResults)
+            .where(and(
+              eq(quizResults.userId, userId),
+              eq(quizResults.score, 100)
+            ));
+          progress.current = results.length;
+          break;
+        }
+        case "knowledge_explorer": {
+          const uniqueSubjects = await db
+            .select({ subject: studySessions.subject })
+            .from(studySessions)
+            .where(eq(studySessions.userId, userId))
+            .groupBy(studySessions.subject);
+          progress.current = uniqueSubjects.length;
+          break;
+        }
+        case "study_streak": {
+          const sessions = await db
+            .select({ date: studySessions.startTime })
+            .from(studySessions)
+            .where(eq(studySessions.userId, userId))
+            .orderBy(studySessions.startTime);
+
+          let streak = 0;
+          let currentStreak = 0;
+          let lastDate: Date | null = null;
+
+          sessions.forEach(({ date }) => {
+            const sessionDate = new Date(date);
+            if (!lastDate || 
+                (sessionDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24) === 1) {
+              currentStreak++;
+            } else {
+              currentStreak = 1;
+            }
+            streak = Math.max(streak, currentStreak);
+            lastDate = sessionDate;
+          });
+
+          progress.current = streak;
+          break;
+        }
+      }
+
+      if (!existingAchievement) {
+        await this.awardBadge({
+          userId,
+          badgeId: badge.id,
+          progress
+        });
+      } else if (progress.current > (existingAchievement.progress?.current || 0)) {
+        await this.updateAchievementProgress(userId, badge.id, progress);
+      }
+    }
   }
 }
 

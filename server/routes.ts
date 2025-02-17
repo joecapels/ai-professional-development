@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketServer } from 'ws';
+import type { WebSocket as WebSocketType } from 'ws';
 import type { IncomingMessage } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
@@ -21,7 +22,7 @@ interface WebSocketRequestWithSession extends IncomingMessage {
 
 // Track active study sessions
 const activeSessions = new Map<number, {
-  ws: WebSocket;
+  ws: WebSocketType;
   userId: number;
   sessionData: any;
 }>();
@@ -119,7 +120,6 @@ app.patch("/api/achievements/:badgeId/progress", async (req, res) => {
 });
 }
 
-
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up session middleware with updated configuration
   app.use(
@@ -142,7 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up WebSocket server with session handling
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
-  wss.on('connection', async (ws: WebSocket, req: WebSocketRequestWithSession) => {
+  wss.on('connection', async (ws: WebSocketType, req: WebSocketRequestWithSession) => {
     // Check authentication
     if (!req.session?.passport?.user) {
       console.log("WebSocket connection attempt without authentication");
@@ -238,11 +238,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/progress", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const progress = await storage.createProgress({
-      ...req.body,
-      userId: req.user.id,
-    });
-    res.json(progress);
+    try {
+      const progress = await storage.createProgress({
+        ...req.body,
+        userId: req.user.id,
+      });
+
+      // Check and update badges after progress is recorded
+      await storage.checkAndAwardBadges(req.user.id);
+
+      res.json(progress);
+    } catch (error) {
+      console.error("Error creating progress:", error);
+      res.status(500).json({ error: "Failed to create progress" });
+    }
   });
 
   // Learning preferences routes
@@ -304,14 +313,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/quiz-results", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const result = await storage.createQuizResult({
+        ...req.body,
+        userId: req.user.id,
+        score: calculateScore(req.body.answers),
+      });
 
-    const result = await storage.createQuizResult({
-      ...req.body,
-      userId: req.user.id,
-      score: calculateScore(req.body.answers),
-    });
+      // Check and update badges after quiz completion
+      await storage.checkAndAwardBadges(req.user.id);
 
-    res.json(result);
+      res.json(result);
+    } catch (error) {
+      console.error("Error creating quiz result:", error);
+      res.status(500).json({ error: "Failed to create quiz result" });
+    }
   });
 
   app.get("/api/quizzes", async (req, res) => {
@@ -457,6 +473,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   await registerBadgeRoutes(app); // Register the new badge routes.
+
+  // Study session completion with badge check
+  app.post("/api/study-sessions/:id/complete", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      await storage.completeStudySession(parseInt(req.params.id));
+
+      // Check and update badges after session completion
+      await storage.checkAndAwardBadges(req.user.id);
+
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("Error completing study session:", error);
+      res.status(500).json({ error: "Failed to complete study session" });
+    }
+  });
 
   // Helper function to calculate quiz score
   function calculateScore(answers: { isCorrect: boolean }[]): number {

@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
 
 const app = express();
 app.use(express.json());
@@ -39,6 +40,14 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Initialize badges after routes are registered
+  try {
+    await storage.createInitialBadges();
+    log('Initial badges created successfully');
+  } catch (error) {
+    log('Error creating initial badges:', error);
+  }
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -53,7 +62,6 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Handle graceful shutdown
   const shutdown = () => {
     log('Received kill signal, shutting down gracefully');
     server.close(() => {
@@ -61,7 +69,6 @@ app.use((req, res, next) => {
       process.exit(0);
     });
 
-    // Force shutdown after 10s
     setTimeout(() => {
       log('Could not close connections in time, forcefully shutting down');
       process.exit(1);
@@ -76,7 +83,7 @@ app.use((req, res, next) => {
   let retries = 0;
 
   const startServer = () => {
-    server.listen(PORT, "0.0.0.0", () => {
+    server.listen(PORT, () => {
       log(`serving on port ${PORT}`);
     }).on('error', (error: any) => {
       if (error.code === 'EADDRINUSE') {
