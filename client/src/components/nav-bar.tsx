@@ -56,8 +56,8 @@ export function NavBar() {
                 <>
                   <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
                   {user.isPowerUser && (
-                    <Link href="/one-ring">
-                      <span className={getNavClass("/one-ring")}>The One Ring</span>
+                    <Link href="/the-one-ring">
+                      <span className={getNavClass("/the-one-ring")}>The One Ring</span>
                     </Link>
                   )}
                   <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
@@ -122,8 +122,8 @@ export function NavBar() {
                 <>
                   <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
                   {user.isPowerUser && (
-                    <Link href="/one-ring">
-                      <span className={getNavClass("/one-ring")}>The One Ring</span>
+                    <Link href="/the-one-ring">
+                      <span className={getNavClass("/the-one-ring")}>The One Ring</span>
                     </Link>
                   )}
                   <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
