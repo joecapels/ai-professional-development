@@ -8,22 +8,23 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, UserPlus, LogIn } from "lucide-react";
 
-const powerLoginSchema = z.object({
+const powerUserSchema = z.object({
   username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   powerKey: z.string().min(1, "Power user key is required"),
 });
 
-type PowerLoginData = z.infer<typeof powerLoginSchema>;
+type PowerUserData = z.infer<typeof powerUserSchema>;
 
 export default function PowerLoginPage() {
-  const { loginMutation } = useAuth();
+  const { loginMutation, registerMutation } = useAuth();
   const [, setLocation] = useLocation();
-  
-  const form = useForm<PowerLoginData>({
-    resolver: zodResolver(powerLoginSchema),
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  const form = useForm<PowerUserData>({
+    resolver: zodResolver(powerUserSchema),
     defaultValues: {
       username: "",
       password: "",
@@ -31,8 +32,10 @@ export default function PowerLoginPage() {
     },
   });
 
-  const onSubmit = async (data: PowerLoginData) => {
-    loginMutation.mutate(
+  const onSubmit = async (data: PowerUserData) => {
+    const mutation = isRegistering ? registerMutation : loginMutation;
+
+    mutation.mutate(
       { ...data, isPowerUser: true },
       {
         onSuccess: () => {
@@ -46,9 +49,11 @@ export default function PowerLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-primary/10 to-background">
       <Card className="w-[400px] shadow-lg">
         <CardHeader>
-          <CardTitle>Power User Access</CardTitle>
+          <CardTitle>{isRegistering ? "Power User Registration" : "Power User Access"}</CardTitle>
           <CardDescription>
-            Enter your credentials and power user key to access the analytics dashboard
+            {isRegistering
+              ? "Create your power user account to access advanced analytics"
+              : "Enter your credentials and power user key to access the analytics dashboard"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -93,20 +98,46 @@ export default function PowerLoginPage() {
                   </FormItem>
                 )}
               />
-              <Button 
-                type="submit" 
-                className="w-full"
-                disabled={loginMutation.isPending}
-              >
-                {loginMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Authenticating...
-                  </>
-                ) : (
-                  "Access Dashboard"
-                )}
-              </Button>
+
+              <div className="space-y-2">
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={loginMutation.isPending || registerMutation.isPending}
+                >
+                  {loginMutation.isPending || registerMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {isRegistering ? "Creating Account..." : "Authenticating..."}
+                    </>
+                  ) : (
+                    <>
+                      {isRegistering ? (
+                        <>
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Create Account
+                        </>
+                      ) : (
+                        <>
+                          <LogIn className="mr-2 h-4 w-4" />
+                          Access Dashboard
+                        </>
+                      )}
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setIsRegistering(!isRegistering)}
+                >
+                  {isRegistering
+                    ? "Already have an account? Login"
+                    : "Need an account? Register"}
+                </Button>
+              </div>
             </form>
           </Form>
         </CardContent>
