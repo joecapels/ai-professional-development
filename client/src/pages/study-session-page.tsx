@@ -5,40 +5,83 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Timer, Pause, Play, StopCircle, BookOpen, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function StudySessionPage() {
   const { sessionId } = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const wsRef = useRef<WebSocket | null>(null);
   const [status, setStatus] = useState<'active' | 'paused'>('active');
   const [duration, setDuration] = useState(0);
   const timerRef = useRef<NodeJS.Timeout>();
+  const [isConnecting, setIsConnecting] = useState(true);
 
   useEffect(() => {
-    // Connect to WebSocket
-    const ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`);
-    wsRef.current = ws;
+    if (!user) {
+      setLocation('/auth');
+      return;
+    }
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      if (message.type === 'error') {
+    // Connect to WebSocket with retry logic
+    const connectWebSocket = () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
+      }
+
+      const ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setIsConnecting(false);
+        console.log('WebSocket connected');
+        ws.send(JSON.stringify({
+          type: 'start',
+          timestamp: new Date().toISOString(),
+          data: {
+            subject: 'General',
+            startTime: new Date().toISOString()
+          }
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type === 'session_started') {
+          toast({
+            title: "Study Session Started",
+            description: "Your study session has begun. Good luck!",
+          });
+          setLocation(`/study-session/${message.sessionId}`);
+        } else if (message.type === 'error') {
+          toast({
+            title: "Session Error",
+            description: message.message,
+            variant: "destructive",
+          });
+        }
+      };
+
+      ws.onerror = () => {
+        setIsConnecting(false);
         toast({
-          title: "Session Error",
-          description: message.message,
+          title: "Connection Error",
+          description: "Lost connection to study session. Please try reconnecting.",
           variant: "destructive",
         });
-      }
+      };
+
+      ws.onclose = () => {
+        setIsConnecting(false);
+        console.log('WebSocket connection closed');
+        // Attempt to reconnect after a delay
+        setTimeout(connectWebSocket, 5000);
+      };
     };
 
-    ws.onerror = () => {
-      toast({
-        title: "Connection Error",
-        description: "Lost connection to study session. Please try reconnecting.",
-        variant: "destructive",
-      });
-    };
+    connectWebSocket();
 
     // Start timer
     timerRef.current = setInterval(() => {
@@ -55,7 +98,7 @@ export default function StudySessionPage() {
         wsRef.current.close();
       }
     };
-  }, [status]);
+  }, [status, user]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -64,34 +107,19 @@ export default function StudySessionPage() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const togglePause = () => {
-    const newStatus = status === 'active' ? 'paused' : 'active';
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: newStatus === 'active' ? 'resume' : 'pause',
-        sessionId: Number(sessionId)
-      }));
-    }
-    setStatus(newStatus);
-    toast({
-      title: newStatus === 'active' ? "Session Resumed" : "Session Paused",
-      description: newStatus === 'active' ? "Keep up the good work!" : "Take a break, you've earned it!",
-    });
-  };
-
-  const endSession = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'end',
-        sessionId: Number(sessionId)
-      }));
-    }
-    toast({
-      title: "Session Ended",
-      description: "Great work! Your progress has been saved.",
-    });
-    setLocation('/study-tracker');
-  };
+  if (isConnecting) {
+    return (
+      <div className="min-h-screen bg-background">
+        <NavBar />
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Connecting to study session...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -128,7 +156,16 @@ export default function StudySessionPage() {
                   <Button
                     variant="outline"
                     size="lg"
-                    onClick={togglePause}
+                    onClick={() => {
+                      const newStatus = status === 'active' ? 'paused' : 'active';
+                      if (wsRef.current?.readyState === WebSocket.OPEN) {
+                        wsRef.current.send(JSON.stringify({
+                          type: newStatus === 'active' ? 'resume' : 'pause',
+                          sessionId: Number(sessionId)
+                        }));
+                      }
+                      setStatus(newStatus);
+                    }}
                     className="flex items-center gap-2"
                   >
                     {status === 'active' ? (
@@ -146,7 +183,15 @@ export default function StudySessionPage() {
                   <Button
                     variant="destructive"
                     size="lg"
-                    onClick={endSession}
+                    onClick={() => {
+                      if (wsRef.current?.readyState === WebSocket.OPEN) {
+                        wsRef.current.send(JSON.stringify({
+                          type: 'end',
+                          sessionId: Number(sessionId)
+                        }));
+                      }
+                      setLocation('/');
+                    }}
                     className="flex items-center gap-2"
                   >
                     <StopCircle className="h-4 w-4" />

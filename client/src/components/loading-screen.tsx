@@ -7,21 +7,52 @@ const CareerIllustration = () => (
     viewBox="0 0 240 240"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
+    className="text-primary"
   >
+    {/* Career Growth Path */}
     <motion.path
-      d="M120 40c-44.183 0-80 35.817-80 80s35.817 80 80 80 80-35.817 80-80-35.817-80-80-80zm0 120c-22.091 0-40-17.909-40-40s17.909-40 40-40 40 17.909 40 40-17.909 40-40 40z"
-      fill="currentColor"
-      initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: 1, opacity: 1 }}
-      transition={{ duration: 2, ease: "easeInOut", repeat: Infinity }}
+      d="M40 200 L100 140 L140 160 L200 40"
+      stroke="currentColor"
+      strokeWidth="4"
+      strokeLinecap="round"
+      fill="none"
+      initial={{ pathLength: 0 }}
+      animate={{ pathLength: 1 }}
+      transition={{ duration: 2, ease: "easeInOut" }}
     />
-    <motion.path
-      d="M120 80c-22.091 0-40 17.909-40 40s17.909 40 40 40 40-17.909 40-40-17.909-40-40-40zm0 60c-11.046 0-20-8.954-20-20s8.954-20 20-20 20 8.954 20 20-8.954 20-20 20z"
-      fill="currentColor"
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ delay: 0.5, duration: 1.5, ease: "easeOut" }}
-    />
+
+    {/* Circular Milestone Points */}
+    <motion.g
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ delay: 0.5, duration: 0.5 }}
+    >
+      <circle cx="40" cy="200" r="8" fill="currentColor" />
+      <circle cx="100" cy="140" r="8" fill="currentColor" />
+      <circle cx="140" cy="160" r="8" fill="currentColor" />
+      <circle cx="200" cy="40" r="8" fill="currentColor" />
+    </motion.g>
+
+    {/* Professional Icons */}
+    <motion.g
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 1, duration: 1 }}
+    >
+      {/* Briefcase */}
+      <path
+        d="M90 130 h60 v40 h-60 v-40 M110 130 v-10 h20 v10"
+        stroke="currentColor"
+        fill="none"
+        strokeWidth="2"
+      />
+      {/* Graduation Cap */}
+      <path
+        d="M180 30 l20 10 l-20 10 l-20 -10 z"
+        stroke="currentColor"
+        fill="currentColor"
+      />
+    </motion.g>
   </svg>
 );
 
@@ -35,7 +66,6 @@ export function LoadingScreen() {
     >
       <div className="flex flex-col items-center space-y-6">
         <motion.div
-          className="text-primary"
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5 }}

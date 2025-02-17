@@ -1,6 +1,7 @@
 import { createContext, useContext, ReactNode, useState, useCallback } from "react";
 import { LoadingScreen } from "@/components/loading-screen";
 import { AnimatePresence } from "framer-motion";
+import { useAuth } from "@/hooks/use-auth";
 
 type LoadingContextType = {
   showLoading: () => void;
@@ -11,6 +12,7 @@ const LoadingContext = createContext<LoadingContextType | null>(null);
 
 export function LoadingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
   const showLoading = useCallback(() => setIsLoading(true), []);
   const hideLoading = useCallback(() => setIsLoading(false), []);
@@ -18,7 +20,7 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   return (
     <LoadingContext.Provider value={{ showLoading, hideLoading }}>
       <AnimatePresence>
-        {isLoading && <LoadingScreen />}
+        {isLoading && user && <LoadingScreen />}
       </AnimatePresence>
       {children}
     </LoadingContext.Provider>
