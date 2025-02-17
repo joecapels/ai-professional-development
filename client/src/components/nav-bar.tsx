@@ -55,11 +55,6 @@ export function NavBar() {
               !user.isAdmin ? (
                 <>
                   <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
-                  {user.isPowerUser && (
-                    <Link href="/one-ring">
-                      <span className={getNavClass("/one-ring")}>The One Ring</span>
-                    </Link>
-                  )}
                   <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
                   <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
                   <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
@@ -121,11 +116,6 @@ export function NavBar() {
               !user.isAdmin ? (
                 <>
                   <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
-                  {user.isPowerUser && (
-                    <Link href="/one-ring">
-                      <span className={getNavClass("/one-ring")}>The One Ring</span>
-                    </Link>
-                  )}
                   <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
                   <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
                   <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
