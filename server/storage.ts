@@ -61,8 +61,8 @@ export class DatabaseStorage implements IStorage {
         userId: progressData.userId,
         materialId: progressData.materialId,
         score: progressData.score,
-        aiRecommendations: progressData.aiRecommendations || [],
-        completedAt: new Date()
+        completedAt: new Date(),
+        aiRecommendations: progressData.aiRecommendations || []
       })
       .returning();
     return newProgress;
@@ -80,9 +80,10 @@ export class DatabaseStorage implements IStorage {
   async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
     const [newQuiz] = await db.insert(quizzes)
       .values({
-        userId: quizData.userId,
+        title: quizData.title,
         subject: quizData.subject,
         difficulty: quizData.difficulty,
+        userId: quizData.userId,
         questions: quizData.questions || [],
         createdAt: new Date()
       })
@@ -103,10 +104,10 @@ export class DatabaseStorage implements IStorage {
     const [newResult] = await db.insert(quizResults)
       .values({
         userId: resultData.userId,
-        quizId: resultData.quizId,
         score: resultData.score,
-        answers: resultData.answers || [],
-        completedAt: new Date()
+        quizId: resultData.quizId,
+        completedAt: new Date(),
+        answers: resultData.answers || []
       })
       .returning();
     return newResult;
@@ -119,12 +120,12 @@ export class DatabaseStorage implements IStorage {
   async saveDocument(document: InsertDocument): Promise<SavedDocument> {
     const [newDocument] = await db.insert(savedDocuments)
       .values({
-        type: document.type,
+        userId: document.userId,
         title: document.title,
         content: document.content,
-        userId: document.userId,
-        metadata: document.metadata || {},
-        createdAt: new Date()
+        type: document.type,
+        createdAt: new Date(),
+        metadata: document.metadata || {}
       })
       .returning();
     return newDocument;
