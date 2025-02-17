@@ -52,12 +52,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProgress(progressData: InsertProgress): Promise<Progress> {
-    const [newProgress] = await db.insert(progress).values({
-      materialId: progressData.materialId,
-      score: progressData.score,
-      userId: progressData.userId,
-      aiRecommendations: progressData.aiRecommendations || []
-    }).returning();
+    const [newProgress] = await db.insert(progress)
+      .values({
+        userId: progressData.userId,
+        materialId: progressData.materialId,
+        score: progressData.score,
+        aiRecommendations: progressData.aiRecommendations || [],
+        completedAt: new Date()
+      })
+      .returning();
     return newProgress;
   }
 
@@ -71,12 +74,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
-    const [newQuiz] = await db.insert(quizzes).values({
-      subject: quizData.subject,
-      difficulty: quizData.difficulty,
-      userId: quizData.userId,
-      questions: quizData.questions || []
-    }).returning();
+    const [newQuiz] = await db.insert(quizzes)
+      .values({
+        userId: quizData.userId,
+        subject: quizData.subject,
+        difficulty: quizData.difficulty,
+        questions: quizData.questions || [],
+        createdAt: new Date()
+      })
+      .returning();
     return newQuiz;
   }
 
@@ -90,12 +96,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuizResult(resultData: InsertQuizResult): Promise<QuizResult> {
-    const [newResult] = await db.insert(quizResults).values({
-      quizId: resultData.quizId,
-      score: resultData.score,
-      userId: resultData.userId,
-      answers: resultData.answers || []
-    }).returning();
+    const [newResult] = await db.insert(quizResults)
+      .values({
+        userId: resultData.userId,
+        quizId: resultData.quizId,
+        score: resultData.score,
+        answers: resultData.answers || [],
+        completedAt: new Date()
+      })
+      .returning();
     return newResult;
   }
 
@@ -104,13 +113,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveDocument(document: InsertDocument): Promise<SavedDocument> {
-    const [newDocument] = await db.insert(savedDocuments).values({
-      userId: document.userId,
-      title: document.title,
-      content: document.content,
-      type: document.type,
-      metadata: document.metadata || {}
-    }).returning();
+    const [newDocument] = await db.insert(savedDocuments)
+      .values({
+        type: document.type,
+        title: document.title,
+        content: document.content,
+        userId: document.userId,
+        metadata: document.metadata || {},
+        createdAt: new Date()
+      })
+      .returning();
     return newDocument;
   }
 
@@ -228,21 +240,27 @@ export class DatabaseStorage implements IStorage {
       front: card.front,
       back: card.back,
       difficulty: card.difficulty,
-      documentIds: card.documentIds || []
+      documentIds: card.documentIds || [],
+      createdAt: new Date()
     }));
 
-    return await db.insert(flashcards).values(cardsToInsert).returning();
+    return await db.insert(flashcards)
+      .values(cardsToInsert)
+      .returning();
   }
 
   async createBadge(badge: InsertBadge): Promise<Badge> {
-    const [newBadge] = await db.insert(badges).values({
-      name: badge.name,
-      description: badge.description,
-      type: badge.type,
-      rarity: badge.rarity,
-      imageUrl: badge.imageUrl,
-      criteria: badge.criteria || null,
-    }).returning();
+    const [newBadge] = await db.insert(badges)
+      .values({
+        name: badge.name,
+        description: badge.description,
+        type: badge.type,
+        rarity: badge.rarity,
+        imageUrl: badge.imageUrl,
+        criteria: badge.criteria || null,
+        createdAt: new Date()
+      })
+      .returning();
     return newBadge;
   }
 
@@ -408,7 +426,7 @@ export class DatabaseStorage implements IStorage {
 
           sessions.forEach(({ date }) => {
             const sessionDate = new Date(date);
-            if (!lastDate || 
+            if (!lastDate ||
                 (sessionDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24) === 1) {
               currentStreak++;
             } else {

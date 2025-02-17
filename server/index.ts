@@ -2,11 +2,21 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
+import path from "path";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Add security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
+// Add request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -45,23 +55,32 @@ app.use((req, res, next) => {
     await storage.createInitialBadges();
     log('Initial badges created successfully');
   } catch (error) {
-    log('Error creating initial badges:', error);
+    log('Error creating initial badges:', String(error));
   }
 
+  // Global error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    log(`Error: ${status} - ${message}`);
     res.status(status).json({ message });
-    throw err;
   });
 
+  // Setup static file serving or Vite based on environment
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
+    // Serve index.html for client-side routing
+    app.get('*', (req, res) => {
+      if (!req.path.startsWith('/api')) {
+        res.sendFile(path.resolve(__dirname, '../dist/index.html'));
+      }
+    });
   }
 
+  // Graceful shutdown handler
   const shutdown = () => {
     log('Received kill signal, shutting down gracefully');
     server.close(() => {
@@ -78,13 +97,19 @@ app.use((req, res, next) => {
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 
+  // Server startup with retry logic
   const PORT = process.env.PORT || 5000;
   const MAX_RETRIES = 3;
   let retries = 0;
 
   const startServer = () => {
-    server.listen(PORT, () => {
-      log(`serving on port ${PORT}`);
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`Server running in ${app.get("env")} mode on port ${PORT}`);
+      log('Required environment variables:', [
+        'DATABASE_URL',
+        'SESSION_SECRET',
+        'PORT',
+      ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
     }).on('error', (error: any) => {
       if (error.code === 'EADDRINUSE') {
         log(`Port ${PORT} is in use`);

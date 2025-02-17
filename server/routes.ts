@@ -1,7 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { WebSocketServer } from 'ws';
-import type { WebSocket as WebSocketType } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import type { IncomingMessage } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
@@ -22,7 +21,7 @@ interface WebSocketRequestWithSession extends IncomingMessage {
 
 // Track active study sessions
 const activeSessions = new Map<number, {
-  ws: WebSocketType;
+  ws: WebSocket;
   userId: number;
   sessionData: any;
 }>();
@@ -31,119 +30,131 @@ const activeSessions = new Map<number, {
 
 // Badge management routes
 async function registerBadgeRoutes(app: Express) {
-app.get("/api/badges", async (req, res) => {
-  if (!req.isAuthenticated()) return res.sendStatus(401);
-  const badges = await storage.getAllBadges();
-  res.json(badges);
-});
+  app.get("/api/badges", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const badges = await storage.getAllBadges();
+    res.json(badges);
+  });
 
-app.post("/api/badges", async (req, res) => {
-  if (!req.isAuthenticated() || !req.user?.isAdmin) return res.sendStatus(403);
-  try {
-    const badge = await storage.createBadge(req.body);
-    res.json(badge);
-  } catch (error) {
-    console.error("Error creating badge:", error);
-    res.status(500).json({ error: "Failed to create badge" });
-  }
-});
-
-// User achievement routes
-app.get("/api/achievements", async (req, res) => {
-  if (!req.isAuthenticated()) return res.sendStatus(401);
-  try {
-    const achievements = await storage.getUserAchievements(req.user.id);
-    const achievementsWithBadges = await Promise.all(
-      achievements.map(async (achievement) => {
-        const badge = await storage.getBadge(achievement.badgeId);
-        return { ...achievement, badge };
-      })
-    );
-    res.json(achievementsWithBadges);
-  } catch (error) {
-    console.error("Error fetching achievements:", error);
-    res.status(500).json({ error: "Failed to fetch achievements" });
-  }
-});
-
-app.post("/api/achievements/:badgeId", async (req, res) => {
-  if (!req.isAuthenticated()) return res.sendStatus(401);
-  try {
-    const badgeId = parseInt(req.params.badgeId);
-    const badge = await storage.getBadge(badgeId);
-
-    if (!badge) {
-      return res.status(404).json({ error: "Badge not found" });
+  app.post("/api/badges", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) return res.sendStatus(403);
+    try {
+      const badge = await storage.createBadge(req.body);
+      res.json(badge);
+    } catch (error) {
+      console.error("Error creating badge:", error);
+      res.status(500).json({ error: "Failed to create badge" });
     }
+  });
 
-    // Check if user already has this badge
-    const existingAchievement = await storage.getUserBadgeProgress(req.user.id, badgeId);
-    if (existingAchievement) {
-      return res.status(400).json({ error: "Badge already awarded" });
+  // User achievement routes
+  app.get("/api/achievements", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const achievements = await storage.getUserAchievements(req.user.id);
+      const achievementsWithBadges = await Promise.all(
+        achievements.map(async (achievement) => {
+          const badge = await storage.getBadge(achievement.badgeId);
+          return { ...achievement, badge };
+        })
+      );
+      res.json(achievementsWithBadges);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ error: "Failed to fetch achievements" });
     }
+  });
 
-    const achievement = await storage.awardBadge({
-      userId: req.user.id,
-      badgeId,
-      progress: {
-        current: 0,
-        target: badge.criteria?.threshold || 1,
-        lastUpdated: new Date().toISOString()
+  app.post("/api/achievements/:badgeId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const badgeId = parseInt(req.params.badgeId);
+      const badge = await storage.getBadge(badgeId);
+
+      if (!badge) {
+        return res.status(404).json({ error: "Badge not found" });
       }
-    });
 
-    res.json(achievement);
-  } catch (error) {
-    console.error("Error awarding badge:", error);
-    res.status(500).json({ error: "Failed to award badge" });
-  }
-});
+      // Check if user already has this badge
+      const existingAchievement = await storage.getUserBadgeProgress(req.user.id, badgeId);
+      if (existingAchievement) {
+        return res.status(400).json({ error: "Badge already awarded" });
+      }
 
-// Update achievement progress
-app.patch("/api/achievements/:badgeId/progress", async (req, res) => {
-  if (!req.isAuthenticated()) return res.sendStatus(401);
-  try {
-    const badgeId = parseInt(req.params.badgeId);
-    const { current, target } = req.body;
+      const achievement = await storage.awardBadge({
+        userId: req.user.id,
+        badgeId,
+        progress: {
+          current: 0,
+          target: badge.criteria?.threshold || 1,
+          lastUpdated: new Date().toISOString()
+        }
+      });
 
-    await storage.updateAchievementProgress(req.user.id, badgeId, {
-      current,
-      target,
-      lastUpdated: new Date().toISOString()
-    });
+      res.json(achievement);
+    } catch (error) {
+      console.error("Error awarding badge:", error);
+      res.status(500).json({ error: "Failed to award badge" });
+    }
+  });
 
-    res.sendStatus(200);
-  } catch (error) {
-    console.error("Error updating achievement progress:", error);
-    res.status(500).json({ error: "Failed to update achievement progress" });
-  }
-});
+  // Update achievement progress
+  app.patch("/api/achievements/:badgeId/progress", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const badgeId = parseInt(req.params.badgeId);
+      const { current, target } = req.body;
+
+      await storage.updateAchievementProgress(req.user.id, badgeId, {
+        current,
+        target,
+        lastUpdated: new Date().toISOString()
+      });
+
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("Error updating achievement progress:", error);
+      res.status(500).json({ error: "Failed to update achievement progress" });
+    }
+  });
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up session middleware with updated configuration
-  app.use(
-    session({
-      store: storage.sessionStore,
-      secret: process.env.SESSION_SECRET || 'your-secret-key',
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      },
-      name: 'sid' // Set a specific cookie name
-    })
-  );
+  const sessionMiddleware = session({
+    store: storage.sessionStore,
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    },
+    name: 'sid' // Set a specific cookie name
+  });
 
+  app.use(sessionMiddleware);
   setupAuth(app);
   const httpServer = createServer(app);
 
   // Set up WebSocket server with session handling
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const wss = new WebSocketServer({
+    server: httpServer,
+    path: '/ws',
+    verifyClient: (info, callback) => {
+      // Apply session middleware to WebSocket upgrade request
+      sessionMiddleware(info.req as any, {} as any, () => {
+        const req = info.req as WebSocketRequestWithSession;
+        if (!req.session?.passport?.user) {
+          callback(false, 401, 'Unauthorized');
+          return;
+        }
+        callback(true);
+      });
+    }
+  });
 
-  wss.on('connection', async (ws: WebSocketType, req: WebSocketRequestWithSession) => {
-    // Check authentication
+  wss.on('connection', async (ws: WebSocket, req: WebSocketRequestWithSession) => {
     if (!req.session?.passport?.user) {
       console.log("WebSocket connection attempt without authentication");
       ws.close(1008, 'Authentication required');
@@ -153,13 +164,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = req.session.passport.user;
     console.log(`WebSocket authenticated for user ${userId}`);
 
-    ws.on('message', async (data: WebSocket.Data) => {
+    ws.on('message', async (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString());
         const validatedMessage = studySessionMessageSchema.parse(message);
 
         switch (validatedMessage.type) {
-          case 'start':
+          case 'start': {
             // Start new study session
             const session = await storage.createStudySession({
               userId,
@@ -169,51 +180,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
             activeSessions.set(session.id, { ws, userId, sessionData: session });
             ws.send(JSON.stringify({ type: 'session_started', sessionId: session.id }));
             break;
+          }
 
           case 'pause':
-          case 'resume':
+          case 'resume': {
             await storage.updateStudySessionStatus(validatedMessage.sessionId,
               validatedMessage.type === 'pause' ? 'paused' : 'active');
+            ws.send(JSON.stringify({
+              type: `session_${validatedMessage.type}d`,
+              sessionId: validatedMessage.sessionId
+            }));
             break;
+          }
 
           case 'break_start':
-          case 'break_end':
+          case 'break_end': {
             await storage.updateStudySessionBreaks(validatedMessage.sessionId, {
               startTime: validatedMessage.type === 'break_start' ? new Date().toISOString() : undefined,
               endTime: validatedMessage.type === 'break_end' ? new Date().toISOString() : undefined,
             });
+            ws.send(JSON.stringify({
+              type: validatedMessage.type === 'break_start' ? 'break_started' : 'break_ended',
+              sessionId: validatedMessage.sessionId
+            }));
             break;
+          }
 
-          case 'end':
+          case 'end': {
             await storage.completeStudySession(validatedMessage.sessionId);
             activeSessions.delete(validatedMessage.sessionId);
+            ws.send(JSON.stringify({
+              type: 'session_ended',
+              sessionId: validatedMessage.sessionId
+            }));
             break;
+          }
 
-          case 'update_metrics':
+          case 'update_metrics': {
             if (validatedMessage.data?.metrics) {
               await storage.updateStudySessionMetrics(
                 validatedMessage.sessionId,
                 validatedMessage.data.metrics
               );
+              ws.send(JSON.stringify({
+                type: 'metrics_updated',
+                sessionId: validatedMessage.sessionId
+              }));
             }
             break;
+          }
         }
       } catch (error: any) {
         console.error('Error processing WebSocket message:', error);
-        ws.send(JSON.stringify({ type: 'error', message: error.message }));
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: error.message,
+          details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        }));
       }
     });
 
     ws.on('close', () => {
       // Clean up any active sessions for this connection
-      // Using Array.from to convert the Map entries iterator to an array
       for (const [sessionId, session] of Array.from(activeSessions.entries())) {
         if (session.ws === ws) {
-          storage.completeStudySession(sessionId);
+          storage.completeStudySession(sessionId).catch(err => {
+            console.error(`Error completing session ${sessionId}:`, err);
+          });
           activeSessions.delete(sessionId);
         }
       }
     });
+
+    // Send initial connection success message
+    ws.send(JSON.stringify({ type: 'connected', userId }));
   });
 
   // Study materials routes
@@ -450,7 +490,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Combine all document content for processing
       const combinedContent = validDocuments
-        .map(doc => doc.content)
+        .map(doc => doc?.content ?? '')
+        .filter(content => content !== '')
         .join("\n\n");
 
       // Generate flashcards using OpenAI
