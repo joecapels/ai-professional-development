@@ -32,9 +32,24 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(user: InsertUser): Promise<User> {
-    const [newUser] = await db.insert(users).values(user).returning();
+  async createUser(userData: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values({
+      ...userData,
+      isAdmin: userData.isAdmin || false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      learningPreferences: userData.learningPreferences || {}
+    }).returning();
     return newUser;
+  }
+
+  async updateUserPreferences(userId: number, preferences: LearningPreferences): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ learningPreferences: preferences })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 
   async getMaterial(id: number): Promise<StudyMaterial | undefined> {
@@ -47,7 +62,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMaterial(material: InsertStudyMaterial): Promise<StudyMaterial> {
-    const [newMaterial] = await db.insert(studyMaterials).values(material).returning();
+    const [newMaterial] = await db.insert(studyMaterials).values({
+      ...material,
+      createdAt: new Date().toISOString()
+    }).returning();
     return newMaterial;
   }
 
@@ -56,37 +74,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProgress(progressData: InsertProgress): Promise<Progress> {
-    const [newProgress] = await db.insert(progress)
-      .values({
-        userId: progressData.userId,
-        materialId: progressData.materialId,
-        score: progressData.score,
-        aiRecommendations: progressData.aiRecommendations || [],
-        completedAt: new Date()
-      })
-      .returning();
+    const [newProgress] = await db.insert(progress).values({
+      ...progressData,
+      aiRecommendations: progressData.aiRecommendations || [],
+      completedAt: new Date().toISOString()
+    }).returning();
     return newProgress;
   }
 
-  async updateUserPreferences(userId: number, preferences: LearningPreferences): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({ learningPreferences: preferences })
-      .where(eq(users.id, userId))
-      .returning();
-    return user;
-  }
-
   async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
-    const [newQuiz] = await db.insert(quizzes)
-      .values({
-        userId: quizData.userId,
-        subject: quizData.subject,
-        difficulty: quizData.difficulty,
-        questions: quizData.questions || [],
-        createdAt: new Date()
-      })
-      .returning();
+    const [newQuiz] = await db.insert(quizzes).values({
+      ...quizData,
+      questions: quizData.questions || [],
+      createdAt: new Date().toISOString()
+    }).returning();
     return newQuiz;
   }
 
@@ -100,15 +101,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuizResult(resultData: InsertQuizResult): Promise<QuizResult> {
-    const [newResult] = await db.insert(quizResults)
-      .values({
-        userId: resultData.userId,
-        quizId: resultData.quizId,
-        score: resultData.score,
-        answers: resultData.answers || [],
-        completedAt: new Date()
-      })
-      .returning();
+    const [newResult] = await db.insert(quizResults).values({
+      ...resultData,
+      answers: resultData.answers || [],
+      completedAt: new Date().toISOString()
+    }).returning();
     return newResult;
   }
 
@@ -117,16 +114,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveDocument(document: InsertDocument): Promise<SavedDocument> {
-    const [newDocument] = await db.insert(savedDocuments)
-      .values({
-        type: document.type,
-        title: document.title,
-        content: document.content,
-        userId: document.userId,
-        metadata: document.metadata || {},
-        createdAt: new Date()
-      })
-      .returning();
+    const [newDocument] = await db.insert(savedDocuments).values({
+      ...document,
+      metadata: document.metadata || {},
+      createdAt: new Date().toISOString()
+    }).returning();
     return newDocument;
   }
 
@@ -139,10 +131,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDocument(id: number): Promise<SavedDocument | undefined> {
-    const [document] = await db
-      .select()
-      .from(savedDocuments)
-      .where(eq(savedDocuments.id, id));
+    const [document] = await db.select().from(savedDocuments).where(eq(savedDocuments.id, id));
     return document;
   }
 
@@ -151,8 +140,11 @@ export class DatabaseStorage implements IStorage {
       userId: sessionData.userId,
       subject: sessionData.subject,
       status: sessionData.status,
-      startTime: new Date(),
-      totalDuration: 0
+      startTime: new Date().toISOString(),
+      endTime: null,
+      totalDuration: 0,
+      breaks: [],
+      metrics: {}
     }).returning();
     return session;
   }
@@ -327,26 +319,22 @@ export class DatabaseStorage implements IStorage {
       back: card.back,
       difficulty: card.difficulty,
       documentIds: card.documentIds || [],
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     }));
 
-    return await db.insert(flashcards)
-      .values(cardsToInsert)
-      .returning();
+    return await db.insert(flashcards).values(cardsToInsert).returning();
   }
 
   async createBadge(badge: InsertBadge): Promise<Badge> {
-    const [newBadge] = await db.insert(badges)
-      .values({
-        name: badge.name,
-        description: badge.description,
-        type: badge.type,
-        rarity: badge.rarity,
-        imageUrl: badge.imageUrl,
-        criteria: badge.criteria || null,
-        createdAt: new Date()
-      })
-      .returning();
+    const [newBadge] = await db.insert(badges).values({
+      name: badge.name,
+      description: badge.description,
+      type: badge.type,
+      rarity: badge.rarity,
+      imageUrl: badge.imageUrl,
+      criteria: badge.criteria || null,
+      createdAt: new Date().toISOString()
+    }).returning();
     return newBadge;
   }
 
@@ -462,11 +450,16 @@ export class DatabaseStorage implements IStorage {
 
     for (const badge of allBadges) {
       const existingAchievement = await this.getUserBadgeProgress(userId, badge.id);
-      if (existingAchievement?.progress?.current >= (badge.criteria?.threshold || 0)) {
+      if (existingAchievement?.progress?.current && badge.criteria?.threshold && 
+          existingAchievement.progress.current >= badge.criteria.threshold) {
         continue;
       }
 
-      let progress = { current: 0, target: badge.criteria?.threshold || 0, lastUpdated: new Date().toISOString() };
+      let progress = { 
+        current: 0, 
+        target: badge.criteria?.threshold || 0, 
+        lastUpdated: new Date().toISOString() 
+      };
 
       switch (badge.type) {
         case "quick_learner": {

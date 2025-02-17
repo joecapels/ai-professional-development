@@ -50,13 +50,15 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  // Initialize badges after routes are registered
-  try {
-    await storage.createInitialBadges();
-    log('Initial badges created successfully');
-  } catch (error) {
-    log('Error creating initial badges:', String(error));
-  }
+  // Initialize badges after server starts
+  server.on('listening', async () => {
+    try {
+      await storage.createInitialBadges();
+      log('Initial badges created successfully');
+    } catch (error) {
+      log('Error creating initial badges:', String(error));
+    }
+  });
 
   // Global error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -98,12 +100,12 @@ app.use((req, res, next) => {
   process.on('SIGINT', shutdown);
 
   // Server startup with retry logic
-  const PORT = Number(process.env.PORT) || 5000;
+  const PORT = Number(process.env.PORT) || 3000; // Changed default to 3000
   const MAX_RETRIES = 3;
   let retries = 0;
 
   const startServer = () => {
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       log(`Server running in ${app.get("env")} mode on port ${PORT}`);
       log('Required environment variables:', [
         'DATABASE_URL',
