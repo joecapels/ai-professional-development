@@ -3,11 +3,12 @@ import { Badge, UserAchievement } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Badge as UIBadge } from "@/components/ui/badge";
+import { AnimatedBadge } from "@/components/ui/animated-badge";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { motion } from "framer-motion";
 
 export default function BadgesPage() {
   const { toast } = useToast();
@@ -68,46 +69,63 @@ export default function BadgesPage() {
     <div className="min-h-screen bg-background">
       <NavBar />
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold mb-8">Learning Achievements</h1>
+        <motion.h1 
+          className="text-4xl font-bold mb-8"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          Learning Achievements
+        </motion.h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {badges?.map((badge) => {
+          {badges?.map((badge, index) => {
             const progress = getBadgeProgress(badge.id);
             const isEarned = !!progress;
 
             return (
-              <Card key={badge.id} className="p-6 flex flex-col gap-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-xl font-semibold">{badge.name}</h3>
-                    <p className="text-muted-foreground">{badge.description}</p>
+              <motion.div
+                key={badge.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <Card className="p-6 hover:shadow-lg transition-shadow duration-300 flex flex-col gap-4 group">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">
+                        {badge.name}
+                      </h3>
+                      <p className="text-muted-foreground">{badge.description}</p>
+                    </div>
+                    <AnimatedBadge 
+                      variant={isEarned ? "default" : "secondary"}
+                      isEarned={isEarned}
+                      className="transition-colors"
+                    >
+                      {badge.rarity}
+                    </AnimatedBadge>
                   </div>
-                  <UIBadge 
-                    variant={isEarned ? "default" : "secondary"}
-                    className={isEarned ? "bg-primary" : ""}
-                  >
-                    {badge.rarity}
-                  </UIBadge>
-                </div>
 
-                {progress && (
-                  <div className="space-y-2">
-                    <Progress 
-                      value={(progress.current / progress.target) * 100}
-                      className="h-2"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Progress: {progress.current}/{progress.target}
+                  {progress && (
+                    <div className="space-y-2">
+                      <Progress 
+                        value={(progress.current / progress.target) * 100}
+                        className="h-2"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Progress: {progress.current}/{progress.target}
+                      </p>
+                    </div>
+                  )}
+
+                  {!isEarned && badge.criteria && (
+                    <p className="text-sm text-muted-foreground italic">
+                      Complete {badge.criteria.threshold} {badge.criteria.type} to earn this badge
                     </p>
-                  </div>
-                )}
-
-                {!isEarned && badge.criteria && (
-                  <p className="text-sm text-muted-foreground italic">
-                    Complete {badge.criteria.threshold} {badge.criteria.type} to earn this badge
-                  </p>
-                )}
-              </Card>
+                  )}
+                </Card>
+              </motion.div>
             );
           })}
 
