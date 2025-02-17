@@ -119,7 +119,6 @@ async function registerBadgeRoutes(app: Express) {
   });
 }
 
-// Update the registerRoutes function
 export async function registerRoutes(app: Express): Promise<Server> {
   // Update the session middleware configuration for better security
   const sessionMiddleware = session({
@@ -135,6 +134,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       httpOnly: true,
     },
     name: 'sid', // Set a specific cookie name
+  });
+
+  // Add security headers middleware
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    if (process.env.NODE_ENV === 'production') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
   });
 
   app.use(sessionMiddleware);

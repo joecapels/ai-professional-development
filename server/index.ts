@@ -2,7 +2,6 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
-import { pool } from "./db";
 import path from "path";
 
 const app = express();
@@ -49,101 +48,85 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  const server = await registerRoutes(app);
+
+  // Initialize badges after routes are registered
   try {
-    // Test database connection
-    await pool.connect();
-    log('Database connection successful');
+    await storage.createInitialBadges();
+    log('Initial badges created successfully');
+  } catch (error) {
+    log('Error creating initial badges:', String(error));
+  }
 
-    const server = await registerRoutes(app);
+  // Global error handler
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
 
-    // Initialize badges after routes are registered
-    try {
-      await storage.createInitialBadges();
-      log('Initial badges created successfully');
-    } catch (error) {
-      log('Error creating initial badges:', String(error));
-    }
+    log(`Error: ${status} - ${message}`);
+    res.status(status).json({ message });
+  });
 
-    // Global error handler
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
+  // Setup static file serving or Vite based on environment
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+    // Serve index.html for client-side routing
+    app.get('*', (req, res) => {
+      if (!req.path.startsWith('/api')) {
+        res.sendFile(path.resolve(__dirname, '../dist/index.html'));
+      }
+    });
+  }
 
-      log(`Error: ${status} - ${message}`);
-      res.status(status).json({ message });
+  // Graceful shutdown handler
+  const shutdown = () => {
+    log('Received kill signal, shutting down gracefully');
+    server.close(() => {
+      log('Closed out remaining connections');
+      process.exit(0);
     });
 
-    // Setup static file serving or Vite based on environment
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
-    } else {
-      serveStatic(app);
-      // Serve index.html for client-side routing
-      app.get('*', (req, res) => {
-        if (!req.path.startsWith('/api')) {
-          res.sendFile(path.resolve(__dirname, '../dist/index.html'));
-        }
-      });
-    }
+    setTimeout(() => {
+      log('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+  };
 
-    // Graceful shutdown handler
-    const shutdown = () => {
-      log('Received kill signal, shutting down gracefully');
-      server.close(async () => {
-        try {
-          await pool.end();
-          log('Database connections closed');
-          log('Closed out remaining connections');
-          process.exit(0);
-        } catch (error) {
-          log('Error during shutdown:', String(error));
-          process.exit(1);
-        }
-      });
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 
-      setTimeout(() => {
-        log('Could not close connections in time, forcefully shutting down');
-        process.exit(1);
-      }, 10000);
-    };
+  // Server startup with retry logic
+  const PORT = Number(process.env.PORT) || 5000;
+  const MAX_RETRIES = 3;
+  let retries = 0;
 
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
-
-    // Server startup with retry logic
-    const PORT = Number(process.env.PORT) || 5000;
-    const MAX_RETRIES = 3;
-    let retries = 0;
-
-    const startServer = () => {
-      server.listen(PORT, '0.0.0.0', () => {
-        log(`Server running in ${app.get("env")} mode on port ${PORT}`);
-        log('Required environment variables:', [
-          'DATABASE_URL',
-          'SESSION_SECRET',
-          'PORT',
-        ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
-      }).on('error', (error: any) => {
-        if (error.code === 'EADDRINUSE') {
-          log(`Port ${PORT} is in use`);
-          if (retries < MAX_RETRIES) {
-            retries++;
-            log(`Retrying in 1 second... (Attempt ${retries}/${MAX_RETRIES})`);
-            setTimeout(startServer, 1000);
-          } else {
-            log('Max retries reached. Could not start server.');
-            process.exit(1);
-          }
+  const startServer = () => {
+    server.listen(PORT, () => {
+      log(`Server running in ${app.get("env")} mode on port ${PORT}`);
+      log('Required environment variables:', [
+        'DATABASE_URL',
+        'SESSION_SECRET',
+        'PORT',
+      ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
+    }).on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        log(`Port ${PORT} is in use`);
+        if (retries < MAX_RETRIES) {
+          retries++;
+          log(`Retrying in 1 second... (Attempt ${retries}/${MAX_RETRIES})`);
+          setTimeout(startServer, 1000);
         } else {
-          log(`Error starting server: ${error.message}`);
+          log('Max retries reached. Could not start server.');
           process.exit(1);
         }
-      });
-    };
+      } else {
+        log(`Error starting server: ${error.message}`);
+        process.exit(1);
+      }
+    });
+  };
 
-    startServer();
-  } catch (error) {
-    log('Failed to start application:', String(error));
-    process.exit(1);
-  }
+  startServer();
 })();
