@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { NavBar } from "@/components/nav-bar";
@@ -7,6 +7,9 @@ import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect, useRef } from "react";
 
 interface StudyStats {
   totalStudyTime: number;
@@ -40,10 +43,72 @@ interface StudyStats {
 
 export default function StudyTrackerPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const wsRef = useRef<WebSocket | null>(null);
 
   const { data: studyStats, isLoading } = useQuery<StudyStats>({
     queryKey: ["/api/study-stats"],
   });
+
+  const startSession = async () => {
+    try {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
+      }
+
+      const ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          type: 'start',
+          data: {
+            subject: 'General'
+          }
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type === 'session_started') {
+          toast({
+            title: "Study Session Started",
+            description: "Your study session has begun. Good luck!",
+          });
+          setLocation(`/study-session/${message.sessionId}`);
+        } else if (message.type === 'error') {
+          toast({
+            title: "Error Starting Session",
+            description: message.message,
+            variant: "destructive",
+          });
+        }
+      };
+
+      ws.onerror = () => {
+        toast({
+          title: "Connection Error",
+          description: "Failed to connect to study session. Please try again.",
+          variant: "destructive",
+        });
+      };
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start study session. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -67,7 +132,10 @@ export default function StudyTrackerPage() {
         >
           <h1 className="text-2xl font-bold mb-4">Welcome to Study Tracking!</h1>
           <p className="text-muted-foreground mb-6">Start your learning journey by completing your first study session.</p>
-          <Button className="flex items-center gap-2">
+          <Button 
+            className="flex items-center gap-2"
+            onClick={startSession}
+          >
             <Clock className="h-4 w-4" />
             Begin Study Session
           </Button>
