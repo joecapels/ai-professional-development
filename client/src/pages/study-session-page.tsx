@@ -15,30 +15,70 @@ export default function StudySessionPage() {
   const [status, setStatus] = useState<'active' | 'paused'>('active');
   const [duration, setDuration] = useState(0);
   const timerRef = useRef<NodeJS.Timeout>();
+  const reconnectAttempts = useRef(0);
+  const maxReconnectAttempts = 5;
 
-  useEffect(() => {
-    // Connect to WebSocket
-    const ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`);
+  const connectWebSocket = () => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
     wsRef.current = ws;
 
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      reconnectAttempts.current = 0;
+      toast({
+        title: "Connected",
+        description: "Study session connection established",
+      });
+    };
+
     ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      if (message.type === 'error') {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'error') {
+          toast({
+            title: "Session Error",
+            description: message.message,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      if (reconnectAttempts.current < maxReconnectAttempts) {
+        reconnectAttempts.current++;
+        const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000);
+        setTimeout(connectWebSocket, timeout);
         toast({
-          title: "Session Error",
-          description: message.message,
+          title: "Disconnected",
+          description: "Attempting to reconnect...",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Connection Failed",
+          description: "Please refresh the page to reconnect",
           variant: "destructive",
         });
       }
     };
 
-    ws.onerror = () => {
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
       toast({
         title: "Connection Error",
-        description: "Lost connection to study session. Please try reconnecting.",
+        description: "Failed to connect to study session",
         variant: "destructive",
       });
     };
+  };
+
+  useEffect(() => {
+    connectWebSocket();
 
     // Start timer
     timerRef.current = setInterval(() => {
@@ -64,14 +104,24 @@ export default function StudySessionPage() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  const sendMessage = (message: any) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(message));
+    } else {
+      toast({
+        title: "Connection Error",
+        description: "Cannot send message, connection lost",
+        variant: "destructive",
+      });
+    }
+  };
+
   const togglePause = () => {
     const newStatus = status === 'active' ? 'paused' : 'active';
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: newStatus === 'active' ? 'resume' : 'pause',
-        sessionId: Number(sessionId)
-      }));
-    }
+    sendMessage({
+      type: newStatus === 'active' ? 'resume' : 'pause',
+      sessionId: Number(sessionId)
+    });
     setStatus(newStatus);
     toast({
       title: newStatus === 'active' ? "Session Resumed" : "Session Paused",
@@ -80,12 +130,10 @@ export default function StudySessionPage() {
   };
 
   const endSession = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'end',
-        sessionId: Number(sessionId)
-      }));
-    }
+    sendMessage({
+      type: 'end',
+      sessionId: Number(sessionId)
+    });
     toast({
       title: "Session Ended",
       description: "Great work! Your progress has been saved.",

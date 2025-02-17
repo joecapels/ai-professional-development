@@ -61,6 +61,7 @@ export function NavBar() {
                   <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
                   <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
                   <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
+                  <Link href="/one-ring"><span className={getNavClass("/one-ring")}>The One Ring</span></Link>
                   <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
                 </>
               ) : (
@@ -111,6 +112,7 @@ export function NavBar() {
                 <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
                 <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
                 <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
+                <Link href="/one-ring"><span className={getNavClass("/one-ring")}>The One Ring</span></Link>
                 <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
               </>
             ) : (
