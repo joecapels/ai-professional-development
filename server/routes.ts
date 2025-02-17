@@ -140,6 +140,19 @@ async function registerAdminRoutes(app: Express) {
   });
 
   // Admin analytics
+  interface AdminAnalytics {
+    activeSessions: number;
+    totalAchievements: number;
+    totalUsers: number;
+    userStats: {
+      chatCount: number;
+      quizCount: number;
+      studySessionCount: number;
+      averageSessionDuration: number;
+      totalDocuments: number;
+      totalFlashcards: number;
+    };
+  }
   app.get("/api/admin/analytics", async (req, res) => {
     if (!req.isAuthenticated() || !req.user?.isAdmin) {
       return res.sendStatus(403);
@@ -148,20 +161,55 @@ async function registerAdminRoutes(app: Express) {
       // Get active study sessions count
       const activeSessionsCount = activeSessions.size;
 
-      // Get total achievements across all users
+      // Get all users and their data
       const users = await storage.getAllUsers();
       let totalAchievements = 0;
+      let totalChats = 0;
+      let totalQuizzes = 0;
+      let totalStudySessions = 0;
+      let totalSessionDuration = 0;
+      let totalDocuments = 0;
+      let totalFlashcards = 0;
 
+      // Aggregate user statistics
       for (const user of users) {
+        // Get achievements
         const achievements = await storage.getUserAchievements(user.id);
         totalAchievements += achievements.length;
+
+        // Get study sessions without notes field
+        const studySessions = await storage.getStudySessionsByUser(user.id);
+        totalStudySessions += studySessions.length;
+        totalSessionDuration += studySessions.reduce((acc, session) =>
+          acc + (session.totalDuration || 0), 0);
+
+        // Get quizzes
+        const quizzes = await storage.getQuizzesByUser(user.id);
+        totalQuizzes += quizzes.length;
+
+        // Get documents
+        const documents = await storage.getDocumentsByUser(user.id);
+        totalDocuments += documents.length;
+
+        // Get flashcards
+        const flashcards = await storage.getFlashcardsByUser(user.id);
+        totalFlashcards += flashcards.length;
       }
 
-      // Analytics response type
-      const analyticsData = {
+      const analyticsData: AdminAnalytics = {
         activeSessions: activeSessionsCount,
         totalAchievements,
-        totalUsers: users.length
+        totalUsers: users.length,
+        userStats: {
+          chatCount: totalChats,
+          quizCount: totalQuizzes,
+          studySessionCount: totalStudySessions,
+          averageSessionDuration: totalStudySessions > 0
+            ? Math.round(totalSessionDuration / totalStudySessions)
+            : 0,
+          totalDocuments,
+          totalFlashcards
+        }
       };
 
       res.json(analyticsData);

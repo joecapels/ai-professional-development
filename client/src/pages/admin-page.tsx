@@ -4,7 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { Loader2, Users, BookOpen, Trophy, Activity } from "lucide-react";
+import { 
+  Loader2, Users, BookOpen, Trophy, Activity,
+  MessageSquare, Brain, Clock, FileText, 
+  BarChart2 
+} from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -15,23 +19,29 @@ interface AdminAnalytics {
   activeSessions: number;
   totalAchievements: number;
   totalUsers: number;
+  userStats: {
+    chatCount: number;
+    quizCount: number;
+    studySessionCount: number;
+    averageSessionDuration: number;
+    totalDocuments: number;
+    totalFlashcards: number;
+  };
 }
 
 export default function AdminPage() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Fetch all users
+  // Fetch data
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
 
-  // Fetch study materials
   const { data: materials, isLoading: materialsLoading } = useQuery<StudyMaterial[]>({
     queryKey: ["/api/materials"],
   });
 
-  // Fetch analytics data
   const { data: analytics, isLoading: analyticsLoading } = useQuery<AdminAnalytics>({
     queryKey: ["/api/admin/analytics"],
   });
@@ -75,6 +85,14 @@ export default function AdminPage() {
     );
   }
 
+  // Format duration in minutes
+  const formatDuration = (minutes: number) => {
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}m`;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
@@ -82,7 +100,7 @@ export default function AdminPage() {
         <div className="space-y-6">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
 
-          {/* Statistics Overview */}
+          {/* Primary Statistics */}
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -122,8 +140,60 @@ export default function AdminPage() {
             </Card>
           </div>
 
+          {/* Detailed Analytics */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Study Sessions</CardTitle>
+                <Brain className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="text-2xl font-bold">
+                  {analytics?.userStats.studySessionCount || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Avg. Duration: {formatDuration(analytics?.userStats.averageSessionDuration || 0)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Learning Content</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Documents:</span>
+                  <span className="font-bold">{analytics?.userStats.totalDocuments || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Flashcards:</span>
+                  <span className="font-bold">{analytics?.userStats.totalFlashcards || 0}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Assessment Stats</CardTitle>
+                <BarChart2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Quizzes Taken:</span>
+                  <span className="font-bold">{analytics?.userStats.quizCount || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Chat Interactions:</span>
+                  <span className="font-bold">{analytics?.userStats.chatCount || 0}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
-            {/* User Management */}
+            {/* User Management Section */}
             <Card>
               <CardHeader>
                 <CardTitle>User Management</CardTitle>
