@@ -15,7 +15,7 @@ import DocumentsPage from "@/pages/documents-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import FlashcardPage from "@/pages/flashcard-page";
 import BadgesPage from "@/pages/badges-page";
-
+import OneRingPage from "@/pages/one-ring-page";
 
 function Router() {
   return (
@@ -28,6 +28,7 @@ function Router() {
       <ProtectedRoute path="/analytics" component={AnalyticsPage} />
       <ProtectedRoute path="/flashcards" component={FlashcardPage} />
       <ProtectedRoute path="/badges" component={BadgesPage} />
+      <ProtectedRoute path="/one-ring" component={OneRingPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
