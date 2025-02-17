@@ -129,6 +129,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      sameSite: 'lax',
+      path: '/',
     },
     name: 'sid' // Set a specific cookie name
   });
@@ -142,13 +144,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     server: httpServer,
     path: '/ws',
     verifyClient: (info, callback) => {
+      console.log("WebSocket connection attempt");
       // Apply session middleware to WebSocket upgrade request
       sessionMiddleware(info.req as any, {} as any, () => {
         const req = info.req as WebSocketRequestWithSession;
+        console.log("Session data:", req.session);
         if (!req.session?.passport?.user) {
+          console.log("WebSocket authentication failed - no user in session");
           callback(false, 401, 'Unauthorized');
           return;
         }
+        console.log("WebSocket authentication successful for user:", req.session.passport.user);
         callback(true);
       });
     }
@@ -536,6 +542,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const correctAnswers = answers.filter(a => a.isCorrect).length;
     return Math.round((correctAnswers / answers.length) * 100);
   }
+
+  // Add study stats route
+  app.get("/api/study-stats", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const stats = await storage.getUserStudyStats(req.user.id);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching study stats:", error);
+      res.status(500).json({ error: "Failed to fetch study statistics" });
+    }
+  });
 
   return httpServer;
 }

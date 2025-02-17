@@ -147,7 +147,8 @@ export class DatabaseStorage implements IStorage {
       userId: sessionData.userId,
       subject: sessionData.subject,
       status: sessionData.status,
-      startTime: new Date()
+      startTime: new Date(),
+      totalDuration: 0
     }).returning();
     return session;
   }
@@ -158,6 +159,77 @@ export class DatabaseStorage implements IStorage {
       .from(studySessions)
       .where(eq(studySessions.id, id));
     return session;
+  }
+
+  async getStudySessionsByUser(userId: number) {
+    return await db
+      .select()
+      .from(studySessions)
+      .where(eq(studySessions.userId, userId))
+      .orderBy(desc(studySessions.startTime));
+  }
+
+  async getUserStudyStats(userId: number) {
+    const studySessions = await this.getStudySessionsByUser(userId);
+    const quizResults = await this.getQuizResultsByUser(userId);
+    const documents = await this.getDocumentsByUser(userId);
+
+    const totalStudyTime = studySessions.reduce((acc, session) => {
+      return acc + (session.totalDuration || 0);
+    }, 0);
+
+    const avgSessionLength = studySessions.length > 0 
+      ? Math.round(totalStudyTime / studySessions.length) 
+      : 0;
+
+    const quizStats = {
+      totalQuizzes: quizResults.length,
+      averageScore: quizResults.length > 0
+        ? Math.round(quizResults.reduce((acc, quiz) => acc + quiz.score, 0) / quizResults.length)
+        : 0,
+      perfectScores: quizResults.filter(quiz => quiz.score === 100).length
+    };
+
+    const documentStats = {
+      totalDocuments: documents.length,
+      byType: documents.reduce((acc: Record<string, number>, doc) => {
+        acc[doc.type] = (acc[doc.type] || 0) + 1;
+        return acc;
+      }, {}),
+      recentActivity: documents
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5)
+    };
+
+    let currentStreak = 0;
+    let maxStreak = 0;
+    let lastDate: Date | null = null;
+
+    const orderedSessions = studySessions
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    orderedSessions.forEach(session => {
+      const sessionDate = new Date(session.startTime);
+      if (!lastDate || 
+          (sessionDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24) === 1) {
+        currentStreak++;
+        maxStreak = Math.max(maxStreak, currentStreak);
+      } else if ((sessionDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24) > 1) {
+        currentStreak = 1;
+      }
+      lastDate = sessionDate;
+    });
+
+    return {
+      totalStudyTime,
+      avgSessionLength,
+      totalSessions: studySessions.length,
+      currentStreak,
+      maxStreak,
+      quizStats,
+      documentStats,
+      recentSessions: studySessions.slice(0, 5)
+    };
   }
 
   async updateStudySessionStatus(sessionId: number, status: "active" | "paused" | "completed"): Promise<void> {
@@ -311,7 +383,6 @@ export class DatabaseStorage implements IStorage {
     return achievement;
   }
 
-  // Add method to create initial badges
   async createInitialBadges(): Promise<void> {
     const initialBadges = [
       {
@@ -372,7 +443,6 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Add method to check and award badges based on user activity
   async checkAndAwardBadges(userId: number): Promise<void> {
     const allBadges = await this.getAllBadges();
 

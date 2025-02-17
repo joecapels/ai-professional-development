@@ -1,9 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge, UserAchievement } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { AnimatedBadge } from "@/components/ui/animated-badge";
+import { AnimatedBadge } from "@/components/animated-badge";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
@@ -23,7 +21,9 @@ export default function BadgesPage() {
 
   const getBadgeProgress = (badgeId: number) => {
     const achievement = achievements?.find(a => a.badge.id === badgeId);
-    return achievement?.progress || null;
+    if (!achievement?.progress) return undefined;
+    const { current, target } = achievement.progress;
+    return { current, target };
   };
 
   if (loadingBadges || loadingAchievements) {
@@ -34,13 +34,13 @@ export default function BadgesPage() {
           <h1 className="text-4xl font-bold mb-8">Learning Achievements</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <Card key={i} className="p-6">
+              <div key={i} className="p-6">
                 <div className="space-y-3">
-                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-24 w-24 rounded-full mx-auto" />
+                  <Skeleton className="h-6 w-3/4 mx-auto" />
                   <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-2 w-full" />
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         </main>
@@ -90,41 +90,14 @@ export default function BadgesPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <Card className="p-6 hover:shadow-lg transition-shadow duration-300 flex flex-col gap-4 group">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">
-                        {badge.name}
-                      </h3>
-                      <p className="text-muted-foreground">{badge.description}</p>
-                    </div>
-                    <AnimatedBadge 
-                      variant={isEarned ? "default" : "secondary"}
-                      isEarned={isEarned}
-                      className="transition-colors"
-                    >
-                      {badge.rarity}
-                    </AnimatedBadge>
-                  </div>
-
-                  {progress && (
-                    <div className="space-y-2">
-                      <Progress 
-                        value={(progress.current / progress.target) * 100}
-                        className="h-2"
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        Progress: {progress.current}/{progress.target}
-                      </p>
-                    </div>
-                  )}
-
-                  {!isEarned && badge.criteria && (
-                    <p className="text-sm text-muted-foreground italic">
-                      Complete {badge.criteria.threshold} {badge.criteria.type} to earn this badge
-                    </p>
-                  )}
-                </Card>
+                <AnimatedBadge
+                  name={badge.name}
+                  description={badge.description}
+                  imageUrl={badge.imageUrl}
+                  rarity={badge.rarity}
+                  progress={progress}
+                  earned={isEarned}
+                />
               </motion.div>
             );
           })}
