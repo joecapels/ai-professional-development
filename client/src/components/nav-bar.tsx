@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { Menu, X, Search, Bell, User as UserIcon } from "lucide-react";
+import { Menu, X, Search, Bell, User as UserIcon, Settings } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -61,6 +61,7 @@ export function NavBar() {
                   <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
                   <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
                   <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
+                  <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
                 </>
               ) : (
                 <Link href="/"><span className={getNavClass("/")}>Admin Dashboard</span></Link>
@@ -110,6 +111,7 @@ export function NavBar() {
                 <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
                 <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
                 <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
+                <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
               </>
             ) : (
               <Link href="/"><span className={getNavClass("/")}>Admin Dashboard</span></Link>
