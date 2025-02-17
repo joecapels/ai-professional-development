@@ -28,6 +28,13 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
+// Add type for passport authenticate callback parameters
+type AuthenticateCallback = (
+  error: any,
+  user?: Express.User | false,
+  info?: { message: string }
+) => void;
+
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || 'default-secret-key',
@@ -98,7 +105,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string }) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
@@ -145,7 +152,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Add super user registration endpoint
+  // Update super user registration endpoint with correct types
   app.post("/api/super-register", async (req, res, next) => {
     try {
       const { username, password, isAdmin } = req.body;
@@ -161,11 +168,13 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      // Create new admin user
+      // Create new admin user with correct type
       const user = await storage.createUser({
         username,
         password: await hashPassword(password),
-        isAdmin: true
+        isAdmin: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
 
       // Log them in automatically
@@ -181,4 +190,5 @@ export function setupAuth(app: Express) {
       next(error);
     }
   });
+  return app;
 }

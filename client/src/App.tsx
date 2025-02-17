@@ -17,6 +17,7 @@ import FlashcardPage from "@/pages/flashcard-page";
 import BadgesPage from "@/pages/badges-page";
 import OneRingPage from "@/pages/one-ring-page";
 import SuperUserLoginPage from "@/pages/super-user-login";
+import AdminPage from "@/pages/admin-page";
 
 function Router() {
   return (
@@ -30,6 +31,7 @@ function Router() {
       <ProtectedRoute path="/flashcards" component={FlashcardPage} />
       <ProtectedRoute path="/badges" component={BadgesPage} />
       <ProtectedRoute path="/one-ring" component={OneRingPage} />
+      <ProtectedRoute path="/admin" component={AdminPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/super-login" component={SuperUserLoginPage} />
       <Route component={NotFound} />
