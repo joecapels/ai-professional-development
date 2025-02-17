@@ -121,4 +121,27 @@ export function setupAuth(app: Express) {
     const { password, ...userWithoutPassword } = req.user;
     res.json(userWithoutPassword);
   });
+
+  // Add super user login endpoint
+  app.post("/api/super-login", async (req, res, next) => {
+    try {
+      const { username, password } = req.body;
+      const user = await storage.getUserByUsername(username);
+
+      if (!user || !(await comparePasswords(password, user.password)) || !user.isAdmin) {
+        return res.status(401).json({ message: "Invalid super user credentials" });
+      }
+
+      req.login(user, (err) => {
+        if (err) return next(err);
+        res.json({
+          id: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin,
+        });
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
 }

@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { Menu, X, Search, Bell, User as UserIcon, Settings } from "lucide-react";
+import { Menu, X, Search, Bell, User as UserIcon, Settings, Shield } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -65,7 +65,10 @@ export function NavBar() {
                   <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
                 </>
               ) : (
-                <Link href="/"><span className={getNavClass("/")}>Admin Dashboard</span></Link>
+                <>
+                  <Link href="/admin"><span className={getNavClass("/admin")}>Admin Dashboard</span></Link>
+                  <Link href="/super-login"><span className={getNavClass("/super-login")}>Super User Access</span></Link>
+                </>
               )}
 
               {/* User section */}
@@ -98,6 +101,16 @@ export function NavBar() {
               </div>
             </div>
           )}
+
+          {/* Add Super User Login link when not logged in */}
+          {!user && (
+            <Link href="/super-login">
+              <Button variant="outline" size="sm" className="hidden md:flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Super User Login
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Mobile navigation */}
@@ -116,7 +129,10 @@ export function NavBar() {
                 <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
               </>
             ) : (
-              <Link href="/"><span className={getNavClass("/")}>Admin Dashboard</span></Link>
+              <>
+                <Link href="/admin"><span className={getNavClass("/admin")}>Admin Dashboard</span></Link>
+                <Link href="/super-login"><span className={getNavClass("/super-login")}>Super User Access</span></Link>
+              </>
             )}
 
             <div className="pt-4 mt-4 border-t flex items-center justify-between">
