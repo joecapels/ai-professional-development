@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { NavBar } from "@/components/nav-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { Redirect } from "wouter";
-import { Loader2, Users, Brain, Trophy, Target, BookOpen, TrendingUp } from "lucide-react";
+import { Link, Redirect } from "wouter";
+import { Loader2, Users, Brain, Trophy, Target, BookOpen, TrendingUp, Shield } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from "recharts";
 
 interface AnalyticsData {
@@ -33,7 +33,7 @@ interface AnalyticsData {
 
 export default function PowerDashboardPage() {
   const { user } = useAuth();
-  
+
   // Redirect if not a power user
   if (!user?.isPowerUser) {
     return <Redirect to="/power-login" />;
@@ -70,7 +70,7 @@ export default function PowerDashboardPage() {
       <NavBar />
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Platform Analytics Dashboard</h1>
-        
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -142,11 +142,11 @@ export default function PowerDashboardPage() {
                     <XAxis dataKey="date" />
                     <YAxis />
                     <Tooltip />
-                    <Area 
-                      type="monotone" 
-                      dataKey="count" 
-                      stroke="hsl(var(--primary))" 
-                      fill="hsl(var(--primary))" 
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="hsl(var(--primary))"
+                      fill="hsl(var(--primary))"
                       fillOpacity={0.2}
                     />
                   </AreaChart>
@@ -167,10 +167,10 @@ export default function PowerDashboardPage() {
                     <XAxis dataKey="feature" />
                     <YAxis />
                     <Tooltip />
-                    <Line 
-                      type="monotone" 
-                      dataKey="usage" 
-                      stroke="hsl(var(--primary))" 
+                    <Line
+                      type="monotone"
+                      dataKey="usage"
+                      stroke="hsl(var(--primary))"
                       strokeWidth={2}
                     />
                   </LineChart>
@@ -178,6 +178,24 @@ export default function PowerDashboardPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="mb-8">
+          <Link href="/the-one-ring">
+            <Card className="bg-gradient-to-br from-amber-500/5 to-amber-500/10 hover:from-amber-500/10 hover:to-amber-500/20 transition-colors cursor-pointer">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  The One Ring
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Access the master view of all system users, their sessions, and activities.
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* Additional analytics sections can be added here */}

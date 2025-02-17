@@ -142,6 +142,54 @@ async function registerPowerUserRoutes(app: Express) {
     });
   });
 
+  app.get("/api/power/users/detailed", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isPowerUser) {
+      return res.status(403).json({ message: "Power user access required" });
+    }
+
+    try {
+      const users = await storage.getAllUsers();
+      const sessions = await storage.getAllStudySessions();
+
+      const userDetails = await Promise.all(users.map(async (user) => {
+        const userSessions = sessions.filter(s => s.userId === user.id);
+        const lastSession = userSessions[userSessions.length - 1];
+        const totalSessionTime = userSessions.reduce((sum, session) => {
+          return sum + (session.totalDuration || 0);
+        }, 0);
+
+        // In a real app, you would get these from your auth/session system
+        const mockIpAddress = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+        const mockLocations = ['San Francisco, US', 'New York, US', 'London, UK', 'Tokyo, JP'];
+        const mockLocation = mockLocations[Math.floor(Math.random() * mockLocations.length)];
+
+        return {
+          id: user.id,
+          username: user.username,
+          subscriptionStatus: 'active', // Mock data - would come from subscription system
+          ipAddress: mockIpAddress,
+          lastActive: lastSession?.startTime || user.createdAt,
+          totalSessions: userSessions.length,
+          averageSessionLength: userSessions.length > 0 ? totalSessionTime / userSessions.length : 0,
+          lastLoginLocation: mockLocation,
+          createdAt: user.createdAt,
+          sessions: userSessions.map(session => ({
+            id: session.id,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            duration: session.totalDuration || 0,
+            status: session.status
+          }))
+        };
+      }));
+
+      res.json(userDetails);
+    } catch (error) {
+      console.error("Error fetching detailed user data:", error);
+      res.status(500).json({ message: "Failed to fetch user details" });
+    }
+  });
+
   app.get("/api/power/analytics", async (req, res) => {
     if (!req.isAuthenticated() || !req.user?.isPowerUser) {
       return res.status(403).json({ message: "Power user access required" });

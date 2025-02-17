@@ -120,6 +120,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   isAdmin: boolean("is_admin").notNull().default(false),
+  isPowerUser: boolean("is_power_user").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   learningPreferences: json("learning_preferences").$type<{
     learningStyle: "visual" | "auditory" | "reading" | "kinesthetic";

@@ -18,6 +18,7 @@ import FlashcardPage from "@/pages/flashcard-page";
 import BadgesPage from "@/pages/badges-page";
 import PowerLoginPage from "@/pages/power-login";
 import PowerDashboardPage from "@/pages/power-dashboard";
+import TheOneRingPage from "@/pages/the-one-ring";
 
 function Router() {
   return (
@@ -31,6 +32,7 @@ function Router() {
       <ProtectedRoute path="/flashcards" component={FlashcardPage} />
       <ProtectedRoute path="/badges" component={BadgesPage} />
       <ProtectedRoute path="/power-dashboard" component={PowerDashboardPage} />
+      <ProtectedRoute path="/the-one-ring" component={TheOneRingPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/power-login" component={PowerLoginPage} />
       <Route component={NotFound} />
