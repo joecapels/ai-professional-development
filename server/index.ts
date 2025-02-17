@@ -5,6 +5,8 @@ import { storage } from "./storage";
 import path from "path";
 
 const app = express();
+const PORT = process.env.PORT || 5000;
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -48,6 +50,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize server
   const server = await registerRoutes(app);
 
   // Initialize badges after routes are registered
@@ -62,7 +65,6 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
     log(`Error: ${status} - ${message}`);
     res.status(status).json({ message });
   });
@@ -72,13 +74,30 @@ app.use((req, res, next) => {
     await setupVite(app, server);
   } else {
     serveStatic(app);
-    // Serve index.html for client-side routing
     app.get('*', (req, res) => {
       if (!req.path.startsWith('/api')) {
         res.sendFile(path.resolve(__dirname, '../dist/index.html'));
       }
     });
   }
+
+  // Start server with proper error handling
+  server.listen(PORT, '0.0.0.0', () => {
+    log(`Server running in ${app.get("env")} mode on port ${PORT}`);
+    log('Required environment variables:', [
+      'DATABASE_URL',
+      'SESSION_SECRET',
+      'PORT',
+    ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
+  }).on('error', (error: any) => {
+    if (error.code === 'EADDRINUSE') {
+      log(`Port ${PORT} is in use`);
+      process.exit(1);
+    } else {
+      log(`Error starting server: ${error.message}`);
+      process.exit(1);
+    }
+  });
 
   // Graceful shutdown handler
   const shutdown = () => {
@@ -96,37 +115,4 @@ app.use((req, res, next) => {
 
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
-
-  // Server startup with retry logic
-  const PORT = Number(process.env.PORT) || 5000;
-  const MAX_RETRIES = 3;
-  let retries = 0;
-
-  const startServer = () => {
-    server.listen(PORT, () => {
-      log(`Server running in ${app.get("env")} mode on port ${PORT}`);
-      log('Required environment variables:', [
-        'DATABASE_URL',
-        'SESSION_SECRET',
-        'PORT',
-      ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
-    }).on('error', (error: any) => {
-      if (error.code === 'EADDRINUSE') {
-        log(`Port ${PORT} is in use`);
-        if (retries < MAX_RETRIES) {
-          retries++;
-          log(`Retrying in 1 second... (Attempt ${retries}/${MAX_RETRIES})`);
-          setTimeout(startServer, 1000);
-        } else {
-          log('Max retries reached. Could not start server.');
-          process.exit(1);
-        }
-      } else {
-        log(`Error starting server: ${error.message}`);
-        process.exit(1);
-      }
-    });
-  };
-
-  startServer();
 })();
