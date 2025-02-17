@@ -120,7 +120,7 @@ async function registerBadgeRoutes(app: Express) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Set up session middleware with updated configuration
+  // Update the session middleware configuration for better security
   const sessionMiddleware = session({
     store: storage.sessionStore,
     secret: process.env.SESSION_SECRET || 'your-secret-key',
@@ -129,10 +129,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
       path: '/',
+      httpOnly: true,
     },
-    name: 'sid' // Set a specific cookie name
+    name: 'sid', // Set a specific cookie name
+  });
+
+  // Add security headers middleware
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    if (process.env.NODE_ENV === 'production') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
   });
 
   app.use(sessionMiddleware);
@@ -170,6 +182,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = req.session.passport.user;
     console.log(`WebSocket authenticated for user ${userId}`);
 
+    // Add error handling for the WebSocket connection
+    ws.on('error', (error) => {
+      console.error(`WebSocket error for user ${userId}:`, error);
+      try {
+        ws.close(1011, 'Internal server error');
+      } catch (e) {
+        console.error('Error while closing WebSocket connection:', e);
+      }
+    });
+
     ws.on('message', async (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString());
@@ -177,14 +199,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         switch (validatedMessage.type) {
           case 'start': {
-            // Start new study session
-            const session = await storage.createStudySession({
-              userId,
-              subject: validatedMessage.data?.subject || 'General',
-              status: 'active',
-            });
-            activeSessions.set(session.id, { ws, userId, sessionData: session });
-            ws.send(JSON.stringify({ type: 'session_started', sessionId: session.id }));
+            try {
+              const session = await storage.createStudySession({
+                userId,
+                subject: validatedMessage.data?.subject || 'General',
+                status: 'active',
+              });
+              activeSessions.set(session.id, { ws, userId, sessionData: session });
+              ws.send(JSON.stringify({ type: 'session_started', sessionId: session.id }));
+            } catch (error) {
+              console.error('Error starting study session:', error);
+              ws.send(JSON.stringify({ 
+                type: 'error', 
+                message: 'Failed to start study session',
+                details: process.env.NODE_ENV === 'development' ? error : undefined
+              }));
+            }
             break;
           }
 
@@ -247,6 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     ws.on('close', () => {
+      console.log(`WebSocket connection closed for user ${userId}`);
       // Clean up any active sessions for this connection
       for (const [sessionId, session] of Array.from(activeSessions.entries())) {
         if (session.ws === ws) {

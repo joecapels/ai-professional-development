@@ -98,12 +98,12 @@ app.use((req, res, next) => {
   process.on('SIGINT', shutdown);
 
   // Server startup with retry logic
-  const PORT = process.env.PORT || 5000;
+  const PORT = Number(process.env.PORT) || 5000;
   const MAX_RETRIES = 3;
   let retries = 0;
 
   const startServer = () => {
-    server.listen(PORT, "0.0.0.0", () => {
+    server.listen(PORT, () => {
       log(`Server running in ${app.get("env")} mode on port ${PORT}`);
       log('Required environment variables:', [
         'DATABASE_URL',
