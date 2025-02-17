@@ -1,6 +1,6 @@
 import { IStorage } from "./types";
-import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument, Flashcard, InsertFlashcard, flashcards } from "@shared/schema";
-import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments, studySessions, flashcards as flashcardsTable } from "./db";
+import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument, Flashcard, InsertFlashcard } from "@shared/schema";
+import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments, studySessions, flashcards } from "./db";
 import { eq, desc } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -14,7 +14,7 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     this.sessionStore = new PostgresSessionStore({
       pool,
-      tableName: 'session'  // Use the default table name
+      tableName: 'session'
     });
   }
 
@@ -52,7 +52,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProgress(progressData: InsertProgress): Promise<Progress> {
-    const [newProgress] = await db.insert(progress).values(progressData).returning();
+    const [newProgress] = await db.insert(progress).values({
+      userId: progressData.userId,
+      materialId: progressData.materialId,
+      score: progressData.score,
+      aiRecommendations: progressData.aiRecommendations || []
+    }).returning();
     return newProgress;
   }
 
@@ -66,15 +71,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
-    const [newQuiz] = await db
-      .insert(quizzes)
-      .values({
-        userId: quizData.userId,
-        subject: quizData.subject,
-        difficulty: quizData.difficulty,
-        questions: quizData.questions || [],
-      })
-      .returning();
+    const [newQuiz] = await db.insert(quizzes).values({
+      userId: quizData.userId,
+      subject: quizData.subject,
+      difficulty: quizData.difficulty,
+      questions: quizData.questions || []
+    }).returning();
     return newQuiz;
   }
 
@@ -88,15 +90,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuizResult(resultData: InsertQuizResult): Promise<QuizResult> {
-    const [newResult] = await db
-      .insert(quizResults)
-      .values({
-        quizId: resultData.quizId,
-        userId: resultData.userId,
-        score: resultData.score,
-        answers: resultData.answers || [],
-      })
-      .returning();
+    const [newResult] = await db.insert(quizResults).values({
+      userId: resultData.userId,
+      quizId: resultData.quizId,
+      score: resultData.score,
+      answers: resultData.answers || []
+    }).returning();
     return newResult;
   }
 
@@ -105,16 +104,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveDocument(document: InsertDocument): Promise<SavedDocument> {
-    const [newDocument] = await db
-      .insert(savedDocuments)
-      .values({
-        userId: document.userId,
-        title: document.title,
-        content: document.content,
-        type: document.type,
-        metadata: document.metadata || {},
-      })
-      .returning();
+    const [newDocument] = await db.insert(savedDocuments).values({
+      userId: document.userId,
+      title: document.title,
+      content: document.content,
+      type: document.type,
+      metadata: document.metadata || {}
+    }).returning();
     return newDocument;
   }
 
@@ -134,16 +130,13 @@ export class DatabaseStorage implements IStorage {
     return document;
   }
 
-  async createStudySession(sessionData: { userId: number; subject: string; status: string }): Promise<any> {
-    const [session] = await db
-      .insert(studySessions)
-      .values({
-        userId: sessionData.userId,
-        subject: sessionData.subject,
-        status: sessionData.status,
-        startTime: new Date(),
-      })
-      .returning();
+  async createStudySession(sessionData: { userId: number; subject: string; status: "active" | "paused" | "completed" }): Promise<any> {
+    const [session] = await db.insert(studySessions).values({
+      userId: sessionData.userId,
+      subject: sessionData.subject,
+      status: sessionData.status,
+      startTime: new Date()
+    }).returning();
     return session;
   }
 
@@ -155,7 +148,7 @@ export class DatabaseStorage implements IStorage {
     return session;
   }
 
-  async updateStudySessionStatus(sessionId: number, status: string): Promise<void> {
+  async updateStudySessionStatus(sessionId: number, status: "active" | "paused" | "completed"): Promise<void> {
     await db
       .update(studySessions)
       .set({ status })
@@ -212,7 +205,7 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(studySessions)
       .set({
-        status: 'completed',
+        status: 'completed' as const,
         endTime,
         totalDuration,
       })
@@ -227,15 +220,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(flashcards.createdAt));
   }
 
-  async saveFlashcards(cards: (Omit<InsertFlashcard, "id">)[]): Promise<Flashcard[]> {
+  async saveFlashcards(cards: (InsertFlashcard & { userId: number })[]): Promise<Flashcard[]> {
     if (cards.length === 0) return [];
-
-    const savedCards = await db
-      .insert(flashcards)
-      .values(cards)
-      .returning();
-
-    return savedCards;
+    return await db.insert(flashcards).values(cards).returning();
   }
 }
 
