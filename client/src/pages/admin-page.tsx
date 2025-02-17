@@ -15,11 +15,22 @@ import { useToast } from "@/hooks/use-toast";
 import type { StudyMaterial, User } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
 
+interface UserStats {
+  chatCount: number;
+  quizCount: number;
+  studySessionCount: number;
+  averageSessionDuration: number;
+  totalDocuments: number;
+  totalFlashcards: number;
+  achievements: number;
+}
+
 interface AdminAnalytics {
   activeSessions: number;
   totalAchievements: number;
   totalUsers: number;
-  userStats: {
+  userStats: Record<number, UserStats>;
+  aggregateStats: {
     chatCount: number;
     quizCount: number;
     studySessionCount: number;
@@ -108,7 +119,7 @@ export default function AdminPage() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{users?.length || 0}</div>
+                <div className="text-2xl font-bold">{analytics?.totalUsers || 0}</div>
               </CardContent>
             </Card>
             <Card>
@@ -149,10 +160,10 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="text-2xl font-bold">
-                  {analytics?.userStats.studySessionCount || 0}
+                  {analytics?.aggregateStats.studySessionCount || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Avg. Duration: {formatDuration(analytics?.userStats.averageSessionDuration || 0)}
+                  Avg. Duration: {formatDuration(analytics?.aggregateStats.averageSessionDuration || 0)}
                 </p>
               </CardContent>
             </Card>
@@ -165,11 +176,11 @@ export default function AdminPage() {
               <CardContent className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Documents:</span>
-                  <span className="font-bold">{analytics?.userStats.totalDocuments || 0}</span>
+                  <span className="font-bold">{analytics?.aggregateStats.totalDocuments || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Flashcards:</span>
-                  <span className="font-bold">{analytics?.userStats.totalFlashcards || 0}</span>
+                  <span className="font-bold">{analytics?.aggregateStats.totalFlashcards || 0}</span>
                 </div>
               </CardContent>
             </Card>
@@ -182,11 +193,11 @@ export default function AdminPage() {
               <CardContent className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Quizzes Taken:</span>
-                  <span className="font-bold">{analytics?.userStats.quizCount || 0}</span>
+                  <span className="font-bold">{analytics?.aggregateStats.quizCount || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Chat Interactions:</span>
-                  <span className="font-bold">{analytics?.userStats.chatCount || 0}</span>
+                  <span className="font-bold">{analytics?.aggregateStats.chatCount || 0}</span>
                 </div>
               </CardContent>
             </Card>
@@ -205,19 +216,85 @@ export default function AdminPage() {
                       key={user.id}
                       className="p-4 border rounded-lg hover:border-primary transition-colors"
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-bold">{user.username}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Joined: {new Date(user.createdAt).toLocaleDateString()}
-                          </p>
+                      <div className="flex flex-col space-y-4">
+                        {/* User Header */}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-bold">{user.username}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Joined: {new Date(user.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              user.isAdmin ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'
+                            }`}>
+                              {user.isAdmin ? 'Admin' : 'Student'}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            user.isAdmin ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'
-                          }`}>
-                            {user.isAdmin ? 'Admin' : 'Student'}
-                          </span>
+
+                        {/* User Statistics Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
+                          {/* Study Sessions */}
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Brain className="h-3 w-3" /> Study Sessions
+                            </span>
+                            <span className="font-medium">
+                              {analytics?.userStats[user.id]?.studySessionCount || 0}
+                            </span>
+                          </div>
+
+                          {/* Documents */}
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <FileText className="h-3 w-3" /> Documents
+                            </span>
+                            <span className="font-medium">
+                              {analytics?.userStats[user.id]?.totalDocuments || 0}
+                            </span>
+                          </div>
+
+                          {/* Flashcards */}
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <BookOpen className="h-3 w-3" /> Flashcards
+                            </span>
+                            <span className="font-medium">
+                              {analytics?.userStats[user.id]?.totalFlashcards || 0}
+                            </span>
+                          </div>
+
+                          {/* Quizzes */}
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <BarChart2 className="h-3 w-3" /> Quizzes Taken
+                            </span>
+                            <span className="font-medium">
+                              {analytics?.userStats[user.id]?.quizCount || 0}
+                            </span>
+                          </div>
+
+                          {/* Achievements */}
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Trophy className="h-3 w-3" /> Achievements
+                            </span>
+                            <span className="font-medium">
+                              {analytics?.userStats[user.id]?.achievements || 0}
+                            </span>
+                          </div>
+
+                          {/* Average Session Duration */}
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> Avg. Session
+                            </span>
+                            <span className="font-medium">
+                              {formatDuration(analytics?.userStats[user.id]?.averageSessionDuration || 0)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -231,7 +308,7 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
-            {/* Study Materials Management */}
+            {/* Study Materials Management remains unchanged */}
             <Card>
               <CardHeader>
                 <CardTitle>Study Materials</CardTitle>

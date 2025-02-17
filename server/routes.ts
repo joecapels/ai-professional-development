@@ -140,11 +140,22 @@ async function registerAdminRoutes(app: Express) {
   });
 
   // Admin analytics
+  interface UserStats {
+    chatCount: number;
+    quizCount: number;
+    studySessionCount: number;
+    averageSessionDuration: number;
+    totalDocuments: number;
+    totalFlashcards: number;
+    achievements: number;
+  }
+
   interface AdminAnalytics {
     activeSessions: number;
     totalAchievements: number;
     totalUsers: number;
-    userStats: {
+    userStats: Record<number, UserStats>;
+    aggregateStats: {
       chatCount: number;
       quizCount: number;
       studySessionCount: number;
@@ -153,6 +164,7 @@ async function registerAdminRoutes(app: Express) {
       totalFlashcards: number;
     };
   }
+
   app.get("/api/admin/analytics", async (req, res) => {
     if (!req.isAuthenticated() || !req.user?.isAdmin) {
       return res.sendStatus(403);
@@ -164,51 +176,70 @@ async function registerAdminRoutes(app: Express) {
       // Get all users and their data
       const users = await storage.getAllUsers();
       let totalAchievements = 0;
-      let totalChats = 0;
-      let totalQuizzes = 0;
-      let totalStudySessions = 0;
-      let totalSessionDuration = 0;
-      let totalDocuments = 0;
-      let totalFlashcards = 0;
+      const userStats: Record<number, UserStats> = {};
+      let aggregateStats = {
+        chatCount: 0,
+        quizCount: 0,
+        studySessionCount: 0,
+        totalSessionDuration: 0,
+        totalDocuments: 0,
+        totalFlashcards: 0,
+      };
 
-      // Aggregate user statistics
+      // Collect statistics for each user
       for (const user of users) {
         // Get achievements
         const achievements = await storage.getUserAchievements(user.id);
-        totalAchievements += achievements.length;
+        const achievementCount = achievements.length;
+        totalAchievements += achievementCount;
 
         // Get study sessions without notes field
         const studySessions = await storage.getStudySessionsByUser(user.id);
-        totalStudySessions += studySessions.length;
-        totalSessionDuration += studySessions.reduce((acc, session) =>
+        const sessionCount = studySessions.length;
+        const sessionDuration = studySessions.reduce((acc, session) =>
           acc + (session.totalDuration || 0), 0);
 
         // Get quizzes
         const quizzes = await storage.getQuizzesByUser(user.id);
-        totalQuizzes += quizzes.length;
+        const quizCount = quizzes.length;
 
         // Get documents
         const documents = await storage.getDocumentsByUser(user.id);
-        totalDocuments += documents.length;
+        const documentCount = documents.length;
 
         // Get flashcards
         const flashcards = await storage.getFlashcardsByUser(user.id);
-        totalFlashcards += flashcards.length;
+        const flashcardCount = flashcards.length;
+
+        // Store individual user stats
+        userStats[user.id] = {
+          chatCount: 0, // Add chat count when implemented
+          quizCount,
+          studySessionCount: sessionCount,
+          averageSessionDuration: sessionCount > 0 ? Math.round(sessionDuration / sessionCount) : 0,
+          totalDocuments: documentCount,
+          totalFlashcards: flashcardCount,
+          achievements: achievementCount
+        };
+
+        // Update aggregate stats
+        aggregateStats.quizCount += quizCount;
+        aggregateStats.studySessionCount += sessionCount;
+        aggregateStats.totalSessionDuration += sessionDuration;
+        aggregateStats.totalDocuments += documentCount;
+        aggregateStats.totalFlashcards += flashcardCount;
       }
 
       const analyticsData: AdminAnalytics = {
         activeSessions: activeSessionsCount,
         totalAchievements,
         totalUsers: users.length,
-        userStats: {
-          chatCount: totalChats,
-          quizCount: totalQuizzes,
-          studySessionCount: totalStudySessions,
-          averageSessionDuration: totalStudySessions > 0
-            ? Math.round(totalSessionDuration / totalStudySessions)
+        userStats,
+        aggregateStats: {
+          ...aggregateStats,
+          averageSessionDuration: aggregateStats.studySessionCount > 0
+            ? Math.round(aggregateStats.totalSessionDuration / aggregateStats.studySessionCount)
             : 0,
-          totalDocuments,
-          totalFlashcards
         }
       };
 
