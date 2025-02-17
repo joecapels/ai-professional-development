@@ -148,6 +148,17 @@ async function registerAdminRoutes(app: Express) {
     totalDocuments: number;
     totalFlashcards: number;
     achievements: number;
+    lastLogin: string | null;
+    totalLogins: number;
+    sessionHistory: {
+      startTime: string;
+      endTime: string | null;
+      duration: number;
+    }[];
+    chatHistory: {
+      timestamp: string;
+      type: string;
+    }[];
   }
 
   interface AdminAnalytics {
@@ -156,12 +167,17 @@ async function registerAdminRoutes(app: Express) {
     totalUsers: number;
     userStats: Record<number, UserStats>;
     aggregateStats: {
-      chatCount: number;
-      quizCount: number;
-      studySessionCount: number;
+      totalSessions: number;
+      activeUsers24h: number;
       averageSessionDuration: number;
       totalDocuments: number;
       totalFlashcards: number;
+      totalChats: number;
+      userEngagement: {
+        daily: number;
+        weekly: number;
+        monthly: number;
+      };
     };
   }
 
@@ -178,13 +194,23 @@ async function registerAdminRoutes(app: Express) {
       let totalAchievements = 0;
       const userStats: Record<number, UserStats> = {};
       let aggregateStats = {
-        chatCount: 0,
-        quizCount: 0,
-        studySessionCount: 0,
-        totalSessionDuration: 0,
+        totalSessions: 0,
+        activeUsers24h: 0,
+        averageSessionDuration: 0,
         totalDocuments: 0,
         totalFlashcards: 0,
+        totalChats: 0,
+        userEngagement: {
+          daily: 0,
+          weekly: 0,
+          monthly: 0
+        }
       };
+
+      const now = new Date();
+      const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
       // Collect statistics for each user
       for (const user of users) {
@@ -193,11 +219,34 @@ async function registerAdminRoutes(app: Express) {
         const achievementCount = achievements.length;
         totalAchievements += achievementCount;
 
-        // Get study sessions without notes field
+        // Get study sessions
         const studySessions = await storage.getStudySessionsByUser(user.id);
         const sessionCount = studySessions.length;
         const sessionDuration = studySessions.reduce((acc, session) =>
           acc + (session.totalDuration || 0), 0);
+
+        // Get session history
+        const sessionHistory = studySessions.map(session => ({
+          startTime: session.startTime,
+          endTime: session.endTime,
+          duration: session.totalDuration || 0
+        }));
+
+        // Check recent activity
+        const hasRecentActivity = sessionHistory.some(
+          session => new Date(session.startTime) > last24h
+        );
+        if (hasRecentActivity) {
+          aggregateStats.activeUsers24h++;
+        }
+
+        // Calculate engagement periods
+        const hasActivityInPeriod = (date: Date) =>
+          sessionHistory.some(session => new Date(session.startTime) > date);
+
+        if (hasActivityInPeriod(last24h)) aggregateStats.userEngagement.daily++;
+        if (hasActivityInPeriod(lastWeek)) aggregateStats.userEngagement.weekly++;
+        if (hasActivityInPeriod(lastMonth)) aggregateStats.userEngagement.monthly++;
 
         // Get quizzes
         const quizzes = await storage.getQuizzesByUser(user.id);
@@ -213,21 +262,31 @@ async function registerAdminRoutes(app: Express) {
 
         // Store individual user stats
         userStats[user.id] = {
-          chatCount: 0, // Add chat count when implemented
+          chatCount: 0, // This will be implemented when chat history is available
           quizCount,
           studySessionCount: sessionCount,
           averageSessionDuration: sessionCount > 0 ? Math.round(sessionDuration / sessionCount) : 0,
           totalDocuments: documentCount,
           totalFlashcards: flashcardCount,
-          achievements: achievementCount
+          achievements: achievementCount,
+          lastLogin: sessionHistory[0]?.startTime || null,
+          totalLogins: sessionHistory.length,
+          sessionHistory,
+          chatHistory: [] // This will be populated when chat system is implemented
         };
 
         // Update aggregate stats
-        aggregateStats.quizCount += quizCount;
-        aggregateStats.studySessionCount += sessionCount;
-        aggregateStats.totalSessionDuration += sessionDuration;
+        aggregateStats.totalSessions += sessionCount;
         aggregateStats.totalDocuments += documentCount;
         aggregateStats.totalFlashcards += flashcardCount;
+        aggregateStats.averageSessionDuration += sessionDuration;
+      }
+
+      // Calculate final averages
+      if (users.length > 0) {
+        aggregateStats.averageSessionDuration = Math.round(
+          aggregateStats.averageSessionDuration / aggregateStats.totalSessions
+        );
       }
 
       const analyticsData: AdminAnalytics = {
@@ -235,18 +294,93 @@ async function registerAdminRoutes(app: Express) {
         totalAchievements,
         totalUsers: users.length,
         userStats,
-        aggregateStats: {
-          ...aggregateStats,
-          averageSessionDuration: aggregateStats.studySessionCount > 0
-            ? Math.round(aggregateStats.totalSessionDuration / aggregateStats.studySessionCount)
-            : 0,
-        }
+        aggregateStats
       };
 
       res.json(analyticsData);
     } catch (error) {
       console.error("Error fetching admin analytics:", error);
       res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
+  // Individual user stats endpoint
+  app.get("/api/admin/user-stats/:userId", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const studySessions = await storage.getStudySessionsByUser(userId);
+      const achievements = await storage.getUserAchievements(userId);
+      const quizzes = await storage.getQuizzesByUser(userId);
+      const documents = await storage.getDocumentsByUser(userId);
+      const flashcards = await storage.getFlashcardsByUser(userId);
+
+      const sessionHistory = studySessions.map(session => ({
+        startTime: session.startTime,
+        endTime: session.endTime,
+        duration: session.totalDuration || 0,
+        subject: session.subject,
+        status: session.status
+      }));
+
+      const userStats = {
+        user: {
+          id: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin,
+          createdAt: user.createdAt
+        },
+        studyStats: {
+          totalSessions: studySessions.length,
+          totalStudyTime: studySessions.reduce((acc, session) =>
+            acc + (session.totalDuration || 0), 0),
+          averageSessionDuration: studySessions.length > 0
+            ? Math.round(studySessions.reduce((acc, session) =>
+                acc + (session.totalDuration || 0), 0) / studySessions.length)
+            : 0,
+          sessionHistory
+        },
+        achievements: {
+          total: achievements.length,
+          list: achievements
+        },
+        quizStats: {
+          totalQuizzes: quizzes.length,
+          averageScore: quizzes.length > 0
+            ? Math.round(quizzes.reduce((acc, quiz) => acc + (quiz.score || 0), 0) / quizzes.length)
+            : 0
+        },
+        contentStats: {
+          documents: {
+            total: documents.length,
+            byType: documents.reduce((acc: Record<string, number>, doc) => {
+              acc[doc.type] = (acc[doc.type] || 0) + 1;
+              return acc;
+            }, {})
+          },
+          flashcards: {
+            total: flashcards.length,
+            byDifficulty: flashcards.reduce((acc: Record<string, number>, card) => {
+              acc[card.difficulty] = (acc[card.difficulty] || 0) + 1;
+              return acc;
+            }, {})
+          }
+        }
+      };
+
+      res.json(userStats);
+    } catch (error) {
+      console.error("Error fetching user stats:", error);
+      res.status(500).json({ error: "Failed to fetch user statistics" });
     }
   });
 }
