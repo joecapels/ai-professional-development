@@ -18,6 +18,10 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -178,8 +182,8 @@ export class DatabaseStorage implements IStorage {
       return acc + (session.totalDuration || 0);
     }, 0);
 
-    const avgSessionLength = studySessions.length > 0 
-      ? Math.round(totalStudyTime / studySessions.length) 
+    const avgSessionLength = studySessions.length > 0
+      ? Math.round(totalStudyTime / studySessions.length)
       : 0;
 
     const quizStats = {
@@ -210,7 +214,7 @@ export class DatabaseStorage implements IStorage {
 
     orderedSessions.forEach(session => {
       const sessionDate = new Date(session.startTime);
-      if (!lastDate || 
+      if (!lastDate ||
           (sessionDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24) === 1) {
         currentStreak++;
         maxStreak = Math.max(maxStreak, currentStreak);

@@ -1,3 +1,9 @@
+interface StudySessionData {
+  ws: WebSocket;
+  userId: number;
+  sessionData: any; // This can be more specific based on your session data structure
+}
+
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocket, WebSocketServer } from 'ws';
@@ -19,12 +25,8 @@ interface WebSocketRequestWithSession extends IncomingMessage {
   };
 }
 
-// Track active study sessions
-const activeSessions = new Map<number, {
-  ws: WebSocket;
-  userId: number;
-  sessionData: any;
-}>();
+// Track active study sessions with proper typing
+const activeSessions = new Map<number, StudySessionData>();
 
 // Add new routes before the registerRoutes function
 
@@ -119,6 +121,57 @@ async function registerBadgeRoutes(app: Express) {
   });
 }
 
+// Add admin-specific routes before the registerRoutes function
+async function registerAdminRoutes(app: Express) {
+  // Fetch all users (admin only)
+  app.get("/api/users", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) {
+      return res.sendStatus(403);
+    }
+    try {
+      const users = await storage.getAllUsers();
+      // Remove sensitive information
+      const sanitizedUsers = users.map(({ password, ...user }) => user);
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  // Admin analytics
+  app.get("/api/admin/analytics", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user?.isAdmin) {
+      return res.sendStatus(403);
+    }
+    try {
+      // Get active study sessions count
+      const activeSessionsCount = activeSessions.size;
+
+      // Get total achievements across all users
+      const users = await storage.getAllUsers();
+      let totalAchievements = 0;
+
+      for (const user of users) {
+        const achievements = await storage.getUserAchievements(user.id);
+        totalAchievements += achievements.length;
+      }
+
+      // Analytics response type
+      const analyticsData = {
+        activeSessions: activeSessionsCount,
+        totalAchievements,
+        totalUsers: users.length
+      };
+
+      res.json(analyticsData);
+    } catch (error) {
+      console.error("Error fetching admin analytics:", error);
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Update the session middleware configuration for better security
   const sessionMiddleware = session({
@@ -209,8 +262,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ws.send(JSON.stringify({ type: 'session_started', sessionId: session.id }));
             } catch (error) {
               console.error('Error starting study session:', error);
-              ws.send(JSON.stringify({ 
-                type: 'error', 
+              ws.send(JSON.stringify({
+                type: 'error',
                 message: 'Failed to start study session',
                 details: process.env.NODE_ENV === 'development' ? error : undefined
               }));
@@ -550,7 +603,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  await registerBadgeRoutes(app); // Register the new badge routes.
+  await registerBadgeRoutes(app);
+  await registerAdminRoutes(app); // Register the new admin routes
 
   // Study session completion with badge check
   app.post("/api/study-sessions/:id/complete", async (req, res) => {

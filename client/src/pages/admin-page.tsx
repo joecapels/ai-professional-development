@@ -4,19 +4,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { Loader2 } from "lucide-react";
+import { Loader2, Users, BookOpen, Trophy, Activity } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import type { StudyMaterial } from "@shared/schema";
+import type { StudyMaterial, User } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
+
+interface AdminAnalytics {
+  activeSessions: number;
+  totalAchievements: number;
+  totalUsers: number;
+}
 
 export default function AdminPage() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const { data: materials, isLoading } = useQuery<StudyMaterial[]>({
+  // Fetch all users
+  const { data: users, isLoading: usersLoading } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+  });
+
+  // Fetch study materials
+  const { data: materials, isLoading: materialsLoading } = useQuery<StudyMaterial[]>({
     queryKey: ["/api/materials"],
+  });
+
+  // Fetch analytics data
+  const { data: analytics, isLoading: analyticsLoading } = useQuery<AdminAnalytics>({
+    queryKey: ["/api/admin/analytics"],
   });
 
   const form = useForm<StudyMaterial>({
@@ -47,7 +64,7 @@ export default function AdminPage() {
     },
   });
 
-  if (isLoading) {
+  if (usersLoading || materialsLoading || analyticsLoading) {
     return (
       <div className="min-h-screen">
         <NavBar />
@@ -65,10 +82,89 @@ export default function AdminPage() {
         <div className="space-y-6">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
 
+          {/* Statistics Overview */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{users?.length || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Study Materials</CardTitle>
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{materials?.length || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analytics?.activeSessions || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Achievements</CardTitle>
+                <Trophy className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analytics?.totalAchievements || 0}</div>
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
+            {/* User Management */}
             <Card>
               <CardHeader>
-                <CardTitle>Add Study Material</CardTitle>
+                <CardTitle>User Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {users?.map((user) => (
+                    <div
+                      key={user.id}
+                      className="p-4 border rounded-lg hover:border-primary transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-bold">{user.username}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Joined: {new Date(user.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            user.isAdmin ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'
+                          }`}>
+                            {user.isAdmin ? 'Admin' : 'Student'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {(!users || users.length === 0) && (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No users found.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Study Materials Management */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Study Materials</CardTitle>
               </CardHeader>
               <CardContent>
                 <form
@@ -103,15 +199,8 @@ export default function AdminPage() {
                     Add Material
                   </Button>
                 </form>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Study Materials</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+                <div className="mt-6 space-y-4">
                   {materials?.map((material) => (
                     <div
                       key={material.id}
