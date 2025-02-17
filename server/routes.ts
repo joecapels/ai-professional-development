@@ -253,27 +253,20 @@ async function registerAdminRoutes(app: Express) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Update the session middleware configuration for better security
-  const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || 'default-secret-key',
+  const sessionMiddleware = session({
+    store: storage.sessionStore,
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
-    store: storage.sessionStore,
     cookie: {
       secure: process.env.NODE_ENV === 'production',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      path: '/',
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-      sameSite: 'lax'
     },
-    name: 'sid'
-  };
-
-  if (app.get('env') === 'production') {
-    app.set('trust proxy', 1);
-    if (sessionSettings.cookie) sessionSettings.cookie.secure = true;
-  }
-
-  const sessionMiddleware = session(sessionSettings);
-
+    name: 'sid', // Set a specific cookie name
+  });
 
   // Add security headers middleware
   app.use((req, res, next) => {
