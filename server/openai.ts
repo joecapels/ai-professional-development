@@ -200,7 +200,7 @@ export async function handleStudyChat(
       encouraging: "Be encouraging and motivating. Celebrate student successes and provide positive reinforcement. Use phrases like 'Great question!' and 'You're making excellent progress!'",
       socratic: "Use the Socratic method. Guide students to answers through questioning. Help them discover solutions themselves rather than providing direct answers.",
       professional: "Maintain a professional and formal tone. Focus on clear, concise explanations with academic language.",
-      friendly: "Be casual and approachable. Use conversational language and relatable examples.",
+      friendly: "Be casual and approachable. Use conversational language and relatable examples. Make learning feel fun and informal.",
     };
 
     const personalityPrompt = preferences?.chatbotPersonality
@@ -346,12 +346,11 @@ export async function generateFlashcardsFromContent(contentText: string): Promis
 
 // Add new interface for multi-modal messages
 interface MultiModalMessage {
-  type: 'text' | 'image' | 'code' | 'math' | 'diagram';
+  type: 'text' | 'image' | 'code' | 'math';
   content: string;
   metadata?: {
     format?: string;
     language?: string;
-    diagramType?: 'flowchart' | 'sequence' | 'class' | 'state' | 'er' | 'gantt';
   };
 }
 
@@ -386,12 +385,6 @@ export async function handleMultiModalChat(
           role: "user" as const,
           content: `Here's a mathematical expression to analyze: ${msg.content}`
         };
-      } else if (msg.type === 'diagram') {
-        return {
-          role: "user" as const,
-          content: `Please create a ${msg.metadata?.diagramType || 'flowchart'} diagram for: ${msg.content}
-          Use Mermaid.js syntax. Wrap the diagram code in \`\`\`mermaid tags.`
-        };
       }
       return {
         role: "user" as const,
@@ -407,22 +400,14 @@ export async function handleMultiModalChat(
       ? generatePreferencesContext(preferences)
       : '';
 
-    // Enhanced system prompt for diagram generation
-    const diagramPrompt = `You can create diagrams using Mermaid.js syntax. When asked to create a diagram:
-    1. Use proper Mermaid.js syntax
-    2. Keep diagrams clear and readable
-    3. Use appropriate diagram type (flowchart, sequence, etc.)
-    4. Wrap diagram code in \`\`\`mermaid code blocks
-    5. Add brief explanations before and after the diagram`;
-
     const response = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview", // Using vision model for all types of content
+      model: "gpt-4-vision-preview", // Using vision model for image support
       messages: [
         { 
           role: "system" as const, 
-          content: `${SYSTEM_PROMPT}\n${personalityPrompt}\n${preferencesContext}\n${diagramPrompt}` 
+          content: `${SYSTEM_PROMPT}\n${personalityPrompt}\n${preferencesContext}` 
         },
-        ...formattedMessages as any
+        ...formattedMessages as any // Type assertion needed for mixed content types
       ],
       max_tokens: 1000
     });
@@ -458,5 +443,5 @@ function generatePreferencesContext(preferences: LearningPreferences): string {
   `;
 }
 
-// Export types and interfaces
-export type { MultiModalMessage, LearningPreferences };
+// Export new types and interfaces
+export type { MultiModalMessage };
