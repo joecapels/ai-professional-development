@@ -25,14 +25,14 @@ export function NavBar() {
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   const menuItems = !user?.isAdmin ? [
-    { path: "/", label: "Dashboard" },
-    { path: "/chat", label: "Learn" },
-    { path: "/quiz", label: "Practice" },
-    { path: "/flashcards", label: "Flashcards" },
-    { path: "/documents", label: "Documents" },
-    { path: "/badges", label: "Achievements" },
-    { path: "/analytics", label: "Analytics" },
-    { path: "/settings", label: "Settings" }
+    { path: "/", label: "Dashboard", dataTour: "dashboard" },
+    { path: "/chat", label: "Learn", dataTour: "learn" },
+    { path: "/quiz", label: "Practice", dataTour: "practice" },
+    { path: "/flashcards", label: "Flashcards", dataTour: "flashcards" },
+    { path: "/documents", label: "Documents", dataTour: "documents" },
+    { path: "/badges", label: "Achievements", dataTour: "achievements" },
+    { path: "/analytics", label: "Analytics", dataTour: "analytics" },
+    { path: "/settings", label: "Settings", dataTour: "settings" }
   ] : [
     { path: "/admin", label: "Admin Dashboard" }
   ];
@@ -91,9 +91,14 @@ export function NavBar() {
           <div className="hidden md:flex items-center gap-1">
             {user && (
               <>
-                {menuItems.map(({ path, label }) => (
+                {menuItems.map(({ path, label, dataTour }) => (
                   <Link key={path} href={path}>
-                    <span className={getNavClass(path)}>{label}</span>
+                    <span 
+                      className={getNavClass(path)}
+                      data-tour={dataTour}
+                    >
+                      {label}
+                    </span>
                   </Link>
                 ))}
 
@@ -145,13 +150,18 @@ export function NavBar() {
               <div className="py-4 space-y-1">
                 {user && (
                   <>
-                    {menuItems.map(({ path, label }, index) => (
+                    {menuItems.map(({ path, label, dataTour }, index) => (
                       <motion.div
                         key={path}
                         variants={itemVariants}
                       >
                         <Link href={path}>
-                          <span className={getNavClass(path)}>{label}</span>
+                          <span 
+                            className={getNavClass(path)}
+                            data-tour={dataTour}
+                          >
+                            {label}
+                          </span>
                         </Link>
                       </motion.div>
                     ))}

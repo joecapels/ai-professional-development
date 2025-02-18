@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { AppTour } from "@/components/app-tour";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import HomePage from "@/pages/home-page";
@@ -15,8 +16,6 @@ import DocumentsPage from "@/pages/documents-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import FlashcardPage from "@/pages/flashcard-page";
 import BadgesPage from "@/pages/badges-page";
-import OneRingPage from "@/pages/one-ring-page";
-import SuperUserLoginPage from "@/pages/super-user-login";
 import AdminPage from "@/pages/admin-page";
 
 function Router() {
@@ -30,10 +29,8 @@ function Router() {
       <ProtectedRoute path="/analytics" component={AnalyticsPage} />
       <ProtectedRoute path="/flashcards" component={FlashcardPage} />
       <ProtectedRoute path="/badges" component={BadgesPage} />
-      <ProtectedRoute path="/one-ring" component={OneRingPage} />
       <ProtectedRoute path="/admin" component={AdminPage} />
       <Route path="/auth" component={AuthPage} />
-      <Route path="/super-login" component={SuperUserLoginPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -45,6 +42,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <Router />
+          <AppTour />
           <Toaster />
         </AuthProvider>
       </QueryClientProvider>
