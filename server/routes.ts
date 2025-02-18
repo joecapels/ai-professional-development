@@ -386,7 +386,11 @@ async function registerAdminRoutes(app: Express) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Update the session middleware configuration for better security
+  // Health check endpoint
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   const sessionMiddleware = session({
     store: storage.sessionStore,
     secret: process.env.SESSION_SECRET || 'your-secret-key',
@@ -399,18 +403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       path: '/',
       httpOnly: true,
     },
-    name: 'sid', // Set a specific cookie name
-  });
-
-  // Add security headers middleware
-  app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    if (process.env.NODE_ENV === 'production') {
-      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    }
-    next();
+    name: 'sid',
   });
 
   app.use(sessionMiddleware);

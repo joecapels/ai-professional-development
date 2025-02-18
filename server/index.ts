@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import path from "path";
+import { createServer } from "node:net";
 
 const app = express();
 app.use(express.json());
@@ -13,6 +14,9 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
   next();
 });
 
@@ -47,64 +51,98 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  const server = await registerRoutes(app);
-
-  // Initialize badges after server starts
-  server.on('listening', async () => {
-    try {
-      await storage.createInitialBadges();
-      log('Initial badges created successfully');
-    } catch (error) {
-      log('Error creating initial badges:', String(error));
-    }
-  });
-
-  // Global error handler
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    log(`Error: ${status} - ${message}`);
-    res.status(status).json({ message });
-  });
-
-  // Setup static file serving or Vite based on environment
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-    // Serve index.html for client-side routing
-    app.get('*', (req, res) => {
-      if (!req.path.startsWith('/api')) {
-        res.sendFile(path.resolve(__dirname, '../dist/index.html'));
-      }
+async function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = createServer();
+    server.once('error', () => {
+      log(`Port ${port} is not available`);
+      resolve(false);
     });
+    server.once('listening', () => {
+      server.close();
+      log(`Port ${port} is available`);
+      resolve(true);
+    });
+    server.listen(port, '0.0.0.0');
+  });
+}
+
+async function findAvailablePort(startPort: number, maxAttempts: number = 10): Promise<number> {
+  log(`Starting port availability check from port ${startPort}`);
+  for (let port = startPort; port < startPort + maxAttempts; port++) {
+    if (await isPortAvailable(port)) {
+      return port;
+    }
   }
+  throw new Error(`No available ports found between ${startPort} and ${startPort + maxAttempts - 1}`);
+}
+
+(async () => {
+  let server: any = null;
 
   // Graceful shutdown handler
-  const shutdown = () => {
-    log('Received kill signal, shutting down gracefully');
-    server.close(() => {
-      log('Closed out remaining connections');
-      process.exit(0);
-    });
+  const shutdown = async (signal: string) => {
+    log(`Received ${signal}, starting graceful shutdown...`);
 
-    setTimeout(() => {
-      log('Could not close connections in time, forcefully shutting down');
-      process.exit(1);
-    }, 10000);
+    if (server) {
+      await new Promise<void>((resolve) => {
+        server.close(() => {
+          log('Closed out remaining connections');
+          resolve();
+        });
+
+        // Force close after timeout
+        setTimeout(() => {
+          log('Could not close connections in time, forcing shutdown');
+          resolve();
+        }, 10000);
+      });
+    }
+
+    process.exit(0);
   };
 
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
+  // Register shutdown handlers
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 
-  // Server startup with retry logic
-  const PORT = Number(process.env.PORT) || 3000; // Changed default to 3000
-  const MAX_RETRIES = 3;
-  let retries = 0;
+  try {
+    // Initialize server
+    log('Initializing server...');
+    server = await registerRoutes(app);
 
-  const startServer = () => {
+    // Global error handler
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      log(`Error: ${status} - ${message}`);
+      res.status(status).json({ message });
+    });
+
+    // Setup environment-specific middleware
+    if (app.get("env") === "development") {
+      log('Setting up Vite development server...');
+      await setupVite(app, server);
+    } else {
+      log('Setting up static file serving...');
+      serveStatic(app);
+      app.get('*', (_req, res) => {
+        if (!_req.path.startsWith('/api')) {
+          res.sendFile(path.resolve(__dirname, '../dist/index.html'));
+        }
+      });
+    }
+
+    // Find available port
+    const preferredPort = Number(process.env.PORT) || 3000;
+    log(`Checking port availability starting from ${preferredPort}...`);
+    const PORT = await findAvailablePort(preferredPort);
+
+    if (PORT !== preferredPort) {
+      log(`Preferred port ${preferredPort} was in use, using port ${PORT} instead`);
+    }
+
+    // Start server
     server.listen(PORT, '0.0.0.0', () => {
       log(`Server running in ${app.get("env")} mode on port ${PORT}`);
       log('Required environment variables:', [
@@ -112,23 +150,26 @@ app.use((req, res, next) => {
         'SESSION_SECRET',
         'PORT',
       ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
-    }).on('error', (error: any) => {
-      if (error.code === 'EADDRINUSE') {
-        log(`Port ${PORT} is in use`);
-        if (retries < MAX_RETRIES) {
-          retries++;
-          log(`Retrying in 1 second... (Attempt ${retries}/${MAX_RETRIES})`);
-          setTimeout(startServer, 1000);
-        } else {
-          log('Max retries reached. Could not start server.');
-          process.exit(1);
-        }
-      } else {
-        log(`Error starting server: ${error.message}`);
-        process.exit(1);
-      }
-    });
-  };
 
-  startServer();
+      // Initialize badges in background after server starts
+      setTimeout(async () => {
+        try {
+          await storage.createInitialBadges();
+          log('Initial badges created successfully');
+        } catch (error) {
+          log('Error creating initial badges:', String(error));
+        }
+      }, 1000);
+    });
+
+    // Handle server errors
+    server.on('error', (error: any) => {
+      log(`Error starting server: ${error.message}`);
+      process.exit(1);
+    });
+
+  } catch (error) {
+    log(`Fatal error during startup: ${error}`);
+    process.exit(1);
+  }
 })();
