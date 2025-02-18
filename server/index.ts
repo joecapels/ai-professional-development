@@ -2,9 +2,9 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
-import { createServer } from "node:net";
 
 const app = express();
+const PORT = 5000;
 
 // Essential middleware only
 app.use(express.json());
@@ -15,32 +15,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-async function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const server = createServer();
-    server.once('error', () => {
-      log(`Port ${port} is not available`);
-      resolve(false);
-    });
-    server.once('listening', () => {
-      server.close();
-      log(`Port ${port} is available`);
-      resolve(true);
-    });
-    server.listen(port, '0.0.0.0');
-  });
-}
-
-async function findAvailablePort(startPort: number, maxAttempts: number = 10): Promise<number> {
-  log(`Starting port availability check from port ${startPort}`);
-  for (let port = startPort; port < startPort + maxAttempts; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
-  }
-  throw new Error(`No available ports found between ${startPort} and ${startPort + maxAttempts - 1}`);
-}
-
 async function startServer() {
   let server: any = null;
 
@@ -49,19 +23,9 @@ async function startServer() {
     log('Initializing minimal server routes...');
     server = await registerRoutes(app);
 
-    // Find available port
-    const preferredPort = Number(process.env.PORT) || 3001;
-    log(`Current process.env.PORT: ${process.env.PORT}`);
-    log(`Checking port availability starting from ${preferredPort}...`);
-    const PORT = await findAvailablePort(preferredPort);
-
-    if (PORT !== preferredPort) {
-      log(`Preferred port ${preferredPort} was in use, using port ${PORT} instead`);
-    }
-
     // Start server with minimal configuration
     await new Promise<void>((resolve, reject) => {
-      log(`Attempting to start server on port ${PORT}...`);
+      log(`Starting server on port ${PORT}...`);
       server.listen(PORT, '0.0.0.0', () => {
         log(`Server successfully bound to port ${PORT}`);
         log(`Server running in ${app.get("env")} mode`);

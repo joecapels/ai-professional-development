@@ -94,15 +94,6 @@ export default function StudentPage() {
     <div className="min-h-screen bg-background">
       <NavBar />
       <main className="container py-4 px-3 md:py-8 md:px-6 lg:px-8">
-        {user?.username === "joe" && (
-          <Alert className="mb-4 md:mb-6 bg-primary/5 border-primary/20">
-            <InfoIcon className="h-4 w-4 text-primary" />
-            <AlertDescription>
-              You are viewing demo data. As you use the platform, this section will be populated with your actual learning progress and insights.
-            </AlertDescription>
-          </Alert>
-        )}
-
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

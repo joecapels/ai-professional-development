@@ -26,144 +26,7 @@ interface SubjectPerformance {
   improvement: number; // percentage improvement over time
 }
 
-// Generate demo data for development and testing
-function generateDemoData() {
-  const subjects = [
-    "Biology",
-    "History",
-    "Music Theory",
-    "Art History",
-    "Physics",
-    "Literature",
-    "Mathematics",
-    "Chemistry",
-    "World Geography",
-    "Computer Science"
-  ];
-
-  const demoPerformanceMetrics: PerformanceMetrics = {
-    overallScore: 78,
-    strengthAreas: [
-      "Biology - Cell Structure and Function",
-      "Music Theory - Scales and Harmony",
-      "Art History - Renaissance Period",
-      "History - Ancient Civilizations"
-    ],
-    improvementAreas: [
-      "Physics - Quantum Mechanics",
-      "Chemistry - Organic Compounds",
-      "Mathematics - Calculus",
-      "Literature - Modern Poetry"
-    ],
-    learningTrends: [
-      { period: "Week 1", score: 65 },
-      { period: "Week 2", score: 70 },
-      { period: "Week 3", score: 75 },
-      { period: "Week 4", score: 78 },
-      { period: "Week 5", score: 82 }
-    ],
-    recommendedTopics: [
-      "Advanced Cell Biology",
-      "Baroque Music Composition",
-      "Modern Art Movements",
-      "World History - Industrial Revolution"
-    ],
-    predictedDifficulty: 3
-  };
-
-  const demoSubjectPerformance: SubjectPerformance[] = subjects.map(subject => ({
-    subject,
-    averageScore: 60 + Math.floor(Math.random() * 30),
-    totalAttempts: 5 + Math.floor(Math.random() * 10),
-    lastAttemptDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-    improvement: Math.floor(Math.random() * 15)
-  }));
-
-  const demoRecommendations = [
-    "Focus on practical applications in Physics to strengthen understanding",
-    "Review fundamental concepts in Organic Chemistry",
-    "Practice more Calculus problems with real-world examples",
-    "Explore contemporary literature to build analysis skills",
-    "Continue excellent progress in Biology and Music Theory"
-  ];
-
-  // Add demo quiz analysis data
-  const demoQuizAnalysis = {
-    topicBreakdown: [
-      { topic: "Biology", correctAnswers: 45, totalQuestions: 50 },
-      { topic: "Physics", correctAnswers: 32, totalQuestions: 50 },
-      { topic: "Chemistry", correctAnswers: 38, totalQuestions: 50 },
-      { topic: "Mathematics", correctAnswers: 42, totalQuestions: 50 },
-      { topic: "Literature", correctAnswers: 47, totalQuestions: 50 }
-    ],
-    commonMistakes: [
-      {
-        topic: "Physics - Force and Motion",
-        description: "Difficulty applying Newton's laws to complex scenarios",
-        frequency: 8
-      },
-      {
-        topic: "Chemistry - Organic Compounds",
-        description: "Confusion with naming conventions and structures",
-        frequency: 6
-      },
-      {
-        topic: "Mathematics - Integration",
-        description: "Struggles with integration by parts method",
-        frequency: 5
-      }
-    ],
-    timeOfDayPerformance: [
-      { timeSlot: "Morning", averageScore: 85 },
-      { timeSlot: "Afternoon", averageScore: 78 },
-      { timeSlot: "Evening", averageScore: 72 },
-      { timeSlot: "Night", averageScore: 68 }
-    ]
-  };
-
-  // Add demo document analysis data
-  const demoDocumentAnalysis = {
-    topicsDistribution: [
-      { topic: "Biology", count: 15 },
-      { topic: "Physics", count: 12 },
-      { topic: "Chemistry", count: 10 },
-      { topic: "Mathematics", count: 18 },
-      { topic: "Literature", count: 14 }
-    ],
-    complexityTrend: [
-      { month: "January", averageComplexity: 2.5 },
-      { month: "February", averageComplexity: 3.2 },
-      { month: "March", averageComplexity: 3.8 }
-    ],
-    conceptConnections: [
-      {
-        concept: "Cell Biology",
-        relatedConcepts: ["Genetics", "Biochemistry", "Molecular Biology"],
-        strength: 0.85
-      },
-      {
-        concept: "Classical Mechanics",
-        relatedConcepts: ["Forces", "Motion", "Energy"],
-        strength: 0.78
-      },
-      {
-        concept: "Organic Chemistry",
-        relatedConcepts: ["Molecular Structure", "Reactions", "Synthesis"],
-        strength: 0.72
-      }
-    ]
-  };
-
-  return {
-    performanceMetrics: demoPerformanceMetrics,
-    subjectPerformance: demoSubjectPerformance,
-    nextStepRecommendations: demoRecommendations,
-    quizAnalysis: demoQuizAnalysis,
-    documentAnalysis: demoDocumentAnalysis
-  };
-}
-
-// Update the default data function to include the new fields
+// Default data function for new users or when data is not available
 function getDefaultData(): {
   performanceMetrics: PerformanceMetrics;
   subjectPerformance: SubjectPerformance[];
@@ -233,21 +96,16 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
   };
 }> {
   try {
-    // Check if the user is "joe"
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-
-    if (user && user.username === "joe") {
-      return generateDemoData();
-    }
-
+    // Get the user's actual data from the database
+    // This will be implemented with real data gathering logic
     return getDefaultData();
   } catch (error) {
-    console.error("Error checking user:", error);
+    console.error("Error generating analytics:", error);
     return getDefaultData();
   }
 }
 
-// Helper function to calculate basic score when ML analysis fails
+// Helper function to calculate basic score
 function calculateBasicScore(quizResults: QuizResult[]): number {
   if (quizResults.length === 0) return 0;
   const totalScore = quizResults.reduce((sum, result) => sum + result.score, 0);
@@ -265,38 +123,6 @@ export async function generatePersonalizedStudyPlan(
   milestones: { description: string; targetDate: string }[];
 }> {
   try {
-    // Check if the user is "joe"
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-
-    if (user && user.username === "joe") {
-      // Return demo study plan for joe
-      return {
-        dailyGoals: [
-          "Review Biology Chapter 5: Cell Division",
-          "Practice Music Theory scales for 30 minutes",
-          "Study Art History: Modern Period",
-          "Complete 2 Physics practice problems"
-        ],
-        focusAreas: metrics.improvementAreas,
-        estimatedTimeInvestment: 2.5,
-        milestones: [
-          {
-            description: "Complete Biology Module Assessment",
-            targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            description: "Master Basic Music Theory Concepts",
-            targetDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            description: "Finish Art History Period Overview",
-            targetDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
-          }
-        ],
-      };
-    }
-
-    // Return default study plan for other users
     return {
       dailyGoals: [
         "Complete your profile settings",
@@ -317,7 +143,7 @@ export async function generatePersonalizedStudyPlan(
       ],
     };
   } catch (error) {
-    console.error("Error checking user:", error);
+    console.error("Error generating study plan:", error);
     return {
       dailyGoals: ["Set up your profile"],
       focusAreas: ["Getting started"],
