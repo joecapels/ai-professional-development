@@ -32,7 +32,6 @@ export function NavBar() {
     { path: "/documents", label: "Documents" },
     { path: "/badges", label: "Badges" },
     { path: "/analytics", label: "Analytics" },
-    { path: "/one-ring", label: "The One Ring" },
     { path: "/settings", label: "Settings" }
   ] : [
     { path: "/admin", label: "Admin Dashboard" }
