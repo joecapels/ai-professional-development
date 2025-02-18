@@ -26,11 +26,11 @@ export function NavBar() {
 
   const menuItems = !user?.isAdmin ? [
     { path: "/", label: "Dashboard" },
-    { path: "/chat", label: "Study Chat" },
-    { path: "/quiz", label: "Take Quiz" },
+    { path: "/chat", label: "Learn" },
+    { path: "/quiz", label: "Practice" },
     { path: "/flashcards", label: "Flashcards" },
     { path: "/documents", label: "Documents" },
-    { path: "/badges", label: "Badges" },
+    { path: "/badges", label: "Achievements" },
     { path: "/analytics", label: "Analytics" },
     { path: "/settings", label: "Settings" }
   ] : [
