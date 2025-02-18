@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { Menu, X, Search, Bell, User as UserIcon, Settings, Shield } from "lucide-react";
+import { Menu, X, Search, Bell, User as UserIcon, Settings } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
@@ -89,14 +89,6 @@ export function NavBar() {
 
           {/* Desktop navigation */}
           <div className="hidden md:flex items-center gap-1">
-            {/* Super User Login link - always visible */}
-            <Link href="/super-login">
-              <span className={getNavClass("/super-login")}>
-                <Shield className="inline-block h-4 w-4 mr-1" />
-                Super User
-              </span>
-            </Link>
-
             {user && (
               <>
                 {menuItems.map(({ path, label }) => (
@@ -151,16 +143,6 @@ export function NavBar() {
               className="md:hidden overflow-hidden"
             >
               <div className="py-4 space-y-1">
-                {/* Super User Login link - always visible in mobile */}
-                <motion.div variants={itemVariants}>
-                  <Link href="/super-login">
-                    <span className={getNavClass("/super-login")}>
-                      <Shield className="inline-block h-4 w-4 mr-1" />
-                      Super User
-                    </span>
-                  </Link>
-                </motion.div>
-
                 {user && (
                   <>
                     {menuItems.map(({ path, label }, index) => (
