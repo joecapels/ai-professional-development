@@ -6,7 +6,13 @@ import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 
-const STAGGER_DELAY = 0.05; // Consistent delay between items
+const STAGGER_DELAY = 0.05;
+
+interface MenuItem {
+  path: string;
+  label: string;
+  dataTour?: string;
+}
 
 export function NavBar() {
   const { user, logoutMutation } = useAuth();
@@ -24,7 +30,7 @@ export function NavBar() {
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
-  const menuItems = !user?.isAdmin ? [
+  const menuItems: MenuItem[] = !user?.isAdmin ? [
     { path: "/", label: "Dashboard", dataTour: "dashboard" },
     { path: "/chat", label: "Learn", dataTour: "learn" },
     { path: "/quiz", label: "Practice", dataTour: "practice" },

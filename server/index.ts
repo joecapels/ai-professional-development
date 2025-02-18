@@ -2,9 +2,27 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
+import helmet from "helmet";
+import compression from "compression";
 
 const app = express();
-const PORT = 5000;
+const PORT = parseInt(process.env.PORT || "5000", 10);
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", process.env.NODE_ENV === "development" ? "*" : ""]
+    }
+  }
+}));
+
+// Performance middleware
+app.use(compression());
 
 // Essential middleware only
 app.use(express.json());
@@ -12,7 +30,12 @@ app.use(express.urlencoded({ extended: false }));
 
 // Health check endpoint - keep this simple and early
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    environment: app.get("env"),
+    uptime: process.uptime()
+  });
 });
 
 async function startServer() {
@@ -26,7 +49,16 @@ async function startServer() {
     // Start server with minimal configuration
     await new Promise<void>((resolve, reject) => {
       log(`Starting server on port ${PORT}...`);
-      server.listen(PORT, '0.0.0.0', () => {
+      const handleError = (error: Error & { code?: string }) => {
+        if (error.code === 'EADDRINUSE') {
+          log(`Port ${PORT} is already in use. Please ensure no other service is running on this port.`);
+          process.exit(1);
+        }
+        log(`Error starting server: ${error.message}`);
+        reject(error);
+      };
+
+      server = app.listen(PORT, '0.0.0.0', () => {
         log(`Server successfully bound to port ${PORT}`);
         log(`Server running in ${app.get("env")} mode`);
         log('Required environment variables:', [
@@ -37,10 +69,7 @@ async function startServer() {
         resolve();
       });
 
-      server.on('error', (error: Error) => {
-        log(`Error starting server: ${error.message}`);
-        reject(error);
-      });
+      server.on('error', handleError);
     });
 
     // Global error handler
@@ -48,7 +77,13 @@ async function startServer() {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
       log(`Error: ${status} - ${message}`);
-      res.status(status).json({ message });
+
+      // Don't expose error details in production
+      const response = app.get("env") === "development"
+        ? { message, stack: err.stack }
+        : { message: "Internal Server Error" };
+
+      res.status(status).json(response);
     });
 
     // Once server is confirmed running, add additional features
@@ -62,6 +97,7 @@ async function startServer() {
       }
     } else {
       log('Setting up static file serving...');
+      app.set('trust proxy', 1); // trust first proxy
       serveStatic(app);
     }
 
