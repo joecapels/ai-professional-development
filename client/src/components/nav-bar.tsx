@@ -4,6 +4,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Menu, X, Search, Bell, User as UserIcon, Settings, Shield } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { motion, AnimatePresence } from "framer-motion";
+
+const STAGGER_DELAY = 0.05; // Consistent delay between items
 
 export function NavBar() {
   const { user, logoutMutation } = useAuth();
@@ -20,6 +23,42 @@ export function NavBar() {
     }`;
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+  const menuItems = !user?.isAdmin ? [
+    { path: "/", label: "Dashboard" },
+    { path: "/chat", label: "Study Chat" },
+    { path: "/quiz", label: "Take Quiz" },
+    { path: "/flashcards", label: "Flashcards" },
+    { path: "/documents", label: "Documents" },
+    { path: "/badges", label: "Badges" },
+    { path: "/analytics", label: "Analytics" },
+    { path: "/one-ring", label: "The One Ring" },
+    { path: "/settings", label: "Settings" }
+  ] : [
+    { path: "/admin", label: "Admin Dashboard" }
+  ];
+
+  const containerVariants = {
+    hidden: { 
+      opacity: 0,
+      height: 0,
+      transition: { staggerChildren: 0, when: "afterChildren" }
+    },
+    visible: {
+      opacity: 1,
+      height: "auto",
+      transition: { 
+        staggerChildren: STAGGER_DELAY,
+        when: "beforeChildren",
+        duration: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { x: -20, opacity: 0 },
+    visible: { x: 0, opacity: 1 }
+  };
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 shadow-sm">
@@ -61,23 +100,11 @@ export function NavBar() {
 
             {user && (
               <>
-                {!user.isAdmin ? (
-                  <>
-                    <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
-                    <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
-                    <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
-                    <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
-                    <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
-                    <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
-                    <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
-                    <Link href="/one-ring"><span className={getNavClass("/one-ring")}>The One Ring</span></Link>
-                    <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/admin"><span className={getNavClass("/admin")}>Admin Dashboard</span></Link>
-                  </>
-                )}
+                {menuItems.map(({ path, label }) => (
+                  <Link key={path} href={path}>
+                    <span className={getNavClass(path)}>{label}</span>
+                  </Link>
+                ))}
 
                 {/* User section */}
                 <div className="flex items-center gap-4 ml-4 pl-4 border-l">
@@ -115,63 +142,71 @@ export function NavBar() {
         </div>
 
         {/* Mobile navigation */}
-        {isMenuOpen && (
-          <div className="md:hidden py-4 space-y-2">
-            {/* Super User Login link - always visible in mobile */}
-            <Link href="/super-login">
-              <span className={getNavClass("/super-login")}>
-                <Shield className="inline-block h-4 w-4 mr-1" />
-                Super User
-              </span>
-            </Link>
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              className="md:hidden overflow-hidden"
+            >
+              <div className="py-4 space-y-1">
+                {/* Super User Login link - always visible in mobile */}
+                <motion.div variants={itemVariants}>
+                  <Link href="/super-login">
+                    <span className={getNavClass("/super-login")}>
+                      <Shield className="inline-block h-4 w-4 mr-1" />
+                      Super User
+                    </span>
+                  </Link>
+                </motion.div>
 
-            {user && (
-              <>
-                {!user.isAdmin ? (
+                {user && (
                   <>
-                    <Link href="/"><span className={getNavClass("/")}>Dashboard</span></Link>
-                    <Link href="/chat"><span className={getNavClass("/chat")}>Study Chat</span></Link>
-                    <Link href="/quiz"><span className={getNavClass("/quiz")}>Take Quiz</span></Link>
-                    <Link href="/flashcards"><span className={getNavClass("/flashcards")}>Flashcards</span></Link>
-                    <Link href="/documents"><span className={getNavClass("/documents")}>Documents</span></Link>
-                    <Link href="/badges"><span className={getNavClass("/badges")}>Badges</span></Link>
-                    <Link href="/analytics"><span className={getNavClass("/analytics")}>Analytics</span></Link>
-                    <Link href="/one-ring"><span className={getNavClass("/one-ring")}>The One Ring</span></Link>
-                    <Link href="/settings"><span className={getNavClass("/settings")}>Settings</span></Link>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/admin"><span className={getNavClass("/admin")}>Admin Dashboard</span></Link>
+                    {menuItems.map(({ path, label }, index) => (
+                      <motion.div
+                        key={path}
+                        variants={itemVariants}
+                      >
+                        <Link href={path}>
+                          <span className={getNavClass(path)}>{label}</span>
+                        </Link>
+                      </motion.div>
+                    ))}
+
+                    <motion.div
+                      variants={itemVariants}
+                      className="pt-4 mt-4 border-t flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {user.username.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{user.username}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {user.isAdmin ? "Administrator" : "Student"}
+                          </span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => logoutMutation.mutate()}
+                        disabled={logoutMutation.isPending}
+                      >
+                        Logout
+                      </Button>
+                    </motion.div>
                   </>
                 )}
-
-                <div className="pt-4 mt-4 border-t flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {user.username.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{user.username}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {user.isAdmin ? "Administrator" : "Student"}
-                      </span>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => logoutMutation.mutate()}
-                    disabled={logoutMutation.isPending}
-                  >
-                    Logout
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </nav>
   );

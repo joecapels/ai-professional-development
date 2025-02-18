@@ -2,53 +2,17 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
-import path from "path";
 import { createServer } from "node:net";
 
 const app = express();
+
+// Essential middleware only
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Add security headers
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
-  next();
-});
-
-// Add request logging middleware
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
-
-  next();
+// Health check endpoint - keep this simple and early
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 async function isPortAvailable(port: number): Promise<boolean> {
@@ -77,39 +41,43 @@ async function findAvailablePort(startPort: number, maxAttempts: number = 10): P
   throw new Error(`No available ports found between ${startPort} and ${startPort + maxAttempts - 1}`);
 }
 
-(async () => {
+async function startServer() {
   let server: any = null;
 
-  // Graceful shutdown handler
-  const shutdown = async (signal: string) => {
-    log(`Received ${signal}, starting graceful shutdown...`);
+  try {
+    // Register minimal routes first
+    log('Initializing minimal server routes...');
+    server = await registerRoutes(app);
 
-    if (server) {
-      await new Promise<void>((resolve) => {
-        server.close(() => {
-          log('Closed out remaining connections');
-          resolve();
-        });
+    // Find available port
+    const preferredPort = Number(process.env.PORT) || 3001;
+    log(`Current process.env.PORT: ${process.env.PORT}`);
+    log(`Checking port availability starting from ${preferredPort}...`);
+    const PORT = await findAvailablePort(preferredPort);
 
-        // Force close after timeout
-        setTimeout(() => {
-          log('Could not close connections in time, forcing shutdown');
-          resolve();
-        }, 10000);
-      });
+    if (PORT !== preferredPort) {
+      log(`Preferred port ${preferredPort} was in use, using port ${PORT} instead`);
     }
 
-    process.exit(0);
-  };
+    // Start server with minimal configuration
+    await new Promise<void>((resolve, reject) => {
+      log(`Attempting to start server on port ${PORT}...`);
+      server.listen(PORT, '0.0.0.0', () => {
+        log(`Server successfully bound to port ${PORT}`);
+        log(`Server running in ${app.get("env")} mode`);
+        log('Required environment variables:', [
+          'DATABASE_URL',
+          'SESSION_SECRET',
+          'PORT',
+        ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
+        resolve();
+      });
 
-  // Register shutdown handlers
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
-
-  try {
-    // Initialize server
-    log('Initializing server...');
-    server = await registerRoutes(app);
+      server.on('error', (error: Error) => {
+        log(`Error starting server: ${error.message}`);
+        reject(error);
+      });
+    });
 
     // Global error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -119,57 +87,59 @@ async function findAvailablePort(startPort: number, maxAttempts: number = 10): P
       res.status(status).json({ message });
     });
 
-    // Setup environment-specific middleware
+    // Once server is confirmed running, add additional features
     if (app.get("env") === "development") {
       log('Setting up Vite development server...');
-      await setupVite(app, server);
+      try {
+        await setupVite(app, server);
+        log('Vite development server setup complete');
+      } catch (error) {
+        log(`Warning: Vite setup failed - ${error}. Continuing without Vite.`);
+      }
     } else {
       log('Setting up static file serving...');
       serveStatic(app);
-      app.get('*', (_req, res) => {
-        if (!_req.path.startsWith('/api')) {
-          res.sendFile(path.resolve(__dirname, '../dist/index.html'));
-        }
-      });
     }
 
-    // Find available port
-    const preferredPort = Number(process.env.PORT) || 3000;
-    log(`Checking port availability starting from ${preferredPort}...`);
-    const PORT = await findAvailablePort(preferredPort);
+    // Initialize badges as the last step
+    log('Scheduling badge initialization...');
+    setTimeout(async () => {
+      try {
+        await storage.createInitialBadges();
+        log('Initial badges created successfully');
+      } catch (error) {
+        log('Error creating initial badges:', String(error));
+      }
+    }, 2000);
 
-    if (PORT !== preferredPort) {
-      log(`Preferred port ${preferredPort} was in use, using port ${PORT} instead`);
-    }
+    // Register shutdown handlers
+    const shutdown = async (signal: string) => {
+      log(`Received ${signal}, starting graceful shutdown...`);
+      if (server) {
+        await new Promise<void>((resolve) => {
+          server.close(() => {
+            log('Closed out remaining connections');
+            resolve();
+          });
 
-    // Start server
-    server.listen(PORT, '0.0.0.0', () => {
-      log(`Server running in ${app.get("env")} mode on port ${PORT}`);
-      log('Required environment variables:', [
-        'DATABASE_URL',
-        'SESSION_SECRET',
-        'PORT',
-      ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
+          // Force close after timeout
+          setTimeout(() => {
+            log('Could not close connections in time, forcing shutdown');
+            resolve();
+          }, 10000);
+        });
+      }
+      process.exit(0);
+    };
 
-      // Initialize badges in background after server starts
-      setTimeout(async () => {
-        try {
-          await storage.createInitialBadges();
-          log('Initial badges created successfully');
-        } catch (error) {
-          log('Error creating initial badges:', String(error));
-        }
-      }, 1000);
-    });
-
-    // Handle server errors
-    server.on('error', (error: any) => {
-      log(`Error starting server: ${error.message}`);
-      process.exit(1);
-    });
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
 
   } catch (error) {
     log(`Fatal error during startup: ${error}`);
     process.exit(1);
   }
-})();
+}
+
+// Start the server
+startServer();
