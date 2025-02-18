@@ -11,7 +11,7 @@ import type { IncomingMessage } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { StudyMaterial, Progress, type LearningPreferences, type StudySessionMessage, studySessionMessageSchema } from "@shared/schema";
-import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat, generateMoodSuggestion, generateFlashcardsFromContent } from "./openai";
+import { generateStudyRecommendations, generatePracticeQuestions, handleStudyChat, generateMoodSuggestion, generateFlashcardsFromContent, handleMultiModalChat, type MultiModalMessage } from "./openai";
 import { generateAdvancedAnalytics, generatePersonalizedStudyPlan } from "./analytics";
 import session from "express-session";
 import { pool } from "./db";
@@ -620,14 +620,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(questions);
   });
 
+  // Enhanced chat routes to support multi-modal interactions
   app.post("/api/chat", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const { message } = req.body;
-    if (!message) return res.status(400).json({ message: "Message is required" });
 
-    const user = await storage.getUser(req.user.id);
-    const response = await handleStudyChat(message, user?.learningPreferences);
-    res.json({ message: response });
+    try {
+      const { message, type = 'text', metadata } = req.body;
+      if (!message) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+
+      const user = await storage.getUser(req.user.id);
+
+      // Handle single message as before for backward compatibility
+      if (type === 'text' && !metadata) {
+        const response = await handleStudyChat(message, user?.learningPreferences);
+        return res.json({ message: response });
+      }
+
+      // Handle multi-modal message
+      const multiModalMessage: MultiModalMessage[] = [{
+        type: type as 'text' | 'image' | 'code' | 'math',
+        content: message,
+        metadata
+      }];
+
+      const response = await handleMultiModalChat(multiModalMessage, user?.learningPreferences);
+      res.json({ message: response });
+    } catch (error) {
+      console.error("Error in chat:", error);
+      res.status(500).json({ error: "Failed to process chat message" });
+    }
+  });
+
+  // New endpoint for multi-message conversations
+  app.post("/api/chat/multi", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const { messages } = req.body;
+      if (!Array.isArray(messages) || messages.length === 0) {
+        return res.status(400).json({ error: "Messages array is required" });
+      }
+
+      const user = await storage.getUser(req.user.id);
+      const response = await handleMultiModalChat(messages, user?.learningPreferences);
+      res.json({ message: response });
+    } catch (error) {
+      console.error("Error in multi-modal chat:", error);
+      res.status(500).json({ error: "Failed to process multi-modal chat messages" });
+    }
   });
 
   // Add quiz routes here

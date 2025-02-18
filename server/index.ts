@@ -6,7 +6,7 @@ import helmet from "helmet";
 import compression from "compression";
 
 const app = express();
-const PORT = parseInt(process.env.PORT || "5000", 10);
+const PORT = 5000; // Explicitly set to 5000 as per repository requirements
 
 // Security middleware
 app.use(helmet({
@@ -46,18 +46,11 @@ async function startServer() {
     log('Initializing minimal server routes...');
     server = await registerRoutes(app);
 
-    // Start server with minimal configuration
+    // Start server with better error handling for port conflicts
     await new Promise<void>((resolve, reject) => {
       log(`Starting server on port ${PORT}...`);
-      const handleError = (error: Error & { code?: string }) => {
-        if (error.code === 'EADDRINUSE') {
-          log(`Port ${PORT} is already in use. Please ensure no other service is running on this port.`);
-          process.exit(1);
-        }
-        log(`Error starting server: ${error.message}`);
-        reject(error);
-      };
 
+      // Try to create server first
       server = app.listen(PORT, '0.0.0.0', () => {
         log(`Server successfully bound to port ${PORT}`);
         log(`Server running in ${app.get("env")} mode`);
@@ -69,7 +62,22 @@ async function startServer() {
         resolve();
       });
 
-      server.on('error', handleError);
+      // Enhanced error handling
+      server.on('error', (error: Error & { code?: string }) => {
+        if (error.code === 'EADDRINUSE') {
+          log(`Port ${PORT} is already in use`);
+          // Try to find an alternative port
+          const altPort = PORT + 1;
+          log(`Attempting to use alternative port ${altPort}...`);
+          server = app.listen(altPort, '0.0.0.0', () => {
+            log(`Server started on alternative port ${altPort}`);
+            resolve();
+          });
+        } else {
+          log(`Error starting server: ${error.message}`);
+          reject(error);
+        }
+      });
     });
 
     // Global error handler
