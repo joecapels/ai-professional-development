@@ -202,12 +202,6 @@ export function NavBar() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
-                        <Link href="/profile">
-                          <DropdownMenuItem>
-                            <UserProfile className="mr-2 h-4 w-4" />
-                            <span>Profile</span>
-                          </DropdownMenuItem>
-                        </Link>
                         <Link href="/documents">
                           <DropdownMenuItem>
                             <BookOpen className="mr-2 h-4 w-4" />
