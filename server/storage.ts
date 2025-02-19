@@ -1,11 +1,11 @@
 import { IStorage } from "./types";
-import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument, Flashcard, InsertFlashcard, Badge, InsertBadge, UserAchievement, InsertUserAchievement } from "@shared/schema";
+import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument, Flashcard, InsertFlashcard, Badge, InsertBadge, UserAchievement, InsertUserAchievement, learningPreferencesSchema } from "@shared/schema";
 import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments, studySessions, flashcards, badges, userAchievements } from "./db";
 import { eq, desc, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
-import * as z from 'zod'; // Assuming zod is used for validation
+import * as z from 'zod';
 
 const PostgresSessionStore = connectPg(session);
 
@@ -47,10 +47,13 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserPreferences(userId: number, preferences: LearningPreferences): Promise<User> {
     try {
-      // Validate the preferences using the schema
-      const validPreferences = learningPreferencesSchema.parse(preferences); // learningPreferencesSchema needs to be defined elsewhere
+      console.log('Updating preferences for user:', userId, 'with data:', preferences);
 
-      const [user] = await db
+      // Validate the preferences using the schema
+      const validPreferences = learningPreferencesSchema.parse(preferences);
+      console.log('Validated preferences:', validPreferences);
+
+      const [updatedUser] = await db
         .update(users)
         .set({ 
           learningPreferences: validPreferences,
@@ -59,14 +62,17 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, userId))
         .returning();
 
-      if (!user) {
+      if (!updatedUser) {
+        console.error('No user found with ID:', userId);
         throw new Error(`User with ID ${userId} not found`);
       }
 
-      return user;
+      console.log('Successfully updated user preferences:', updatedUser);
+      return updatedUser;
     } catch (error) {
+      console.error('Error updating user preferences:', error);
       if (error instanceof z.ZodError) {
-        throw new Error(`Invalid preferences format: ${error.message}`);
+        throw new Error(`Invalid preferences format: ${error.errors.map(e => e.message).join(', ')}`);
       }
       throw error;
     }
