@@ -231,9 +231,17 @@ export const flashcards = pgTable("flashcards", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertUserSchema = createInsertSchema(users).extend({
+  isAdmin: z.boolean().optional().default(false),
+  learningPreferences: learningPreferencesSchema.optional().default({
+    learningStyle: "visual",
+    pacePreference: "moderate",
+    explanationDetail: "detailed",
+    exampleFrequency: "moderate",
+    chatbotPersonality: "encouraging",
+    gradeLevel: "high_school",
+    researchAreas: ["computer_science"]
+  })
 });
 
 export const learningPreferencesSchema = z.object({
