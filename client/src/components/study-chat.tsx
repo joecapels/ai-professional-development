@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   role: "user" | "assistant";
@@ -28,6 +29,7 @@ export function StudyChat() {
   const [input, setInput] = useState("");
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [documentTitle, setDocumentTitle] = useState("");
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const {
     voices,
@@ -37,6 +39,17 @@ export function StudyChat() {
     speak,
     cancel
   } = useSpeechSynthesis();
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollArea = scrollAreaRef.current;
+      scrollArea.scrollTo({
+        top: scrollArea.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [messages]);
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
@@ -108,6 +121,31 @@ export function StudyChat() {
     }
   }, [speak, cancel, speaking]);
 
+  // Message animation variants
+  const messageVariants = {
+    initial: {
+      opacity: 0,
+      y: 20,
+      scale: 0.95
+    },
+    animate: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: 0.3,
+        ease: "easeOut"
+      }
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.95,
+      transition: {
+        duration: 0.2
+      }
+    }
+  };
+
   return (
     <Card className="flex flex-col h-[calc(100vh-12rem)] mx-auto max-w-3xl shadow-lg">
       <CardHeader className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
@@ -149,61 +187,72 @@ export function StudyChat() {
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-6 p-6">
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
           <div className="space-y-6">
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={`flex ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-[85%] rounded-lg px-6 py-4 shadow-md transition-colors ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground ml-4"
-                      : "bg-muted/60 mr-4 prose prose-slate dark:prose-invert"
+            <AnimatePresence initial={false}>
+              {messages.map((msg, i) => (
+                <motion.div
+                  key={i}
+                  variants={messageVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className={`flex ${
+                    msg.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className={`${
-                      msg.role === "assistant" 
-                        ? "prose prose-slate dark:prose-invert max-w-none leading-relaxed"
-                        : "text-base leading-relaxed"
-                    }`}>
-                      {msg.role === "assistant" ? (
-                        <div className="space-y-4">
-                          {msg.content.split('\n\n').map((paragraph, idx) => (
-                            <p key={idx} className="text-base">
-                              {paragraph}
-                            </p>
-                          ))}
-                        </div>
-                      ) : (
-                        msg.content
+                  <div
+                    className={`max-w-[85%] rounded-lg px-6 py-4 shadow-md transition-colors ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground ml-4"
+                        : "bg-muted/60 mr-4 prose prose-slate dark:prose-invert"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className={`${
+                        msg.role === "assistant" 
+                          ? "prose prose-slate dark:prose-invert max-w-none leading-relaxed"
+                          : "text-base leading-relaxed"
+                      }`}>
+                        {msg.role === "assistant" ? (
+                          <div className="space-y-4">
+                            {msg.content.split('\n\n').map((paragraph, idx) => (
+                              <p key={idx} className="text-base">
+                                {paragraph}
+                              </p>
+                            ))}
+                          </div>
+                        ) : (
+                          msg.content
+                        )}
+                      </div>
+                      {msg.role === "assistant" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleSpeak(msg.content)}
+                          className="flex-shrink-0 hover:bg-background/20"
+                          title={speaking ? "Stop speaking" : "Read aloud"}
+                        >
+                          {speaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                        </Button>
                       )}
                     </div>
-                    {msg.role === "assistant" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleSpeak(msg.content)}
-                        className="flex-shrink-0 hover:bg-background/20"
-                        title={speaking ? "Stop speaking" : "Read aloud"}
-                      >
-                        {speaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                      </Button>
-                    )}
                   </div>
-                </div>
-              </div>
-            ))}
+                </motion.div>
+              ))}
+            </AnimatePresence>
             {chatMutation.isPending && (
-              <div className="flex justify-start">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="flex justify-start"
+              >
                 <div className="bg-muted/60 rounded-lg px-6 py-4 mr-4">
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
                 </div>
-              </div>
+              </motion.div>
             )}
           </div>
         </ScrollArea>
