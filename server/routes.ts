@@ -889,12 +889,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const stats = await storage.getUserStudyStats(req.user.id);
+      // If no stats exist yet, return default values
+      if (!stats) {
+        return res.json({
+          totalStudyTime: 0,
+          avgSessionLength: 0,
+          totalSessions: 0,
+          currentStreak: 0,
+          maxStreak: 0,
+          quizStats: {
+            totalQuizzes: 0,
+            averageScore: 0,
+            perfectScores: 0
+          },
+          documentStats: {
+            totalDocuments: 0,
+            byType: {},
+            recentActivity: []
+          },
+          recentSessions: []
+        });
+      }
       res.json(stats);
     } catch (error) {
       console.error("Error fetching study stats:", error);
       res.status(500).json({ error: "Failed to fetch study statistics" });
     }
   });
-
   return httpServer;
 }
