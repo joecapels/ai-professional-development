@@ -122,15 +122,15 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-  learningPreferences: jsonb("learning_preferences").$type<{
-    learningStyle?: "visual" | "auditory" | "reading" | "kinesthetic";
-    pacePreference?: "fast" | "moderate" | "slow";
-    explanationDetail?: "basic" | "detailed" | "comprehensive";
-    exampleFrequency?: "few" | "moderate" | "many";
-    chatbotPersonality?: "encouraging" | "socratic" | "professional" | "friendly";
-    gradeLevel?: typeof gradeLevel[number];
-    researchAreas?: typeof researchArea[number][];
-  }>().default({}),
+  learningPreferences: jsonb("learning_preferences").$type<z.infer<typeof learningPreferencesSchema>>().default({
+    learningStyle: "visual",
+    pacePreference: "moderate",
+    explanationDetail: "detailed",
+    exampleFrequency: "moderate",
+    chatbotPersonality: "encouraging",
+    gradeLevel: "high_school",
+    researchAreas: ["computer_science"]
+  })
 });
 
 export const studyMaterials = pgTable("study_materials", {
@@ -237,13 +237,13 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 
 export const learningPreferencesSchema = z.object({
-  learningStyle: z.enum(["visual", "auditory", "reading", "kinesthetic"]).optional(),
-  pacePreference: z.enum(["fast", "moderate", "slow"]).optional(),
-  explanationDetail: z.enum(["basic", "detailed", "comprehensive"]).optional(),
-  exampleFrequency: z.enum(["few", "moderate", "many"]).optional(),
-  chatbotPersonality: z.enum(["encouraging", "socratic", "professional", "friendly"]).optional(),
-  gradeLevel: z.enum(gradeLevel).optional(),
-  researchAreas: z.array(z.enum(researchArea)).min(1).optional(),
+  learningStyle: z.enum(["visual", "auditory", "reading", "kinesthetic"]),
+  pacePreference: z.enum(["fast", "moderate", "slow"]),
+  explanationDetail: z.enum(["basic", "detailed", "comprehensive"]),
+  exampleFrequency: z.enum(["few", "moderate", "many"]),
+  chatbotPersonality: z.enum(["encouraging", "socratic", "professional", "friendly"]),
+  gradeLevel: z.enum(gradeLevel),
+  researchAreas: z.array(z.enum(researchArea)).min(1)
 }).strict();
 
 export const insertStudyMaterialSchema = createInsertSchema(studyMaterials);

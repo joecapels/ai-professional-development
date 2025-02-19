@@ -45,7 +45,7 @@ export class DatabaseStorage implements IStorage {
     return newUser;
   }
 
-  async updateUserPreferences(userId: number, preferences: LearningPreferences): Promise<User> {
+  async updateUserPreferences(userId: number, preferences: z.infer<typeof learningPreferencesSchema>): Promise<User> {
     try {
       console.log('Updating preferences for user:', userId, 'with data:', preferences);
 
