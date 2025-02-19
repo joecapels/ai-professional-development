@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation } from "wouter";
+import { NavBar } from "@/components/nav-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Timer, Pause, Play, StopCircle, BookOpen, Edit } from "lucide-react";
@@ -142,6 +143,7 @@ export default function StudySessionPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <NavBar />
       <main className="container mx-auto px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}

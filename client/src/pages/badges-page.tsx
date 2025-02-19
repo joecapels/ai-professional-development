@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge, UserAchievement } from "@shared/schema";
+import { NavBar } from "@/components/nav-bar";
 import { AnimatedBadge } from "@/components/animated-badge";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +30,7 @@ export default function BadgesPage() {
   if (loadingBadges || loadingAchievements) {
     return (
       <div className="min-h-screen bg-background">
+        <NavBar />
         <main className="container mx-auto px-4 py-8">
           <h1 className="text-4xl font-bold mb-8">Learning Achievements</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -50,6 +52,7 @@ export default function BadgesPage() {
   if (badgesError || achievementsError) {
     return (
       <div className="min-h-screen bg-background">
+        <NavBar />
         <main className="container mx-auto px-4 py-8">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -69,6 +72,7 @@ export default function BadgesPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <NavBar />
       <main className="container mx-auto px-4 py-8">
         <motion.div 
           className="mb-8 space-y-4"
