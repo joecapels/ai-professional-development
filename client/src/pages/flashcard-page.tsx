@@ -160,32 +160,26 @@ export default function FlashcardPage() {
                     stiffness: 300,
                     damping: 30
                   }}
+                  className="absolute inset-0"
                   style={{
-                    position: 'absolute',
-                    width: '100%',
-                    height: '100%',
                     transformStyle: "preserve-3d",
                   }}
-                  className="absolute inset-0"
                 >
                   <Card
-                    className="h-full w-full cursor-pointer bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-lg transition-all transform-gpu"
+                    className="h-full w-full cursor-pointer bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-lg transition-all"
                     onClick={() => setFlipped(!flipped)}
                   >
-                    <CardContent className="flex items-center justify-center h-full p-8 relative">
-                      <motion.div
-                        className="text-center w-full h-full"
+                    <CardContent className="flex items-center justify-center h-full p-8">
+                      {/* Front of the card */}
+                      <div
+                        className="absolute inset-0 w-full h-full flex items-center justify-center backface-hidden"
                         style={{
-                          backfaceVisibility: 'hidden',
-                          position: 'absolute',
-                          inset: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transformStyle: 'preserve-3d',
+                          backfaceVisibility: "hidden",
+                          transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                          transition: "transform 0.3s"
                         }}
                       >
-                        <div>
+                        <div className="text-center p-6">
                           <p className="text-xl font-medium">
                             {flashcards[currentCardIndex].front}
                           </p>
@@ -193,22 +187,18 @@ export default function FlashcardPage() {
                             Click to show answer
                           </p>
                         </div>
-                      </motion.div>
+                      </div>
 
-                      <motion.div
-                        className="text-center w-full h-full"
+                      {/* Back of the card */}
+                      <div
+                        className="absolute inset-0 w-full h-full flex items-center justify-center backface-hidden"
                         style={{
-                          backfaceVisibility: 'hidden',
-                          position: 'absolute',
-                          inset: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transform: 'rotateY(180deg)',
-                          transformStyle: 'preserve-3d',
+                          backfaceVisibility: "hidden",
+                          transform: flipped ? "rotateY(0deg)" : "rotateY(-180deg)",
+                          transition: "transform 0.3s"
                         }}
                       >
-                        <div style={{ transform: 'rotateY(180deg)' }}>
+                        <div className="text-center p-6">
                           <p className="text-xl font-medium">
                             {flashcards[currentCardIndex].back}
                           </p>
@@ -216,7 +206,7 @@ export default function FlashcardPage() {
                             Click to hide answer
                           </p>
                         </div>
-                      </motion.div>
+                      </div>
                     </CardContent>
                   </Card>
                 </motion.div>
