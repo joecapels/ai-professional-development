@@ -36,20 +36,11 @@ export class DatabaseStorage implements IStorage {
   async createUser(userData: InsertUser): Promise<User> {
     const now = new Date();
     const [newUser] = await db.insert(users).values({
-      username: userData.username,
-      password: userData.password,
-      isAdmin: userData.isAdmin ?? false,
+      ...userData,
+      isAdmin: userData.isAdmin || false,
       createdAt: now,
       updatedAt: now,
-      learningPreferences: userData.learningPreferences ?? {
-        learningStyle: "visual",
-        pacePreference: "moderate",
-        explanationDetail: "detailed",
-        exampleFrequency: "moderate",
-        chatbotPersonality: "encouraging",
-        gradeLevel: "high_school",
-        researchAreas: ["computer_science"]
-      }
+      learningPreferences: userData.learningPreferences || {}
     }).returning();
     return newUser;
   }
@@ -112,9 +103,8 @@ export class DatabaseStorage implements IStorage {
   async createProgress(progressData: InsertProgress): Promise<Progress> {
     const now = new Date();
     const [newProgress] = await db.insert(progress).values({
-      userId: progressData.userId,
-      materialId: progressData.materialId,
-      score: progressData.score,
+      ...progressData,
+      aiRecommendations: progressData.aiRecommendations || [],
       completedAt: now
     }).returning();
     return newProgress;
@@ -123,9 +113,8 @@ export class DatabaseStorage implements IStorage {
   async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
     const now = new Date();
     const [newQuiz] = await db.insert(quizzes).values({
-      userId: quizData.userId,
-      subject: quizData.subject,
-      difficulty: quizData.difficulty,
+      ...quizData,
+      questions: quizData.questions || [],
       createdAt: now
     }).returning();
     return newQuiz;
@@ -143,9 +132,8 @@ export class DatabaseStorage implements IStorage {
   async createQuizResult(resultData: InsertQuizResult): Promise<QuizResult> {
     const now = new Date();
     const [newResult] = await db.insert(quizResults).values({
-      userId: resultData.userId,
-      quizId: resultData.quizId,
-      score: resultData.score,
+      ...resultData,
+      answers: resultData.answers || [],
       completedAt: now
     }).returning();
     return newResult;
@@ -158,10 +146,11 @@ export class DatabaseStorage implements IStorage {
   async saveDocument(document: InsertDocument): Promise<SavedDocument> {
     const now = new Date();
     const [newDocument] = await db.insert(savedDocuments).values({
+      userId: document.userId,
       title: document.title,
       content: document.content,
       type: document.type,
-      metadata: document.metadata ?? {},
+      metadata: document.metadata || {},
       createdAt: now
     }).returning();
     return newDocument;
