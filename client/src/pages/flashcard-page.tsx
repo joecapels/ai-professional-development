@@ -179,7 +179,7 @@ export default function FlashcardPage() {
                           transition: "transform 0.3s"
                         }}
                       >
-                        <div className="text-center p-6">
+                        <div className="text-center p-6" style={{ transform: `scale(${flipped ? -1 : 1}, 1)` }}>
                           <p className="text-xl font-medium">
                             {flashcards[currentCardIndex].front}
                           </p>
