@@ -237,14 +237,14 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 
 export const learningPreferencesSchema = z.object({
-  learningStyle: z.enum(["visual", "auditory", "reading", "kinesthetic"]),
-  pacePreference: z.enum(["fast", "moderate", "slow"]),
-  explanationDetail: z.enum(["basic", "detailed", "comprehensive"]),
-  exampleFrequency: z.enum(["few", "moderate", "many"]),
-  chatbotPersonality: z.enum(["encouraging", "socratic", "professional", "friendly"]),
-  gradeLevel: z.enum(gradeLevel),
-  researchAreas: z.array(z.enum(researchArea)).min(1),
-});
+  learningStyle: z.enum(["visual", "auditory", "reading", "kinesthetic"]).optional(),
+  pacePreference: z.enum(["fast", "moderate", "slow"]).optional(),
+  explanationDetail: z.enum(["basic", "detailed", "comprehensive"]).optional(),
+  exampleFrequency: z.enum(["few", "moderate", "many"]).optional(),
+  chatbotPersonality: z.enum(["encouraging", "socratic", "professional", "friendly"]).optional(),
+  gradeLevel: z.enum(gradeLevel).optional(),
+  researchAreas: z.array(z.enum(researchArea)).min(1).optional(),
+}).strict();
 
 export const insertStudyMaterialSchema = createInsertSchema(studyMaterials);
 export const insertProgressSchema = createInsertSchema(progress);

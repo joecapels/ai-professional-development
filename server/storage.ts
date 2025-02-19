@@ -5,6 +5,7 @@ import { eq, desc, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import * as z from 'zod'; // Assuming zod is used for validation
 
 const PostgresSessionStore = connectPg(session);
 
@@ -45,20 +46,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserPreferences(userId: number, preferences: LearningPreferences): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({ 
-        learningPreferences: preferences,
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, userId))
-      .returning();
+    try {
+      // Validate the preferences using the schema
+      const validPreferences = learningPreferencesSchema.parse(preferences); // learningPreferencesSchema needs to be defined elsewhere
 
-    if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
+      const [user] = await db
+        .update(users)
+        .set({ 
+          learningPreferences: validPreferences,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found`);
+      }
+
+      return user;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        throw new Error(`Invalid preferences format: ${error.message}`);
+      }
+      throw error;
     }
-
-    return user;
   }
 
   async getMaterial(id: number): Promise<StudyMaterial | undefined> {
