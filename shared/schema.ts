@@ -98,7 +98,7 @@ export const badges = pgTable("badges", {
     threshold: number;
     timeframe?: number; // in days
   }>(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Add user achievements table
