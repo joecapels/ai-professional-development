@@ -126,10 +126,9 @@ export function NavBar() {
                 {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </Button>
             </DrawerTrigger>
-            <DrawerContent className="h-[90vh] bg-background border-t">
-              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm -z-10" />
-              <DrawerHeader className="border-b pb-4">
-                <DrawerTitle className="text-xl font-bold">Menu</DrawerTitle>
+            <DrawerContent className="h-[90vh]">
+              <DrawerHeader>
+                <DrawerTitle>Menu</DrawerTitle>
               </DrawerHeader>
               <div className="px-4 py-2 flex flex-col gap-2">
                 <div className="flex items-center gap-4 pb-4 mb-4 border-b">
@@ -141,7 +140,7 @@ export function NavBar() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{user.username}</span>
+                        <span className="font-medium">{user.username}</span>
                         <span className="text-sm text-muted-foreground">
                           {user.isAdmin ? "Administrator" : "Student"}
                         </span>
@@ -153,7 +152,7 @@ export function NavBar() {
                 {user && menuItems.map(({ path, label, dataTour }) => (
                   <Link key={path} href={path}>
                     <a
-                      className={`${getNavClass(path)} block w-full text-left py-3 hover:bg-accent/10 transition-colors`}
+                      className={`${getNavClass(path)} block w-full text-left py-3`}
                       data-tour={dataTour}
                       onClick={() => setIsMenuOpen(false)}
                     >
@@ -165,7 +164,7 @@ export function NavBar() {
                 <div className="mt-auto pt-4 border-t">
                   <Button 
                     variant="outline"
-                    className="w-full font-medium"
+                    className="w-full"
                     onClick={() => {
                       logoutMutation.mutate();
                       setIsMenuOpen(false);
