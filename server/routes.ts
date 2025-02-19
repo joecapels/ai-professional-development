@@ -342,6 +342,7 @@ async function registerAdminRoutes(app: Express) {
         : 0;
 
 
+
       const userStats = {
         user: {
           id: user.id,
@@ -884,11 +885,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return Math.round((correctAnswers / answers.length) * 100);
   }
 
-  // Add study stats route
+  // Update the study stats route with proper null checking
   app.get("/api/study-stats", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const stats = await storage.getUserStudyStats(req.user.id);
+      // Fetch all relevant user data
+      const studySessions = await storage.getStudySessionsByUser(req.user.id);
+      const quizResults = await storage.getQuizResultsByUser(req.user.id);
+      const documents = await storage.getDocumentsByUser(req.user.id);
+
+      // Calculate total study time and session stats
+      const totalStudyTime = studySessions.reduce((acc, session) =>
+        acc + (session.totalDuration || 0), 0);
+      const avgSessionLength = studySessions.length > 0
+        ? Math.round(totalStudyTime / studySessions.length)
+        : 0;
+
+      // Calculate current and max streaks
+      const sortedSessions = [...studySessions].sort((a, b) =>
+        new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
+      let currentStreak = 0;
+      let maxStreak = 0;
+      let streakCount = 0;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      for (let i = 0; i < sortedSessions.length; i++) {
+        const sessionDate = new Date(sortedSessions[i].startTime);
+        sessionDate.setHours(0, 0, 0, 0);
+
+        if (i === 0) {
+          streakCount = 1;
+          if (sessionDate.getTime() === today.getTime()) {
+            currentStreak = 1;
+          }
+        } else {
+          const prevDate = new Date(sortedSessions[i - 1].startTime);
+          prevDate.setHours(0, 0, 0, 0);
+
+          const diffDays = Math.floor(
+            (prevDate.getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
+          if (diffDays === 1) {
+            streakCount++;
+            if (i === 1 && sessionDate.getTime() === today.getTime()) {
+              currentStreak = streakCount;
+            }
+          } else {
+            maxStreak = Math.max(maxStreak, streakCount);
+            streakCount = 1;
+          }
+        }
+      }
+      maxStreak = Math.max(maxStreak, streakCount);
+
+      // Calculate quiz statistics
+      const quizStats = {
+        totalQuizzes: quizResults.length,
+        averageScore: quizResults.length > 0
+          ? Math.round(quizResults.reduce((acc, quiz) => acc + quiz.score, 0) / quizResults.length)
+          : 0,
+        perfectScores: quizResults.filter(quiz => quiz.score === 100).length
+      };
+
+      // Analyze documents with proper null checking
+      const documentStats = {
+        totalDocuments: documents.length,
+        byType: documents.reduce((acc: Record<string, number>, doc) => {
+          if (doc.type) {
+            acc[doc.type] = (acc[doc.type] || 0) + 1;
+          }
+          return acc;
+        }, {}),
+        recentActivity: documents
+          .filter(doc => doc.createdAt) // Filter out documents without createdAt
+          .sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0).getTime();
+            const dateB = new Date(b.createdAt || 0).getTime();
+            return dateB - dateA;
+          })
+          .slice(0, 5)
+          .map(doc => ({
+            id: doc.id,
+            title: doc.title,
+            type: doc.type,
+            createdAt: doc.createdAt?.toISOString() || new Date().toISOString()
+          }))
+      };
+
+      // Get recent sessions
+      const recentSessions = sortedSessions
+        .slice(0, 5)
+        .map(session => ({
+          id: session.id,
+          subject: session.subject,
+          startTime: session.startTime.toISOString(),
+          totalDuration: session.totalDuration || 0,
+          status: session.status
+        }));
+
+      const stats = {
+        totalStudyTime,
+        avgSessionLength,
+        totalSessions: studySessions.length,
+        currentStreak,
+        maxStreak,
+        quizStats,
+        documentStats,
+        recentSessions
+      };
+
       res.json(stats);
     } catch (error) {
       console.error("Error fetching study stats:", error);

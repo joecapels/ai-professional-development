@@ -62,6 +62,17 @@ export const researchArea = [
   "law"
 ] as const;
 
+// Define learningPreferencesSchema before using it in the users table
+export const learningPreferencesSchema = z.object({
+  learningStyle: z.enum(["visual", "auditory", "reading", "kinesthetic"]),
+  pacePreference: z.enum(["fast", "moderate", "slow"]),
+  explanationDetail: z.enum(["basic", "detailed", "comprehensive"]),
+  exampleFrequency: z.enum(["few", "moderate", "many"]),
+  chatbotPersonality: z.enum(["encouraging", "socratic", "professional", "friendly"]),
+  gradeLevel: z.enum(gradeLevel),
+  researchAreas: z.array(z.enum(researchArea)).min(1)
+}).strict();
+
 // Add badge types
 export const badgeType = [
   "quick_learner",
@@ -85,36 +96,7 @@ export const badgeRarity = [
   "legendary"
 ] as const;
 
-// Add badges table
-export const badges = pgTable("badges", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  type: text("type").$type<typeof badgeType[number]>().notNull(),
-  rarity: text("rarity").$type<typeof badgeRarity[number]>().notNull(),
-  imageUrl: text("image_url").notNull(),
-  criteria: jsonb("criteria").$type<{
-    type: string;
-    threshold: number;
-    timeframe?: number; // in days
-  }>(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
-
-// Add user achievements table
-export const userAchievements = pgTable("user_achievements", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  badgeId: integer("badge_id").notNull().references(() => badges.id),
-  earnedAt: timestamp("earned_at", { withTimezone: true }).notNull().defaultNow(),
-  progress: jsonb("progress").$type<{
-    current: number;
-    target: number;
-    lastUpdated: string;
-  }>(),
-});
-
-// Keep existing table definitions
+// Now define the tables
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -131,6 +113,33 @@ export const users = pgTable("users", {
     gradeLevel: "high_school",
     researchAreas: ["computer_science"]
   })
+});
+
+export const badges = pgTable("badges", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  type: text("type").$type<typeof badgeType[number]>().notNull(),
+  rarity: text("rarity").$type<typeof badgeRarity[number]>().notNull(),
+  imageUrl: text("image_url").notNull(),
+  criteria: jsonb("criteria").$type<{
+    type: string;
+    threshold: number;
+    timeframe?: number; // in days
+  }>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+export const userAchievements = pgTable("user_achievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  badgeId: integer("badge_id").notNull().references(() => badges.id),
+  earnedAt: timestamp("earned_at", { withTimezone: true }).notNull().defaultNow(),
+  progress: jsonb("progress").$type<{
+    current: number;
+    target: number;
+    lastUpdated: string;
+  }>(),
 });
 
 export const studyMaterials = pgTable("study_materials", {
@@ -156,6 +165,7 @@ export const quizzes = pgTable("quizzes", {
   userId: integer("user_id").notNull().references(() => users.id),
   subject: text("subject").notNull(),
   difficulty: integer("difficulty").notNull(),
+  score: integer("score"), // Add score field
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   questions: jsonb("questions").$type<{
     question: string;
@@ -165,6 +175,7 @@ export const quizzes = pgTable("quizzes", {
   }[]>(),
 });
 
+// Update quiz results schema
 export const quizResults = pgTable("quiz_results", {
   id: serial("id").primaryKey(),
   quizId: integer("quiz_id").notNull().references(() => quizzes.id),
@@ -192,7 +203,6 @@ export const savedDocuments = pgTable("saved_documents", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
-// Add study session related types and schemas
 export const studySessionStatus = [
   "active",
   "paused",
@@ -220,7 +230,6 @@ export const studySessions = pgTable("study_sessions", {
   }>(),
 });
 
-// Add flashcards table
 export const flashcards = pgTable("flashcards", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
@@ -236,44 +245,29 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
 });
 
-export const learningPreferencesSchema = z.object({
-  learningStyle: z.enum(["visual", "auditory", "reading", "kinesthetic"]),
-  pacePreference: z.enum(["fast", "moderate", "slow"]),
-  explanationDetail: z.enum(["basic", "detailed", "comprehensive"]),
-  exampleFrequency: z.enum(["few", "moderate", "many"]),
-  chatbotPersonality: z.enum(["encouraging", "socratic", "professional", "friendly"]),
-  gradeLevel: z.enum(gradeLevel),
-  researchAreas: z.array(z.enum(researchArea)).min(1)
-}).strict();
-
 export const insertStudyMaterialSchema = createInsertSchema(studyMaterials);
 export const insertProgressSchema = createInsertSchema(progress);
 export const insertQuizSchema = createInsertSchema(quizzes);
 export const insertQuizResultSchema = createInsertSchema(quizResults);
 export const insertDocumentSchema = createInsertSchema(savedDocuments);
 
-// Add to existing export types
 export const insertStudySessionSchema = createInsertSchema(studySessions);
 export type StudySession = typeof studySessions.$inferSelect;
 export type InsertStudySession = z.infer<typeof insertStudySessionSchema>;
 
-// Add flashcard schema
 export const insertFlashcardSchema = createInsertSchema(flashcards);
 export type Flashcard = typeof flashcards.$inferSelect;
 export type InsertFlashcard = z.infer<typeof insertFlashcardSchema>;
 
 
-// Add new schemas
 export const insertBadgeSchema = createInsertSchema(badges);
 export const insertUserAchievementSchema = createInsertSchema(userAchievements);
 
-// Add new types
 export type Badge = typeof badges.$inferSelect;
 export type UserAchievement = typeof userAchievements.$inferSelect;
 export type InsertBadge = z.infer<typeof insertBadgeSchema>;
 export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
 
-// Keep existing types and exports
 export type User = typeof users.$inferSelect;
 export type StudyMaterial = typeof studyMaterials.$inferSelect;
 export type Progress = typeof progress.$inferSelect;
@@ -283,13 +277,11 @@ export type InsertProgress = z.infer<typeof insertProgressSchema>;
 export type LearningPreferences = z.infer<typeof learningPreferencesSchema>;
 export type Quiz = typeof quizzes.$inferSelect;
 export type QuizResult = typeof quizResults.$inferSelect;
-export type InsertQuiz = z.infer<typeof insertQuizSchema>;
 export type InsertQuizResult = z.infer<typeof insertQuizResultSchema>;
 export type SavedDocument = typeof savedDocuments.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 
 
-// WebSocket message types
 export const studySessionMessageSchema = z.object({
   type: z.enum(["start", "pause", "resume", "end", "break_start", "break_end", "update_metrics"]),
   sessionId: z.number(),
