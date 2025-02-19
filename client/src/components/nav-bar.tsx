@@ -4,9 +4,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { Menu, X, Search, Bell, User as UserIcon, Settings } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { motion, AnimatePresence } from "framer-motion";
-
-const STAGGER_DELAY = 0.05;
+import { 
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 
 interface MenuItem {
   path: string;
@@ -28,8 +32,6 @@ export function NavBar() {
         : "text-muted-foreground"
     }`;
 
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-
   const menuItems: MenuItem[] = !user?.isAdmin ? [
     { path: "/", label: "Dashboard", dataTour: "dashboard" },
     { path: "/chat", label: "Learn", dataTour: "learn" },
@@ -42,28 +44,6 @@ export function NavBar() {
   ] : [
     { path: "/admin", label: "Admin Dashboard" }
   ];
-
-  const containerVariants = {
-    hidden: { 
-      opacity: 0,
-      height: 0,
-      transition: { staggerChildren: 0, when: "afterChildren" }
-    },
-    visible: {
-      opacity: 1,
-      height: "auto",
-      transition: { 
-        staggerChildren: STAGGER_DELAY,
-        when: "beforeChildren",
-        duration: 0.2
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { x: -20, opacity: 0 },
-    visible: { x: 0, opacity: 1 }
-  };
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 shadow-sm">
@@ -84,14 +64,6 @@ export function NavBar() {
               />
             </div>
           </div>
-
-          {/* Mobile menu button */}
-          <button
-            onClick={toggleMenu}
-            className="md:hidden p-2 text-muted-foreground hover:text-primary transition-colors"
-          >
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
 
           {/* Desktop navigation */}
           <div className="hidden md:flex items-center gap-1">
@@ -141,69 +113,71 @@ export function NavBar() {
               </>
             )}
           </div>
-        </div>
 
-        {/* Mobile navigation */}
-        <AnimatePresence>
-          {isMenuOpen && (
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-              className="md:hidden overflow-hidden"
-            >
-              <div className="py-4 space-y-1">
-                {user && (
-                  <>
-                    {menuItems.map(({ path, label, dataTour }, index) => (
-                      <motion.div
-                        key={path}
-                        variants={itemVariants}
-                      >
-                        <Link href={path}>
-                          <span 
-                            className={getNavClass(path)}
-                            data-tour={dataTour}
-                          >
-                            {label}
-                          </span>
-                        </Link>
-                      </motion.div>
-                    ))}
-
-                    <motion.div
-                      variants={itemVariants}
-                      className="pt-4 mt-4 border-t flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {user.username.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">{user.username}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {user.isAdmin ? "Administrator" : "Student"}
-                          </span>
-                        </div>
+          {/* Mobile menu button and drawer */}
+          <Drawer open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <DrawerTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                aria-label="Toggle Menu"
+              >
+                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent className="h-[90vh]">
+              <DrawerHeader>
+                <DrawerTitle>Menu</DrawerTitle>
+              </DrawerHeader>
+              <div className="px-4 py-2 flex flex-col gap-2">
+                <div className="flex items-center gap-4 pb-4 mb-4 border-b">
+                  {user && (
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {user.username.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{user.username}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {user.isAdmin ? "Administrator" : "Student"}
+                        </span>
                       </div>
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => logoutMutation.mutate()}
-                        disabled={logoutMutation.isPending}
-                      >
-                        Logout
-                      </Button>
-                    </motion.div>
-                  </>
-                )}
+                    </div>
+                  )}
+                </div>
+
+                {user && menuItems.map(({ path, label, dataTour }) => (
+                  <Link key={path} href={path}>
+                    <a
+                      className={`${getNavClass(path)} block w-full text-left py-3`}
+                      data-tour={dataTour}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {label}
+                    </a>
+                  </Link>
+                ))}
+
+                <div className="mt-auto pt-4 border-t">
+                  <Button 
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      logoutMutation.mutate();
+                      setIsMenuOpen(false);
+                    }}
+                    disabled={logoutMutation.isPending}
+                  >
+                    Logout
+                  </Button>
+                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </DrawerContent>
+          </Drawer>
+        </div>
       </div>
     </nav>
   );
