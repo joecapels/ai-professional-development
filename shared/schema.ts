@@ -121,6 +121,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
   learningPreferences: json("learning_preferences").$type<{
     learningStyle: "visual" | "auditory" | "reading" | "kinesthetic";
     pacePreference: "fast" | "moderate" | "slow";
@@ -129,7 +130,7 @@ export const users = pgTable("users", {
     chatbotPersonality: "encouraging" | "socratic" | "professional" | "friendly";
     gradeLevel: typeof gradeLevel[number];
     researchAreas: typeof researchArea[number][];
-  }>(),
+  }>().default({}),
 });
 
 export const studyMaterials = pgTable("study_materials", {

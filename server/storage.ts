@@ -47,9 +47,17 @@ export class DatabaseStorage implements IStorage {
   async updateUserPreferences(userId: number, preferences: LearningPreferences): Promise<User> {
     const [user] = await db
       .update(users)
-      .set({ learningPreferences: preferences })
+      .set({ 
+        learningPreferences: preferences,
+        updatedAt: new Date()
+      })
       .where(eq(users.id, userId))
       .returning();
+
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+
     return user;
   }
 
