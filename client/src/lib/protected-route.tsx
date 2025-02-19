@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
 
 const ADMIN_ONLY_ROUTES = ['/admin'];
-const USER_ONLY_ROUTES = ['/', '/chat', '/quiz', '/settings', '/documents', '/analytics', '/flashcards', '/badges', '/one-ring'];
+const USER_ONLY_ROUTES = ['/', '/chat', '/quiz', '/settings', '/documents', '/analytics', '/flashcards', '/badges', '/notifications'];
 
 export function ProtectedRoute({
   path,

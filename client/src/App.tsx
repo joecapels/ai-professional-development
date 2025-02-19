@@ -17,6 +17,7 @@ import AnalyticsPage from "@/pages/analytics-page";
 import FlashcardPage from "@/pages/flashcard-page";
 import BadgesPage from "@/pages/badges-page";
 import AdminPage from "@/pages/admin-page";
+import NotificationsPage from "@/pages/notifications-page";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <ProtectedRoute path="/analytics" component={AnalyticsPage} />
       <ProtectedRoute path="/flashcards" component={FlashcardPage} />
       <ProtectedRoute path="/badges" component={BadgesPage} />
+      <ProtectedRoute path="/notifications" component={NotificationsPage} />
       <ProtectedRoute path="/admin" component={AdminPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
