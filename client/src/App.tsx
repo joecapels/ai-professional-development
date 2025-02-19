@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { AppTour } from "@/components/app-tour";
+import { NavBar } from "@/components/nav-bar";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import HomePage from "@/pages/home-page";
@@ -45,9 +46,12 @@ export default function App() {
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <Router />
-          <AppTour />
-          <Toaster />
+          <div className="min-h-screen bg-background">
+            <NavBar />
+            <Router />
+            <AppTour />
+            <Toaster />
+          </div>
         </AuthProvider>
       </QueryClientProvider>
     </React.StrictMode>
