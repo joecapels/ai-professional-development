@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { 
-  Menu, X, Search, Bell, UserIcon, Settings,
+  Menu, X, Search, Bell, 
   User as UserProfile, LogOut, Settings2, 
   BookOpen, Trophy, BarChart2 
 } from "lucide-react";
