@@ -4,7 +4,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { 
   Menu, X, Search, Bell, 
   User as UserProfile, LogOut, Settings2, 
-  BookOpen, Trophy, BarChart2 
+  BookOpen, Trophy, BarChart2,
+  Check, Clock 
 } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,6 +26,31 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 
+// Mock notifications - in real app, this would come from an API
+const notifications = [
+  {
+    id: 1,
+    title: "New Achievement Unlocked",
+    description: "You've completed 5 study sessions!",
+    time: "2 hours ago",
+    unread: true,
+  },
+  {
+    id: 2,
+    title: "Quiz Results Available",
+    description: "Your recent quiz results are ready to view",
+    time: "5 hours ago",
+    unread: true,
+  },
+  {
+    id: 3,
+    title: "Study Reminder",
+    description: "Time for your daily study session",
+    time: "1 day ago",
+    unread: false,
+  },
+];
+
 interface MenuItem {
   path: string;
   label: string;
@@ -35,6 +61,7 @@ export function NavBar() {
   const { user, logoutMutation } = useAuth();
   const [location] = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(notifications.filter(n => n.unread).length);
 
   const isActive = (path: string) => location === path;
 
@@ -57,6 +84,11 @@ export function NavBar() {
   ] : [
     { path: "/admin", label: "Admin Dashboard" }
   ];
+
+  const markAllAsRead = () => {
+    setUnreadCount(0);
+    // In a real app, you would also call an API to update the notification status
+  };
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 shadow-sm">
@@ -92,10 +124,62 @@ export function NavBar() {
                 ))}
 
                 <div className="flex items-center gap-4 ml-4 pl-4 border-l">
-                  <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="relative">
+                        <Bell className="h-5 w-5" />
+                        {unreadCount > 0 && (
+                          <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full" />
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-80" align="end" forceMount>
+                      <DropdownMenuLabel className="flex items-center justify-between">
+                        <span>Notifications</span>
+                        {unreadCount > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 text-xs font-normal"
+                            onClick={markAllAsRead}
+                          >
+                            <Check className="mr-1 h-3 w-3" />
+                            Mark all as read
+                          </Button>
+                        )}
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuGroup className="max-h-[300px] overflow-y-auto">
+                        {notifications.map((notification) => (
+                          <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-4">
+                            <div className="flex items-center justify-between w-full">
+                              <span className={`text-sm font-medium ${notification.unread ? 'text-primary' : ''}`}>
+                                {notification.title}
+                              </span>
+                              <span className="text-xs text-muted-foreground flex items-center">
+                                <Clock className="mr-1 h-3 w-3" />
+                                {notification.time}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {notification.description}
+                            </p>
+                          </DropdownMenuItem>
+                        ))}
+                        {notifications.length === 0 && (
+                          <div className="p-4 text-center text-sm text-muted-foreground">
+                            No notifications
+                          </div>
+                        )}
+                      </DropdownMenuGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="h-auto p-0">
+                        <Link href="/notifications" className="w-full p-2 text-center text-sm text-muted-foreground hover:text-primary">
+                          View all notifications
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
