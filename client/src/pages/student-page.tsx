@@ -4,7 +4,6 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon, Brain, Clock, LineChart, BookOpen, MessageSquare, Quote, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { NavBar } from "@/components/nav-bar";
 import type { StudyMaterial, Progress as ProgressType, SavedDocument, QuizResult } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
@@ -66,7 +65,6 @@ export default function StudentPage() {
   if (materialsLoading || progressLoading || recommendationsLoading || documentsLoading || quizResultsLoading) {
     return (
       <div className="min-h-screen">
-        <NavBar />
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -92,7 +90,6 @@ export default function StudentPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <NavBar />
       <main className="container py-4 px-3 md:py-8 md:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
