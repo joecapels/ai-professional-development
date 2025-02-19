@@ -95,9 +95,30 @@ export function NavBar() {
       <div className="container px-4 h-14">
         <div className="flex items-center justify-between h-full">
           <div className="flex items-center gap-8">
-            <h1 className="text-xl font-bold text-primary">
-              Study AI
-            </h1>
+            <Link href="/">
+              <div className="flex items-center gap-2 cursor-pointer">
+                <svg
+                  className="w-8 h-8 text-primary"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 4.5a7.5 7.5 0 100 15 7.5 7.5 0 000-15z" />
+                  <path d="M12 8v8" />
+                  <path d="M8 12h8" />
+                  <path d="M12 3v1.5" />
+                  <path d="M12 19.5V21" />
+                  <path d="M3 12h1.5" />
+                  <path d="M19.5 12H21" />
+                </svg>
+                <h1 className="text-xl font-bold text-primary">
+                  Study AI
+                </h1>
+              </div>
+            </Link>
 
             <div className="hidden md:flex relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
