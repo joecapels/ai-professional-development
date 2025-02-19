@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Brain, Sparkles, RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { NavBar } from "@/components/nav-bar";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,7 @@ interface Flashcard {
 export default function FlashcardPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [flipped, setFlipped] = useState(false);
+  const [showAnswer, setShowAnswer] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [selectedDocs, setSelectedDocs] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -69,14 +69,12 @@ export default function FlashcardPage() {
   };
 
   const nextCard = () => {
-    setFlipped(false);
-    setTimeout(() => {
-      if (flashcards && currentCardIndex < flashcards.length - 1) {
-        setCurrentCardIndex(prev => prev + 1);
-      } else {
-        setCurrentCardIndex(0);
-      }
-    }, 300);
+    setShowAnswer(false);
+    if (flashcards && currentCardIndex < flashcards.length - 1) {
+      setCurrentCardIndex(prev => prev + 1);
+    } else {
+      setCurrentCardIndex(0);
+    }
   };
 
   if (documentsLoading || flashcardsLoading) {
@@ -147,75 +145,21 @@ export default function FlashcardPage() {
         {/* Flashcard Display */}
         {flashcards && flashcards.length > 0 ? (
           <div className="space-y-6">
-            <div className="relative h-[400px] perspective-[1000px]">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentCardIndex + (flipped ? "-back" : "-front")}
-                  initial={{ rotateY: 0, opacity: 0 }}
-                  animate={{ rotateY: flipped ? 180 : 0, opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{
-                    duration: 0.3,
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 30
-                  }}
-                  className="absolute inset-0"
-                  style={{
-                    transformStyle: "preserve-3d",
-                  }}
-                >
-                  <Card
-                    className="h-full w-full cursor-pointer bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-lg transition-all"
-                    onClick={() => setFlipped(!flipped)}
-                  >
-                    <CardContent className="flex items-center justify-center h-full p-8">
-                      <div 
-                        className="w-full h-full"
-                        style={{
-                          transform: `rotateY(${flipped ? 180 : 0}deg)`,
-                          transformStyle: "preserve-3d",
-                          transition: "transform 0.3s"
-                        }}
-                      >
-                        <div
-                          className="absolute inset-0 w-full h-full flex items-center justify-center backface-hidden"
-                          style={{
-                            backfaceVisibility: "hidden",
-                          }}
-                        >
-                          <div className="text-center p-6">
-                            <p className="text-xl font-medium">
-                              {flashcards[currentCardIndex].front}
-                            </p>
-                            <p className="text-sm text-muted-foreground mt-4">
-                              Click to show answer
-                            </p>
-                          </div>
-                        </div>
-
-                        <div
-                          className="absolute inset-0 w-full h-full flex items-center justify-center backface-hidden"
-                          style={{
-                            backfaceVisibility: "hidden",
-                            transform: "rotateY(180deg)"
-                          }}
-                        >
-                          <div className="text-center p-6">
-                            <p className="text-xl font-medium">
-                              {flashcards[currentCardIndex].back}
-                            </p>
-                            <p className="text-sm text-muted-foreground mt-4">
-                              Click to hide answer
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </AnimatePresence>
-            </div>
+            <Card 
+              className="h-[400px] cursor-pointer bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-lg transition-all"
+              onClick={() => setShowAnswer(!showAnswer)}
+            >
+              <CardContent className="flex items-center justify-center h-full p-8">
+                <div className="text-center p-6">
+                  <p className="text-xl font-medium">
+                    {showAnswer ? flashcards[currentCardIndex].back : flashcards[currentCardIndex].front}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-4">
+                    Click to {showAnswer ? "hide answer" : "show answer"}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
             <div className="flex justify-center gap-4">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -229,7 +173,7 @@ export default function FlashcardPage() {
                   Next
                 </Button>
               </motion.div>
-              {flipped && (
+              {showAnswer && (
                 <>
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button
