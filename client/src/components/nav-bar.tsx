@@ -80,6 +80,7 @@ export function NavBar() {
     { path: "/documents", label: "Documents", dataTour: "documents" },
     { path: "/badges", label: "Achievements", dataTour: "achievements" },
     { path: "/analytics", label: "Analytics", dataTour: "analytics" },
+    { path: "/upgrades", label: "Upgrade", dataTour: "upgrades" },
     { path: "/settings", label: "Settings", dataTour: "settings" }
   ] : [
     { path: "/admin", label: "Admin Dashboard" }
