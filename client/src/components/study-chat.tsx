@@ -109,10 +109,21 @@ export function StudyChat() {
   }, [speak, cancel, speaking]);
 
   return (
-    <Card className="flex flex-col h-[calc(100vh-12rem)] mx-auto max-w-3xl shadow-md">
+    <Card className="flex flex-col h-[calc(100vh-12rem)] mx-auto max-w-3xl shadow-lg">
       <CardHeader className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-primary">
+          <CardTitle className="text-xl font-bold text-primary flex items-center gap-2">
+            <svg
+              className="w-5 h-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
             AI Study Assistant
           </CardTitle>
           <div className="flex items-center gap-2">
@@ -137,9 +148,9 @@ export function StudyChat() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-4 p-4">
+      <CardContent className="flex-1 flex flex-col gap-6 p-6">
         <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-4">
+          <div className="space-y-6">
             {messages.map((msg, i) => (
               <div
                 key={i}
@@ -148,20 +159,36 @@ export function StudyChat() {
                 }`}
               >
                 <div
-                  className={`max-w-[85%] rounded-lg px-4 py-2 shadow-sm ${
+                  className={`max-w-[85%] rounded-lg px-6 py-4 shadow-md transition-colors ${
                     msg.role === "user"
-                      ? "bg-primary/90 text-primary-foreground ml-4"
-                      : "bg-muted mr-4"
+                      ? "bg-primary text-primary-foreground ml-4"
+                      : "bg-muted/60 mr-4 prose prose-slate dark:prose-invert"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="leading-relaxed">{msg.content}</p>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className={`${
+                      msg.role === "assistant" 
+                        ? "prose prose-slate dark:prose-invert max-w-none leading-relaxed"
+                        : "text-base leading-relaxed"
+                    }`}>
+                      {msg.role === "assistant" ? (
+                        <div className="space-y-4">
+                          {msg.content.split('\n\n').map((paragraph, idx) => (
+                            <p key={idx} className="text-base">
+                              {paragraph}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        msg.content
+                      )}
+                    </div>
                     {msg.role === "assistant" && (
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleSpeak(msg.content)}
-                        className="flex-shrink-0"
+                        className="flex-shrink-0 hover:bg-background/20"
                         title={speaking ? "Stop speaking" : "Read aloud"}
                       >
                         {speaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -173,8 +200,8 @@ export function StudyChat() {
             ))}
             {chatMutation.isPending && (
               <div className="flex justify-start">
-                <div className="bg-muted rounded-lg px-4 py-2 mr-4">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <div className="bg-muted/60 rounded-lg px-6 py-4 mr-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
                 </div>
               </div>
             )}
@@ -182,18 +209,18 @@ export function StudyChat() {
         </ScrollArea>
         <div className="sticky bottom-0 bg-background pt-4">
           <div className="flex flex-col gap-4">
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="Ask any study-related question..."
-                className="flex-1 bg-muted"
+                className="flex-1 bg-muted/60 text-base"
               />
               <Button
                 onClick={handleSend}
                 disabled={chatMutation.isPending || !input.trim()}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-primary hover:bg-primary/90 px-6"
               >
                 <Send className="h-4 w-4" />
               </Button>
@@ -202,9 +229,9 @@ export function StudyChat() {
               <Button
                 variant="outline"
                 onClick={() => setSaveDialogOpen(true)}
-                className="w-full"
+                className="w-full gap-2 text-base font-medium"
               >
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="h-4 w-4" />
                 Save Conversation
               </Button>
             )}
@@ -215,7 +242,7 @@ export function StudyChat() {
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Save Chat Conversation</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Save Chat Conversation</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -224,16 +251,16 @@ export function StudyChat() {
                 value={documentTitle}
                 onChange={(e) => setDocumentTitle(e.target.value)}
                 placeholder="Enter a title for this conversation"
-                className="bg-muted"
+                className="bg-muted/60"
               />
             </div>
             <Button
               onClick={handleSave}
               disabled={saveDocumentMutation.isPending || !documentTitle}
-              className="w-full bg-primary hover:bg-primary/90"
+              className="w-full bg-primary hover:bg-primary/90 gap-2 text-base font-medium"
             >
               {saveDocumentMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               )}
               Save
             </Button>
