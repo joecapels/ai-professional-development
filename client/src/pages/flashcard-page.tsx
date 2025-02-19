@@ -204,11 +204,11 @@ export default function FlashcardPage() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          transformStyle: 'preserve-3d',
                           transform: 'rotateY(180deg)',
+                          transformStyle: 'preserve-3d',
                         }}
                       >
-                        <div>
+                        <div style={{ transform: 'rotateY(180deg)' }}>
                           <p className="text-xl font-medium">
                             {flashcards[currentCardIndex].back}
                           </p>

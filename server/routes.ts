@@ -269,9 +269,13 @@ async function registerAdminRoutes(app: Express) {
           totalDocuments: documentCount,
           totalFlashcards: flashcardCount,
           achievements: achievementCount,
-          lastLogin: sessionHistory[0]?.startTime || null,
+          lastLogin: sessionHistory[0]?.startTime ? new Date(sessionHistory[0].startTime).toISOString() : null,
           totalLogins: sessionHistory.length,
-          sessionHistory,
+          sessionHistory: sessionHistory.map(session => ({
+            startTime: new Date(session.startTime).toISOString(),
+            endTime: session.endTime ? new Date(session.endTime).toISOString() : null,
+            duration: session.duration
+          })),
           chatHistory: [] // This will be populated when chat system is implemented
         };
 
@@ -332,6 +336,12 @@ async function registerAdminRoutes(app: Express) {
         status: session.status
       }));
 
+      const averageScore = quizzes.length > 0
+        ? Math.round(quizzes.reduce((acc, quiz) =>
+            acc + ((quiz as any).score || 0), 0) / quizzes.length)
+        : 0;
+
+
       const userStats = {
         user: {
           id: user.id,
@@ -355,9 +365,7 @@ async function registerAdminRoutes(app: Express) {
         },
         quizStats: {
           totalQuizzes: quizzes.length,
-          averageScore: quizzes.length > 0
-            ? Math.round(quizzes.reduce((acc, quiz) => acc + (quiz.score || 0), 0) / quizzes.length)
-            : 0
+          averageScore
         },
         contentStats: {
           documents: {
