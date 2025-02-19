@@ -63,22 +63,31 @@ export function StudyChat() {
 
   const saveDocumentMutation = useMutation({
     mutationFn: async (data: { title: string; content: string }) => {
-      const res = await apiRequest("POST", "/api/documents", {
-        title: data.title,
-        content: data.content,
-        type: "chat",
-        metadata: {
-          timestamp: new Date().toISOString(),
-        },
-      });
-      return res.json();
+      try {
+        const res = await apiRequest("POST", "/api/documents", {
+          title: data.title,
+          content: data.content,
+          type: "chat",
+          metadata: {
+            timestamp: new Date().toISOString(),
+          },
+        });
+        if (!res.ok) {
+          throw new Error(`Failed to save document: ${res.status}`);
+        }
+        return res.json();
+      } catch (error) {
+        console.error('Error saving document:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({ title: "Conversation saved successfully" });
       setSaveDialogOpen(false);
       setDocumentTitle("");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error('Save document error:', error);
       toast({
         title: "Failed to save conversation",
         description: error.message,
@@ -103,10 +112,22 @@ export function StudyChat() {
   };
 
   const handleSave = () => {
-    if (!documentTitle) return;
+    if (!documentTitle) {
+      toast({
+        title: "Title required",
+        description: "Please enter a title for the conversation",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Format the content with clear separation between messages
     const content = messages
-      .map((msg) => `${msg.role}: ${msg.content}`)
+      .map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`)
       .join("\n\n");
+
+    console.log('Saving document:', { title: documentTitle, content });
+
     saveDocumentMutation.mutate({
       title: documentTitle,
       content,
@@ -210,7 +231,7 @@ export function StudyChat() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className={`${
-                        msg.role === "assistant" 
+                        msg.role === "assistant"
                           ? "prose prose-slate dark:prose-invert max-w-none leading-relaxed"
                           : "text-base leading-relaxed"
                       }`}>
