@@ -76,7 +76,7 @@ export default function FlashcardPage() {
       } else {
         setCurrentCardIndex(0);
       }
-    }, 300); // Match the exit animation duration
+    }, 300);
   };
 
   if (documentsLoading || flashcardsLoading) {
@@ -170,16 +170,9 @@ export default function FlashcardPage() {
                     onClick={() => setFlipped(!flipped)}
                   >
                     <CardContent className="flex items-center justify-center h-full p-8">
-                      {/* Front of the card */}
-                      <div
-                        className="absolute inset-0 w-full h-full flex items-center justify-center backface-hidden"
-                        style={{
-                          backfaceVisibility: "hidden",
-                          transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
-                          transition: "transform 0.3s"
-                        }}
-                      >
-                        <div className="text-center p-6" style={{ transform: "rotateY(180deg)" }}>
+                      {!flipped ? (
+                        // Front of the card (Question)
+                        <div className="text-center p-6">
                           <p className="text-xl font-medium">
                             {flashcards[currentCardIndex].front}
                           </p>
@@ -187,17 +180,8 @@ export default function FlashcardPage() {
                             Click to show answer
                           </p>
                         </div>
-                      </div>
-
-                      {/* Back of the card */}
-                      <div
-                        className="absolute inset-0 w-full h-full flex items-center justify-center backface-hidden"
-                        style={{
-                          backfaceVisibility: "hidden",
-                          transform: flipped ? "rotateY(0deg)" : "rotateY(-180deg)",
-                          transition: "transform 0.3s"
-                        }}
-                      >
+                      ) : (
+                        // Back of the card (Answer)
                         <div className="text-center p-6">
                           <p className="text-xl font-medium">
                             {flashcards[currentCardIndex].back}
@@ -206,7 +190,7 @@ export default function FlashcardPage() {
                             Click to hide answer
                           </p>
                         </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
