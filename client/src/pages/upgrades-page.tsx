@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 const plans = [
   {
@@ -51,6 +52,16 @@ const item = {
 };
 
 export default function UpgradesPage() {
+  const { toast } = useToast();
+
+  const handleUpgradeClick = () => {
+    toast({
+      title: "Special Offer!",
+      description: "No need to upgrade now, have 14 days on us!",
+      duration: 5000,
+    });
+  };
+
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="text-center mb-12">
@@ -94,6 +105,7 @@ export default function UpgradesPage() {
                 <Button 
                   className="w-full" 
                   variant={plan.highlighted ? "default" : "outline"}
+                  onClick={plan.highlighted ? handleUpgradeClick : undefined}
                 >
                   {plan.highlighted ? "Upgrade Now" : "Get Started"}
                 </Button>
