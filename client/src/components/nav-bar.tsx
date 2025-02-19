@@ -118,26 +118,36 @@ export function NavBar() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
-                        <DropdownMenuItem>
-                          <UserProfile className="mr-2 h-4 w-4" />
-                          <span>Profile</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <BookOpen className="mr-2 h-4 w-4" />
-                          <span>My Learning</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Trophy className="mr-2 h-4 w-4" />
-                          <span>Achievements</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <BarChart2 className="mr-2 h-4 w-4" />
-                          <span>Progress</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Settings2 className="mr-2 h-4 w-4" />
-                          <span>Settings</span>
-                        </DropdownMenuItem>
+                        <Link href="/profile">
+                          <DropdownMenuItem>
+                            <UserProfile className="mr-2 h-4 w-4" />
+                            <span>Profile</span>
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/documents">
+                          <DropdownMenuItem>
+                            <BookOpen className="mr-2 h-4 w-4" />
+                            <span>My Learning</span>
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/badges">
+                          <DropdownMenuItem>
+                            <Trophy className="mr-2 h-4 w-4" />
+                            <span>Achievements</span>
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/analytics">
+                          <DropdownMenuItem>
+                            <BarChart2 className="mr-2 h-4 w-4" />
+                            <span>Progress</span>
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/settings">
+                          <DropdownMenuItem>
+                            <Settings2 className="mr-2 h-4 w-4" />
+                            <span>Settings</span>
+                          </DropdownMenuItem>
+                        </Link>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem 
