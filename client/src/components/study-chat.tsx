@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/select";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { motion, AnimatePresence } from "framer-motion";
+import { queryClient } from "@/lib/queryClient";
+import type { SavedDocument } from "@shared/schema";
 
 interface Message {
   role: "user" | "assistant";
@@ -81,18 +83,47 @@ export function StudyChat() {
         throw error;
       }
     },
-    onSuccess: () => {
+    onMutate: async (newDocument) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/documents"] });
+      const previousDocuments = queryClient.getQueryData<SavedDocument[]>(["/api/documents"]);
+
+      const now = new Date();
+      queryClient.setQueryData<SavedDocument[]>(["/api/documents"], (old = []) => {
+        const optimisticDoc: SavedDocument = {
+          id: Date.now(),
+          title: newDocument.title,
+          content: newDocument.content,
+          type: "chat",
+          userId: -1,
+          metadata: {
+            timestamp: now.toISOString(),
+          },
+          createdAt: now,
+          updatedAt: now,
+        };
+        return [...old, optimisticDoc];
+      });
+
+      return { previousDocuments };
+    },
+    onError: (_error, _newDocument, context) => {
+      if (context?.previousDocuments) {
+        queryClient.setQueryData(["/api/documents"], context.previousDocuments);
+      }
+      toast({
+        title: "Failed to save conversation",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    },
+    onSuccess: (savedDoc) => {
+      queryClient.setQueryData<SavedDocument[]>(["/api/documents"], (old = []) => {
+        const filtered = old.filter(doc => doc.id !== savedDoc.id);
+        return [...filtered, savedDoc];
+      });
       toast({ title: "Conversation saved successfully" });
       setSaveDialogOpen(false);
       setDocumentTitle("");
-    },
-    onError: (error: Error) => {
-      console.error('Save document error:', error);
-      toast({
-        title: "Failed to save conversation",
-        description: error.message,
-        variant: "destructive",
-      });
     },
   });
 

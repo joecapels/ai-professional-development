@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,9 @@ import { NavBar } from "@/components/nav-bar";
 import { Loader2, Search, FileText, MessageSquare, Brain, Filter, HelpCircle } from "lucide-react";
 import type { SavedDocument } from "@shared/schema";
 import { format } from "date-fns";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 type SortOption = "newest" | "oldest" | "title";
 
@@ -64,6 +66,8 @@ const getDocumentIcon = (type: string) => {
 };
 
 export default function DocumentsPage() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -74,15 +78,54 @@ export default function DocumentsPage() {
 
   const { data: documents, isLoading } = useQuery<SavedDocument[]>({
     queryKey: ["/api/documents"],
-    onSuccess: (data) => {
-      if (data && data.length > 0) {
-        const latestDoc = data[0];
-        if (!documents || latestDoc.id !== documents[0]?.id) {
-          setNewDocumentId(latestDoc.id);
-          setTimeout(() => setNewDocumentId(null), 2000); // Remove pulse after 2 seconds
-        }
+  });
+
+  const saveDocumentMutation = useMutation({
+    mutationFn: async (document: Partial<SavedDocument>) => {
+      const response = await apiRequest("POST", "/api/documents", document);
+      return response.json();
+    },
+    onMutate: async (newDocument) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/documents"] });
+      const previousDocuments = queryClient.getQueryData<SavedDocument[]>(["/api/documents"]);
+
+      const now = new Date();
+      queryClient.setQueryData<SavedDocument[]>(["/api/documents"], (old = []) => {
+        const optimisticDoc = {
+          id: Date.now(),
+          title: newDocument.title || "Untitled Document",
+          content: newDocument.content || "",
+          type: newDocument.type || "notes",
+          userId: -1,
+          metadata: newDocument.metadata || { timestamp: now.toISOString() },
+          createdAt: now,
+          updatedAt: now,
+        } satisfies SavedDocument;
+        return [...old, optimisticDoc];
+      });
+
+      setNewDocumentId(Date.now());
+      setTimeout(() => setNewDocumentId(null), 2000);
+
+      return { previousDocuments };
+    },
+    onError: (_error, _newDocument, context) => {
+      if (context?.previousDocuments) {
+        queryClient.setQueryData(["/api/documents"], context.previousDocuments);
       }
-    }
+      toast({
+        title: "Failed to save document",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    },
+    onSuccess: (savedDoc) => {
+      queryClient.setQueryData<SavedDocument[]>(["/api/documents"], (old = []) => {
+        const filtered = old?.filter(doc => doc.id !== savedDoc.id) ?? [];
+        return [...filtered, savedDoc];
+      });
+      toast({ title: "Document saved successfully" });
+    },
   });
 
   const filteredDocuments = documents?.filter((doc) => {
@@ -90,14 +133,17 @@ export default function DocumentsPage() {
       doc.content.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = selectedType === "all" || doc.type === selectedType;
     return matchesSearch && matchesType;
-  });
+  }) ?? [];
 
-  const sortedDocuments = [...(filteredDocuments || [])].sort((a, b) => {
+  const sortedDocuments = [...filteredDocuments].sort((a, b) => {
+    const aDate = new Date(a.createdAt || Date.now());
+    const bDate = new Date(b.createdAt || Date.now());
+
     switch (sortBy) {
       case "newest":
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return bDate.getTime() - aDate.getTime();
       case "oldest":
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        return aDate.getTime() - bDate.getTime();
       case "title":
         return a.title.localeCompare(b.title);
       default:
@@ -105,18 +151,18 @@ export default function DocumentsPage() {
     }
   });
 
+  const documentTypesArray = ["all"].concat(Array.from(new Set(documents?.map(doc => doc.type) ?? [])));
+
   if (isLoading) {
     return (
       <div className="min-h-screen">
         <NavBar />
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
   }
-
-  const documentTypesArray = ["all", ...new Set(documents?.map(doc => doc.type) || [])];
 
   return (
     <div className="min-h-screen bg-background">
@@ -194,12 +240,12 @@ export default function DocumentsPage() {
           )}
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {sortedDocuments?.map((doc) => (
+            {sortedDocuments.map((doc) => (
               <motion.div
                 key={doc.id}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ 
-                  opacity: 1, 
+                animate={{
+                  opacity: 1,
                   y: 0,
                   scale: newDocumentId === doc.id ? [1, 1.02, 1] : 1
                 }}
@@ -209,8 +255,8 @@ export default function DocumentsPage() {
                     duration: 1,
                     ease: "easeInOut"
                   }
-                } : { 
-                  duration: 0.3 
+                } : {
+                  duration: 0.3
                 }}
                 onHoverStart={() => setHoveredId(doc.id)}
                 onHoverEnd={() => setHoveredId(null)}
@@ -240,13 +286,13 @@ export default function DocumentsPage() {
                       <div className={`w-2 h-2 rounded-full ${getDocumentStripColor(doc.type)}`} />
                       <span className="capitalize">{documentTypes[doc.type]?.label || doc.type}</span>
                       <span>•</span>
-                      <span>{format(new Date(doc.createdAt), "PPp")}</span>
+                      <span>{format(new Date(doc.createdAt || Date.now()), "PPp")}</span>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <motion.div 
+                    <motion.div
                       className="space-y-4"
-                      animate={{ 
+                      animate={{
                         height: hoveredId === doc.id ? "auto" : "12rem",
                         transition: { duration: 0.3 }
                       }}
@@ -259,7 +305,7 @@ export default function DocumentsPage() {
                           </span>
                         </div>
                       )}
-                      <motion.div 
+                      <motion.div
                         className={`mt-4 overflow-hidden rounded-lg ${
                           hoveredId === doc.id ? 'max-h-48' : 'max-h-32'
                         } transition-all duration-300`}
@@ -353,7 +399,7 @@ export default function DocumentsPage() {
               </pre>
             </div>
             <div className="text-sm text-muted-foreground text-right">
-              Created: {selectedDocument && format(new Date(selectedDocument.createdAt), "PPp")}
+              Created: {selectedDocument && format(new Date(selectedDocument.createdAt || Date.now()), "PPp")}
             </div>
           </div>
         </DialogContent>
