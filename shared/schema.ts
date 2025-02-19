@@ -188,7 +188,7 @@ export const savedDocuments = pgTable("saved_documents", {
     aiPersonality?: string;
     timestamp?: string;
   }>(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Add study session related types and schemas

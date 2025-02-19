@@ -33,11 +33,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(userData: InsertUser): Promise<User> {
+    const now = new Date();
     const [newUser] = await db.insert(users).values({
       ...userData,
       isAdmin: userData.isAdmin || false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       learningPreferences: userData.learningPreferences || {}
     }).returning();
     return newUser;
@@ -62,9 +63,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMaterial(material: InsertStudyMaterial): Promise<StudyMaterial> {
+    const now = new Date();
     const [newMaterial] = await db.insert(studyMaterials).values({
       ...material,
-      createdAt: new Date().toISOString()
+      createdAt: now
     }).returning();
     return newMaterial;
   }
@@ -74,19 +76,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProgress(progressData: InsertProgress): Promise<Progress> {
+    const now = new Date();
     const [newProgress] = await db.insert(progress).values({
       ...progressData,
       aiRecommendations: progressData.aiRecommendations || [],
-      completedAt: new Date().toISOString()
+      completedAt: now
     }).returning();
     return newProgress;
   }
 
   async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
+    const now = new Date();
     const [newQuiz] = await db.insert(quizzes).values({
       ...quizData,
       questions: quizData.questions || [],
-      createdAt: new Date().toISOString()
+      createdAt: now
     }).returning();
     return newQuiz;
   }
@@ -101,10 +105,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuizResult(resultData: InsertQuizResult): Promise<QuizResult> {
+    const now = new Date();
     const [newResult] = await db.insert(quizResults).values({
       ...resultData,
       answers: resultData.answers || [],
-      completedAt: new Date().toISOString()
+      completedAt: now
     }).returning();
     return newResult;
   }
@@ -114,10 +119,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveDocument(document: InsertDocument): Promise<SavedDocument> {
+    const now = new Date();
     const [newDocument] = await db.insert(savedDocuments).values({
-      ...document,
+      userId: document.userId,
+      title: document.title,
+      content: document.content,
+      type: document.type,
       metadata: document.metadata || {},
-      createdAt: new Date().toISOString()
+      createdAt: now
     }).returning();
     return newDocument;
   }
@@ -136,11 +145,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStudySession(sessionData: { userId: number; subject: string; status: "active" | "paused" | "completed" }): Promise<any> {
+    const now = new Date();
     const [session] = await db.insert(studySessions).values({
       userId: sessionData.userId,
       subject: sessionData.subject,
       status: sessionData.status,
-      startTime: new Date().toISOString(),
+      startTime: now,
       endTime: null,
       totalDuration: 0,
       breaks: [],
@@ -313,19 +323,21 @@ export class DatabaseStorage implements IStorage {
   async saveFlashcards(cards: (InsertFlashcard & { userId: number })[]): Promise<Flashcard[]> {
     if (cards.length === 0) return [];
 
+    const now = new Date();
     const cardsToInsert = cards.map(card => ({
       userId: card.userId,
       front: card.front,
       back: card.back,
       difficulty: card.difficulty,
       documentIds: card.documentIds || [],
-      createdAt: new Date().toISOString()
+      createdAt: now
     }));
 
     return await db.insert(flashcards).values(cardsToInsert).returning();
   }
 
   async createBadge(badge: InsertBadge): Promise<Badge> {
+    const now = new Date();
     const [newBadge] = await db.insert(badges).values({
       name: badge.name,
       description: badge.description,
@@ -333,7 +345,7 @@ export class DatabaseStorage implements IStorage {
       rarity: badge.rarity,
       imageUrl: badge.imageUrl,
       criteria: badge.criteria || null,
-      createdAt: new Date().toISOString()
+      createdAt: now
     }).returning();
     return newBadge;
   }
@@ -356,7 +368,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async awardBadge(achievement: InsertUserAchievement): Promise<UserAchievement> {
-    const [newAchievement] = await db.insert(userAchievements).values(achievement).returning();
+    const now = new Date();
+    const [newAchievement] = await db.insert(userAchievements).values({...achievement, earnedAt: now}).returning();
     return newAchievement;
   }
 
@@ -365,9 +378,10 @@ export class DatabaseStorage implements IStorage {
     badgeId: number,
     progress: { current: number; target: number; lastUpdated: string }
   ): Promise<void> {
+    const now = new Date();
     await db
       .update(userAchievements)
-      .set({ progress })
+      .set({ progress: {...progress, lastUpdated: now} })
       .where(and(
         eq(userAchievements.userId, userId),
         eq(userAchievements.badgeId, badgeId)
