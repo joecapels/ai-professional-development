@@ -45,6 +45,9 @@ interface SubjectPerformance {
   totalAttempts: number;
   lastAttemptDate: string;
   improvement: number;
+  chatAnalytics?: {
+    contentTypes: { type: string; count: number }[];
+  };
 }
 
 interface StudyPlan {
@@ -392,31 +395,35 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            {/* Subject Performance Radar */}
+            {/* Chat Content Distribution */}
             <Card>
               <CardHeader>
-                <CardTitle>Subject Performance Analysis</CardTitle>
+                <CardTitle>Chat Content Distribution</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-[400px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart
-                      cx="50%"
-                      cy="50%"
-                      outerRadius="80%"
-                      data={subjectPerformance}
-                    >
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="subject" />
-                      <PolarRadiusAxis />
-                      <Radar
-                        name="Score"
-                        dataKey="averageScore"
-                        stroke="hsl(var(--primary))"
+                    <PieChart>
+                      <Pie
+                        data={subjectPerformance[0]?.chatAnalytics?.contentTypes || []}
+                        dataKey="count"
+                        nameKey="type"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={160}
                         fill="hsl(var(--primary))"
-                        fillOpacity={0.6}
-                      />
-                    </RadarChart>
+                        label={({ type, percent }) => `${type} (${(percent * 100).toFixed(0)}%)`}
+                      >
+                        {subjectPerformance[0]?.chatAnalytics?.contentTypes?.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={`hsl(${(index * 45) % 360}, 70%, 50%)`}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>

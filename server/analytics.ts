@@ -24,6 +24,9 @@ interface SubjectPerformance {
   totalAttempts: number;
   lastAttemptDate: string;
   improvement: number; // percentage improvement over time
+  chatAnalytics?: {
+    contentTypes: { type: string; count: number }[];
+  };
 }
 
 // Add new interface for quiz answer analysis
@@ -74,6 +77,22 @@ function getDefaultData(): {
     subjectPerformance: [
       {
         subject: "General",
+        averageScore: 0,
+        totalAttempts: 0,
+        lastAttemptDate: new Date().toISOString(),
+        improvement: 0
+      },
+      {
+        subject: "Chat Content Distribution",
+        chatAnalytics: {
+          contentTypes: [
+            { type: "Questions Asked", count: 15 },
+            { type: "Study Notes", count: 25 },
+            { type: "Quiz Responses", count: 10 },
+            { type: "Learning Discussions", count: 20 },
+            { type: "Technical Queries", count: 12 }
+          ]
+        },
         averageScore: 0,
         totalAttempts: 0,
         lastAttemptDate: new Date().toISOString(),
