@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge, UserAchievement } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
-import { AnimatedBadge } from "@/components/animated-badge";
+import { AnimatedBadge } from "@/components/ui/animated-badge"; //Note:  The path here might need adjustment depending on your project structure.  The original code had "@/components/animated-badge", but the edited code uses "@/components/ui/animated-badge".  I've used the edited version's path.
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
@@ -16,16 +16,9 @@ export default function BadgesPage() {
     queryKey: ["/api/badges"],
   });
 
-  const { data: achievements, isLoading: loadingAchievements, error: achievementsError } = useQuery<(UserAchievement & { badge: Badge })[]>({
+  const { data: achievements, isLoading: loadingAchievements, error: achievementsError } = useQuery<UserAchievement[]>({
     queryKey: ["/api/achievements"],
   });
-
-  const getBadgeProgress = (badgeId: number) => {
-    const achievement = achievements?.find(a => a.badge.id === badgeId);
-    if (!achievement?.progress) return undefined;
-    const { current, target } = achievement.progress;
-    return { current, target };
-  };
 
   if (loadingBadges || loadingAchievements) {
     return (
@@ -91,8 +84,9 @@ export default function BadgesPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {badges?.map((badge, index) => {
-            const progress = getBadgeProgress(badge.id);
-            const isEarned = !!progress;
+            const achievement = achievements?.find(a => a.badgeId === badge.id);
+            const isEarned = !!achievement;
+            const progress = achievement?.progress;
 
             return (
               <motion.div
@@ -103,24 +97,32 @@ export default function BadgesPage() {
                 whileHover={{ y: -5 }}
                 className="relative group"
               >
-                <AnimatedBadge
-                  name={badge.name}
-                  description={badge.description}
-                  imageUrl={badge.imageUrl}
-                  rarity={badge.rarity}
-                  progress={progress}
-                  earned={isEarned}
-                />
-                {!isEarned && (
-                  <motion.div 
-                    className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    initial={false}
-                  >
-                    <p className="text-sm text-center px-4">
-                      Complete the required challenges to earn this badge!
-                    </p>
-                  </motion.div>
-                )}
+                <div className="p-6 bg-card rounded-lg border shadow-sm">
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="relative w-24 h-24">
+                      <img 
+                        src={badge.imageUrl} 
+                        alt={badge.name}
+                        className={`w-full h-full ${isEarned ? 'text-primary' : 'text-muted-foreground opacity-50'}`}
+                      />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold">{badge.name}</h3>
+                      <p className="text-sm text-muted-foreground">{badge.description}</p>
+                    </div>
+                    {progress && (
+                      <div className="w-full">
+                        <Progress 
+                          value={(progress.current / progress.target) * 100} 
+                          className="h-2"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {progress.current} / {progress.target}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </motion.div>
             );
           })}
