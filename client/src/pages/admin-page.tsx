@@ -5,13 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Loader2, Users, BookOpen, Trophy, Activity,
   MessageSquare, Brain, Clock, FileText,
-  BarChart2, Search, Filter, Star, Calendar,
-  Shield, ShieldOff, UserPlus, UserMinus,
-  MoreHorizontal
+  BarChart2, Search, Filter, Star, Calendar
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -24,7 +21,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -75,7 +71,6 @@ export default function AdminPage() {
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "student">("all");
   const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("all");
   const [timelineFilter, setTimelineFilter] = useState<"all" | "academic" | "engagement" | "milestone">("all");
-  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -116,65 +111,6 @@ export default function AdminPage() {
       });
     },
   });
-
-  const bulkUpdateUsersMutation = useMutation({
-    mutationFn: async ({ userIds, updates }: { userIds: number[], updates: Partial<User> }) => {
-      const res = await apiRequest("PATCH", "/api/users/bulk", { userIds, updates });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({
-        title: "Users updated successfully",
-        description: `Updated ${selectedUsers.length} users`
-      });
-      setSelectedUsers([]);
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to update users",
-        description: error.message,
-        variant: "destructive"
-      });
-    },
-  });
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedUsers(filteredUsers.map(user => user.id));
-    } else {
-      setSelectedUsers([]);
-    }
-  };
-
-  const handleSelectUser = (userId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedUsers([...selectedUsers, userId]);
-    } else {
-      setSelectedUsers(selectedUsers.filter(id => id !== userId));
-    }
-  };
-
-  const handleBulkAction = (action: 'promote' | 'demote' | 'activate' | 'deactivate') => {
-    const updates: Partial<User> = {};
-
-    switch (action) {
-      case 'promote':
-        updates.isAdmin = true;
-        break;
-      case 'demote':
-        updates.isAdmin = false;
-        break;
-      case 'activate':
-        updates.isActive = true;
-        break;
-      case 'deactivate':
-        updates.isActive = false;
-        break;
-    }
-
-    bulkUpdateUsersMutation.mutate({ userIds: selectedUsers, updates });
-  };
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -310,50 +246,7 @@ export default function AdminPage() {
           <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
             <Card className="col-span-2">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>User Management</CardTitle>
-                  {selectedUsers.length > 0 && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="flex items-center gap-2">
-                          <MoreHorizontal className="h-4 w-4" />
-                          Bulk Actions ({selectedUsers.length})
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleBulkAction('promote')}
-                          className="flex items-center gap-2"
-                        >
-                          <Shield className="h-4 w-4" />
-                          Promote to Admin
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleBulkAction('demote')}
-                          className="flex items-center gap-2"
-                        >
-                          <ShieldOff className="h-4 w-4" />
-                          Remove Admin Rights
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleBulkAction('activate')}
-                          className="flex items-center gap-2"
-                        >
-                          <UserPlus className="h-4 w-4" />
-                          Activate Users
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleBulkAction('deactivate')}
-                          className="flex items-center gap-2 text-destructive"
-                        >
-                          <UserMinus className="h-4 w-4" />
-                          Deactivate Users
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
+                <CardTitle>User Management</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="mb-4 flex flex-col sm:flex-row gap-4">
@@ -414,13 +307,6 @@ export default function AdminPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12">
-                          <Checkbox
-                            checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
-                            onCheckedChange={handleSelectAll}
-                            aria-label="Select all users"
-                          />
-                        </TableHead>
                         <TableHead>Username</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Joined Date</TableHead>
@@ -435,13 +321,6 @@ export default function AdminPage() {
                     <TableBody>
                       {filteredUsers.map((user) => (
                         <TableRow key={user.id}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedUsers.includes(user.id)}
-                              onCheckedChange={(checked) => handleSelectUser(user.id, checked as boolean)}
-                              aria-label={`Select user ${user.username}`}
-                            />
-                          </TableCell>
                           <TableCell className="font-medium">{user.username}</TableCell>
                           <TableCell>
                             <span className={`px-2 py-1 rounded-full text-xs ${
