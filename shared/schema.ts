@@ -165,18 +165,20 @@ export const quizzes = pgTable("quizzes", {
   }[]>(),
 });
 
+// Update the quiz results table definition
 export const quizResults = pgTable("quiz_results", {
   id: serial("id").primaryKey(),
   quizId: integer("quiz_id").notNull().references(() => quizzes.id),
   userId: integer("user_id").notNull().references(() => users.id),
   score: integer("score").notNull(),
-  totalQuestions: integer("total_questions").notNull(),
+  totalQuestions: integer("total_questions").notNull().default(10),
+  subject: text("subject").notNull().default("General"),
   answers: jsonb("answers").$type<{
     questionIndex: number;
     selectedAnswer: string;
     isCorrect: boolean;
-  }[]>(),
-  completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
+  }[]>().default([]),
+  completedAt: timestamp("completed_at").notNull().defaultNow(),
 });
 
 export const savedDocuments = pgTable("saved_documents", {
@@ -307,3 +309,10 @@ export const studySessionMessageSchema = z.object({
 });
 
 export type StudySessionMessage = z.infer<typeof studySessionMessageSchema>;
+
+// Add session table definition to prevent it from being dropped
+export const sessions = pgTable("session", {
+  sid: text("sid").primaryKey(),
+  sess: jsonb("sess").notNull(),
+  expire: timestamp("expire").notNull(),
+});
