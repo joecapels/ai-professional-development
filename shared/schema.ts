@@ -119,9 +119,6 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  email: text("email").notNull().unique(),
-  phoneNumber: text("phone_number"),
-  country: text("country"),
   isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
@@ -237,17 +234,9 @@ export const flashcards = pgTable("flashcards", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Update the insert schema to include the new fields
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
-  email: true,
-  phoneNumber: true,
-  country: true,
-}).extend({
-  email: z.string().email("Invalid email address"),
-  phoneNumber: z.string().optional(),
-  country: z.string().optional(),
 });
 
 export const learningPreferencesSchema = z.object({
