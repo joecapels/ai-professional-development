@@ -15,7 +15,8 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     this.sessionStore = new PostgresSessionStore({
       pool,
-      tableName: 'session'
+      tableName: 'session',
+      createTableIfMissing: true 
     });
   }
 
@@ -37,10 +38,10 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const [newUser] = await db.insert(users).values({
       ...userData,
-      isAdmin: userData.isAdmin || false,
+      isAdmin: false,
       createdAt: now,
       updatedAt: now,
-      learningPreferences: userData.learningPreferences || {}
+      learningPreferences: {}
     }).returning();
     return newUser;
   }
@@ -49,7 +50,6 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('Updating preferences for user:', userId, 'with data:', preferences);
 
-      // Validate the preferences using the schema
       const validPreferences = learningPreferencesSchema.parse(preferences);
       console.log('Validated preferences:', validPreferences);
 

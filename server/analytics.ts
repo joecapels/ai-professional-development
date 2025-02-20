@@ -48,6 +48,11 @@ function getDefaultData(): {
     topicBreakdown: { topic: string; correctAnswers: number; totalQuestions: number }[];
     commonMistakes: { topic: string; description: string; frequency: number }[];
     timeOfDayPerformance: { timeSlot: string; averageScore: number }[];
+    answerPatterns: {
+      correctVsIncorrect: { category: string; count: number }[];
+      topicAccuracy: { topic: string; accuracy: number }[];
+      mistakeFrequency: { mistake: string; count: number }[];
+    };
   };
   documentAnalysis: {
     topicsDistribution: { topic: string; count: number }[];
@@ -83,7 +88,15 @@ function getDefaultData(): {
     quizAnalysis: {
       topicBreakdown: [],
       commonMistakes: [],
-      timeOfDayPerformance: []
+      timeOfDayPerformance: [],
+      answerPatterns: {
+        correctVsIncorrect: [
+          { category: "Correct Answers", count: 0 },
+          { category: "Incorrect Answers", count: 0 }
+        ],
+        topicAccuracy: [],
+        mistakeFrequency: []
+      }
     },
     documentAnalysis: {
       topicsDistribution: [],
@@ -132,8 +145,8 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
     // Analyze quiz answers with processed results
     const answerPatterns = {
       correctVsIncorrect: [
-        { 
-          category: "Correct Answers", 
+        {
+          category: "Correct Answers",
           count: processedResults.reduce((acc, quiz) => acc + quiz.correctAnswers, 0)
         },
         {
