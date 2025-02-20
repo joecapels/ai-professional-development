@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { User as SelectUser, insertUserSchema } from "@shared/schema";
 
 declare global {
   namespace Express {
@@ -28,32 +28,21 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
-// Add type for passport authenticate callback parameters
-type AuthenticateCallback = (
-  error: any,
-  user?: Express.User | false,
-  info?: { message: string }
-) => void;
-
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || 'default-secret-key',
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
       secure: process.env.NODE_ENV === 'production',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      path: '/',
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-      sameSite: 'lax'
     },
-    name: 'sid'
+    name: 'sid',
   };
-
-  if (app.get('env') === 'production') {
-    app.set('trust proxy', 1);
-    if (sessionSettings.cookie) sessionSettings.cookie.secure = true;
-  }
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());
@@ -64,7 +53,7 @@ export function setupAuth(app: Express) {
       try {
         const user = await storage.getUserByUsername(username);
         if (!user || !(await comparePasswords(password, user.password))) {
-          return done(null, false);
+          return done(null, false, { message: "Invalid credentials" });
         }
         return done(null, user);
       } catch (error) {
@@ -77,6 +66,9 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
+      if (!user) {
+        return done(null, false);
+      }
       done(null, user);
     } catch (error) {
       done(error);
@@ -90,16 +82,22 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
+      // Validate the user data against the schema
+      const validatedData = insertUserSchema.parse(req.body);
+
       const user = await storage.createUser({
-        ...req.body,
-        password: await hashPassword(req.body.password),
+        ...validatedData,
+        password: await hashPassword(validatedData.password),
       });
 
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json({ id: user.id, username: user.username });
+        // Don't send password back to client
+        const { password, ...userWithoutPassword } = user;
+        res.status(201).json(userWithoutPassword);
       });
     } catch (error) {
+      console.error("Registration error:", error);
       next(error);
     }
   });
@@ -107,11 +105,13 @@ export function setupAuth(app: Express) {
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string }) => {
       if (err) return next(err);
-      if (!user) return res.status(401).json({ message: "Invalid credentials" });
+      if (!user) return res.status(401).json({ message: info.message || "Invalid credentials" });
 
       req.login(user, (err) => {
         if (err) return next(err);
-        res.json({ id: user.id, username: user.username });
+        // Don't send password back to client
+        const { password, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
       });
     })(req, res, next);
   });
@@ -119,76 +119,19 @@ export function setupAuth(app: Express) {
   app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
-      res.sendStatus(200);
+      req.session.destroy((err) => {
+        if (err) return next(err);
+        res.sendStatus(200);
+      });
     });
   });
 
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    // Don't send password back to client
     const { password, ...userWithoutPassword } = req.user;
     res.json(userWithoutPassword);
   });
 
-  // Add super user login endpoint
-  app.post("/api/super-login", async (req, res, next) => {
-    try {
-      const { username, password } = req.body;
-      const user = await storage.getUserByUsername(username);
-
-      if (!user || !(await comparePasswords(password, user.password)) || !user.isAdmin) {
-        return res.status(401).json({ message: "Invalid super user credentials" });
-      }
-
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.json({
-          id: user.id,
-          username: user.username,
-          isAdmin: user.isAdmin,
-        });
-      });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  // Update super user registration endpoint with correct types
-  app.post("/api/super-register", async (req, res, next) => {
-    try {
-      const { username, password, isAdmin } = req.body;
-
-      // Validate admin flag is true
-      if (!isAdmin) {
-        return res.status(400).json({ message: "Must register as administrator" });
-      }
-
-      // Check if user already exists
-      const existingUser = await storage.getUserByUsername(username);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      // Create new admin user with correct type
-      const user = await storage.createUser({
-        username,
-        password: await hashPassword(password),
-        isAdmin: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-
-      // Log them in automatically
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.status(201).json({
-          id: user.id,
-          username: user.username,
-          isAdmin: user.isAdmin,
-        });
-      });
-    } catch (error) {
-      next(error);
-    }
-  });
   return app;
 }
