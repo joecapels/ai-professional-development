@@ -78,15 +78,20 @@ export default function QuizPage() {
   });
 
   const handleEndQuiz = () => {
-    if (!currentQuiz?.questions) return;
+    if (!currentQuiz?.questions || !currentQuiz.id) {
+      toast({
+        title: "Error",
+        description: "Quiz data is invalid",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const totalQuestions = currentQuiz.questions.length;
-
-    // Calculate score based on answered questions
     const answers = selectedAnswers.map((selectedAnswer, index) => ({
       questionIndex: index,
       selectedAnswer: selectedAnswer || "",
-      isCorrect: selectedAnswer === currentQuiz.questions![index]?.correctAnswer,
+      isCorrect: selectedAnswer === currentQuiz.questions[index]?.correctAnswer,
     }));
 
     // Add empty answers for unanswered questions
@@ -108,22 +113,26 @@ export default function QuizPage() {
   const currentQuestion: Question | undefined = currentQuiz?.questions?.[currentQuestionIndex];
 
   const handleAnswerSelect = (answer: string) => {
+    if (!currentQuiz?.questions) return;
+
     const newAnswers = [...selectedAnswers];
     newAnswers[currentQuestionIndex] = answer;
     setSelectedAnswers(newAnswers);
     setShowExplanation(true);
 
-    if (currentQuestionIndex === (currentQuiz?.questions?.length || 0) - 1) {
+    if (currentQuestionIndex === currentQuiz.questions.length - 1) {
       // Submit quiz if it's the last question
-      submitAnswerMutation.mutate({
-        quizId: currentQuiz!.id,
-        totalQuestions: currentQuiz!.questions.length,
-        answers: newAnswers.map((selectedAnswer, index) => ({
-          questionIndex: index,
-          selectedAnswer,
-          isCorrect: selectedAnswer === currentQuiz?.questions?.[index].correctAnswer,
-        })),
-      });
+      if (currentQuiz.id) {
+        submitAnswerMutation.mutate({
+          quizId: currentQuiz.id,
+          totalQuestions: currentQuiz.questions.length,
+          answers: newAnswers.map((selectedAnswer, index) => ({
+            questionIndex: index,
+            selectedAnswer,
+            isCorrect: selectedAnswer === currentQuiz.questions[index]?.correctAnswer,
+          })),
+        });
+      }
     }
   };
 
