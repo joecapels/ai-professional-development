@@ -4,16 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
-import { 
+import {
   Loader2, Users, BookOpen, Trophy, Activity,
-  MessageSquare, Brain, Clock, FileText, 
-  BarChart2 
+  MessageSquare, Brain, Clock, FileText,
+  BarChart2
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import type { StudyMaterial, User } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface UserStats {
   chatCount: number;
@@ -77,8 +78,8 @@ export default function AdminPage() {
       form.reset();
     },
     onError: (error) => {
-      toast({ 
-        title: "Failed to create study material", 
+      toast({
+        title: "Failed to create study material",
         description: error.message,
         variant: "destructive"
       });
@@ -205,100 +206,50 @@ export default function AdminPage() {
 
           <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
             {/* User Management Section */}
-            <Card>
+            <Card className="col-span-2">
               <CardHeader>
                 <CardTitle>User Management</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {users?.map((user) => (
-                    <div
-                      key={user.id}
-                      className="p-4 border rounded-lg hover:border-primary transition-colors"
-                    >
-                      <div className="flex flex-col space-y-4">
-                        {/* User Header */}
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-bold">{user.username}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Joined: {new Date(user.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Username</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Joined Date</TableHead>
+                        <TableHead>Study Sessions</TableHead>
+                        <TableHead>Documents</TableHead>
+                        <TableHead>Flashcards</TableHead>
+                        <TableHead>Quizzes</TableHead>
+                        <TableHead>Achievements</TableHead>
+                        <TableHead>Avg. Session</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users?.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.username}</TableCell>
+                          <TableCell>
                             <span className={`px-2 py-1 rounded-full text-xs ${
                               user.isAdmin ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'
                             }`}>
                               {user.isAdmin ? 'Admin' : 'Student'}
                             </span>
-                          </div>
-                        </div>
-
-                        {/* User Statistics Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
-                          {/* Study Sessions */}
-                          <div className="flex flex-col">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Brain className="h-3 w-3" /> Study Sessions
-                            </span>
-                            <span className="font-medium">
-                              {analytics?.userStats[user.id]?.studySessionCount || 0}
-                            </span>
-                          </div>
-
-                          {/* Documents */}
-                          <div className="flex flex-col">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <FileText className="h-3 w-3" /> Documents
-                            </span>
-                            <span className="font-medium">
-                              {analytics?.userStats[user.id]?.totalDocuments || 0}
-                            </span>
-                          </div>
-
-                          {/* Flashcards */}
-                          <div className="flex flex-col">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <BookOpen className="h-3 w-3" /> Flashcards
-                            </span>
-                            <span className="font-medium">
-                              {analytics?.userStats[user.id]?.totalFlashcards || 0}
-                            </span>
-                          </div>
-
-                          {/* Quizzes */}
-                          <div className="flex flex-col">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <BarChart2 className="h-3 w-3" /> Quizzes Taken
-                            </span>
-                            <span className="font-medium">
-                              {analytics?.userStats[user.id]?.quizCount || 0}
-                            </span>
-                          </div>
-
-                          {/* Achievements */}
-                          <div className="flex flex-col">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Trophy className="h-3 w-3" /> Achievements
-                            </span>
-                            <span className="font-medium">
-                              {analytics?.userStats[user.id]?.achievements || 0}
-                            </span>
-                          </div>
-
-                          {/* Average Session Duration */}
-                          <div className="flex flex-col">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="h-3 w-3" /> Avg. Session
-                            </span>
-                            <span className="font-medium">
-                              {formatDuration(analytics?.userStats[user.id]?.averageSessionDuration || 0)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                          </TableCell>
+                          <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                          <TableCell>{analytics?.userStats[user.id]?.studySessionCount || 0}</TableCell>
+                          <TableCell>{analytics?.userStats[user.id]?.totalDocuments || 0}</TableCell>
+                          <TableCell>{analytics?.userStats[user.id]?.totalFlashcards || 0}</TableCell>
+                          <TableCell>{analytics?.userStats[user.id]?.quizCount || 0}</TableCell>
+                          <TableCell>{analytics?.userStats[user.id]?.achievements || 0}</TableCell>
+                          <TableCell>
+                            {formatDuration(analytics?.userStats[user.id]?.averageSessionDuration || 0)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                   {(!users || users.length === 0) && (
                     <div className="text-center py-4 text-muted-foreground">
                       No users found.
@@ -308,7 +259,7 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
-            {/* Study Materials Management remains unchanged */}
+            {/* Study Materials Management */}
             <Card>
               <CardHeader>
                 <CardTitle>Study Materials</CardTitle>
