@@ -431,7 +431,7 @@ export class DatabaseStorage implements IStorage {
         description: "Complete your first study session",
         type: "quick_learner",
         rarity: "common",
-        imageUrl: "/badges/quick-learner.svg",
+        imageUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='8' r='7'/><polyline points='8.21 13.89 7 23 12 20 17 23 15.79 13.88'/></svg>",
         criteria: {
           type: "study_sessions",
           threshold: 1
@@ -442,7 +442,7 @@ export class DatabaseStorage implements IStorage {
         description: "Score 100% on 3 quizzes",
         type: "quiz_master",
         rarity: "rare",
-        imageUrl: "/badges/quiz-master.svg",
+        imageUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M8.21 13.89 7 23l5-3 5 3-1.21-9.12'/><path d='M19 8a7 7 0 1 0-14 0'/></svg>",
         criteria: {
           type: "perfect_quizzes",
           threshold: 3
@@ -453,7 +453,7 @@ export class DatabaseStorage implements IStorage {
         description: "Study 5 different subjects",
         type: "knowledge_explorer",
         rarity: "uncommon",
-        imageUrl: "/badges/knowledge-explorer.svg",
+        imageUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><line x1='2' y1='12' x2='22' y2='12'/><path d='M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'/></svg>",
         criteria: {
           type: "unique_subjects",
           threshold: 5
@@ -464,7 +464,7 @@ export class DatabaseStorage implements IStorage {
         description: "Study for 7 consecutive days",
         type: "study_streak",
         rarity: "epic",
-        imageUrl: "/badges/study-streak.svg",
+        imageUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 2v20'/><path d='m17 5-5-3-5 3'/><path d='m17 19-5 3-5-3'/><path d='M12 2a10 10 0 0 1 10 10'/><path d='M12 2a10 10 0 0 0-10 10'/><path d='M12 22a10 10 0 0 0 10-10'/><path d='M12 22a10 10 0 0 1-10-10'/></svg>",
         criteria: {
           type: "consecutive_days",
           threshold: 7
