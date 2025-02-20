@@ -85,6 +85,13 @@ export const badgeRarity = [
   "legendary"
 ] as const;
 
+// Add session table definition first to ensure it exists
+export const sessions = pgTable("session", {
+  sid: text("sid").primaryKey(),
+  sess: jsonb("sess").notNull(),
+  expire: timestamp("expire", { withTimezone: true }).notNull()
+});
+
 // Add badges table
 export const badges = pgTable("badges", {
   id: serial("id").primaryKey(),
@@ -114,17 +121,17 @@ export const userAchievements = pgTable("user_achievements", {
   }>(),
 });
 
-// Keep existing table definitions
+// Update the users table with consistent timestamp usage
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  email: text("email").notNull(),
+  email: text("email"),
   phoneNumber: text("phone_number"),
   country: text("country"),
   isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   learningPreferences: jsonb("learning_preferences").$type<z.infer<typeof learningPreferencesSchema>>().default({
     learningStyle: "visual",
     pacePreference: "moderate",
@@ -237,7 +244,7 @@ export const flashcards = pgTable("flashcards", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Update the insert schema to include new fields
+// Update the insert schema to make new fields optional
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -245,9 +252,9 @@ export const insertUserSchema = createInsertSchema(users).pick({
   phoneNumber: true,
   country: true,
 }).extend({
-  email: z.string().email("Invalid email address"),
-  phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
-  country: z.string().min(2, "Please select a country"),
+  email: z.string().email("Invalid email address").optional(),
+  phoneNumber: z.string().min(10, "Phone number must be at least 10 digits").optional(),
+  country: z.string().min(2, "Please select a country").optional(),
 });
 
 export const learningPreferencesSchema = z.object({
@@ -320,10 +327,3 @@ export const studySessionMessageSchema = z.object({
 });
 
 export type StudySessionMessage = z.infer<typeof studySessionMessageSchema>;
-
-// Add session table definition to prevent it from being dropped
-export const sessions = pgTable("session", {
-  sid: text("sid").primaryKey(),
-  sess: jsonb("sess").notNull(),
-  expire: timestamp("expire").notNull(),
-});
