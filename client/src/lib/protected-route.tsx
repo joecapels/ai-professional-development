@@ -32,16 +32,17 @@ export function ProtectedRoute({
     );
   }
 
-  // Enhanced admin route protection with proper checking
-  if (ADMIN_ONLY_ROUTES.includes(path)) {
-    if (!user.isAdmin) {
-      return (
-        <Route path={path}>
-          <Redirect to="/" />
-        </Route>
-      );
-    }
-  } else if (USER_ONLY_ROUTES.includes(path) && user.isAdmin) {
+  // Redirect non-admin users trying to access admin routes
+  if (ADMIN_ONLY_ROUTES.includes(path) && !user.isAdmin) {
+    return (
+      <Route path={path}>
+        <Redirect to="/" />
+      </Route>
+    );
+  }
+
+  // Redirect admin users trying to access regular user routes
+  if (USER_ONLY_ROUTES.includes(path) && user.isAdmin) {
     return (
       <Route path={path}>
         <Redirect to="/admin" />

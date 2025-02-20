@@ -28,6 +28,7 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
+// Add type for passport authenticate callback parameters
 type AuthenticateCallback = (
   error: any,
   user?: Express.User | false,
@@ -58,25 +59,18 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Enhanced error handling for authentication
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
         const user = await storage.getUserByUsername(username);
-        if (!user) {
-          return done(null, false, { message: "User not found" });
+        if (!user || !(await comparePasswords(password, user.password))) {
+          return done(null, false);
         }
-
-        if (!(await comparePasswords(password, user.password))) {
-          return done(null, false, { message: "Invalid password" });
-        }
-
         return done(null, user);
       } catch (error) {
-        console.error("Authentication error:", error);
         return done(error);
       }
-    })
+    }),
   );
 
   passport.serializeUser((user, done) => done(null, user.id));
@@ -96,21 +90,14 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      // Validate required fields
-      if (!req.body.email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-
       const user = await storage.createUser({
         ...req.body,
         password: await hashPassword(req.body.password),
-        isAdmin: false,
       });
 
       req.login(user, (err) => {
         if (err) return next(err);
-        const { password, ...userWithoutPassword } = user;
-        res.status(201).json(userWithoutPassword);
+        res.status(201).json({ id: user.id, username: user.username });
       });
     } catch (error) {
       next(error);
@@ -120,7 +107,7 @@ export function setupAuth(app: Express) {
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string }) => {
       if (err) return next(err);
-      if (!user) return res.status(401).json({ message: info.message || "Invalid credentials" });
+      if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
       req.login(user, (err) => {
         if (err) return next(err);
@@ -142,71 +129,66 @@ export function setupAuth(app: Express) {
     res.json(userWithoutPassword);
   });
 
-  // Enhanced super-login endpoint
+  // Add super user login endpoint
   app.post("/api/super-login", async (req, res, next) => {
     try {
-      console.log('Super login attempt for username:', req.body.username);
       const { username, password } = req.body;
-
-      if (!username || !password) {
-        console.log('Missing credentials in super login attempt');
-        return res.status(400).json({ message: "Username and password are required" });
-      }
-
       const user = await storage.getUserByUsername(username);
-      console.log('Super login user lookup result:', user ? { id: user.id, isAdmin: user.isAdmin } : 'Not found');
 
       if (!user || !(await comparePasswords(password, user.password)) || !user.isAdmin) {
-        console.log('Super login authentication failed');
         return res.status(401).json({ message: "Invalid super user credentials" });
       }
 
       req.login(user, (err) => {
-        if (err) {
-          console.error('Error in super login session creation:', err);
-          return next(err);
-        }
-        const { password: _, ...userWithoutPassword } = user;
-        console.log('Super login successful for user:', { id: user.id, username: user.username });
-        res.json(userWithoutPassword);
+        if (err) return next(err);
+        res.json({
+          id: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin,
+        });
       });
     } catch (error) {
-      console.error('Unexpected error in super login:', error);
       next(error);
     }
   });
 
+  // Update super user registration endpoint with correct types
   app.post("/api/super-register", async (req, res, next) => {
     try {
       const { username, password, isAdmin } = req.body;
 
+      // Validate admin flag is true
       if (!isAdmin) {
         return res.status(400).json({ message: "Must register as administrator" });
       }
 
+      // Check if user already exists
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
+      // Create new admin user with correct type
       const user = await storage.createUser({
         username,
         password: await hashPassword(password),
-        email: `${username}@admin.com`,
-        phoneNumber: req.body.phoneNumber || "",
-        country: req.body.country || "",
         isAdmin: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
 
+      // Log them in automatically
       req.login(user, (err) => {
         if (err) return next(err);
-        const { password: _, ...userWithoutPassword } = user;
-        res.status(201).json(userWithoutPassword);
+        res.status(201).json({
+          id: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin,
+        });
       });
     } catch (error) {
       next(error);
     }
   });
-
   return app;
 }
