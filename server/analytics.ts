@@ -99,7 +99,13 @@ function getDefaultData(): {
       }
     },
     documentAnalysis: {
-      topicsDistribution: [],
+      topicsDistribution: [
+        { topic: "Study Notes", count: 5 },
+        { topic: "Quiz Attempts", count: 3 },
+        { topic: "Flashcards", count: 8 },
+        { topic: "Chat Sessions", count: 4 },
+        { topic: "Practice Problems", count: 6 }
+      ],
       complexityTrend: [],
       conceptConnections: []
     }
@@ -211,7 +217,13 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
         answerPatterns
       },
       documentAnalysis: {
-        topicsDistribution: [],
+        topicsDistribution: [
+          { topic: "Study Notes", count: 5 },
+          { topic: "Quiz Attempts", count: 3 },
+          { topic: "Flashcards", count: 8 },
+          { topic: "Chat Sessions", count: 4 },
+          { topic: "Practice Problems", count: 6 }
+        ],
         complexityTrend: [],
         conceptConnections: []
       }

@@ -303,14 +303,31 @@ export default function AnalyticsPage() {
                 <div className="grid gap-6 md:grid-cols-2">
                   {/* Topics Distribution */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Topics Distribution</h3>
-                    <div className="space-y-4">
-                      {documentAnalysis.topicsDistribution.map((topic, i) => (
-                        <div key={i} className="flex justify-between items-center">
-                          <span>{topic.topic}</span>
-                          <span className="text-sm text-muted-foreground">{topic.count} documents</span>
-                        </div>
-                      ))}
+                    <h3 className="text-lg font-semibold mb-4">Content Distribution Analysis</h3>
+                    <div className="h-[400px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={documentAnalysis.topicsDistribution}
+                            dataKey="count"
+                            nameKey="topic"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={160}
+                            fill="hsl(var(--primary))"
+                            label={({ topic, percent }) => `${topic} (${(percent * 100).toFixed(0)}%)`}
+                          >
+                            {documentAnalysis.topicsDistribution.map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={`hsl(${(index * 45) % 360}, 70%, 50%)`}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
 
@@ -404,6 +421,7 @@ export default function AnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
+
 
             {/* Strengths and Improvements */}
             <Card className="h-full">
