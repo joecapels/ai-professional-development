@@ -51,6 +51,9 @@ export default function SuperUserLoginPage() {
       if (!data.isAdmin) {
         throw new Error("Insufficient privileges");
       }
+      
+      // Force refresh auth state
+      await queryClient.invalidateQueries(["/api/user"]);
 
       toast({
         title: isRegistering ? "Registration Successful" : "Welcome, Administrator",
