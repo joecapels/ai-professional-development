@@ -41,7 +41,7 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
-      secure: false,
+      secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 1 day
       sameSite: 'lax'
@@ -144,15 +144,11 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: "Invalid super user credentials" });
       }
 
-      await new Promise<void>((resolve, reject) => {
-        req.login(user, (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
+      req.login(user, (err) => {
+        if (err) return next(err);
+        const { password: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
       });
-
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
     } catch (error) {
       next(error);
     }

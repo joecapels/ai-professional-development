@@ -38,14 +38,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      if (!res.ok) {
-        const error = await res.json();
+      try {
+        const res = await apiRequest("POST", "/api/login", credentials);
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || "Login failed");
+        }
+        return await res.json();
+      } catch (error: any) {
         throw new Error(error.message || "Login failed");
       }
-      const data = await res.json();
-      await queryClient.invalidateQueries(["/api/user"]);
-      return data;
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
