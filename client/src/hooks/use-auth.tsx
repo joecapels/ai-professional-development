@@ -44,7 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const error = await res.json();
           throw new Error(error.message || "Login failed");
         }
-        return await res.json();
+        const data = await res.json();
+        // Verify admin status is properly included in the response
+        if (!data.isAdmin && window.location.pathname === "/admin") {
+          throw new Error("Insufficient privileges");
+        }
+        return data;
       } catch (error: any) {
         throw new Error(error.message || "Login failed");
       }
@@ -53,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Welcome back!",
-        description: `Logged in as ${user.username}`,
+        description: `Logged in as ${user.username}${user.isAdmin ? ' (Administrator)' : ''}`,
       });
     },
     onError: (error: Error) => {

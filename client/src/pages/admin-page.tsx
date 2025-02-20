@@ -22,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Redirect, useLocation } from "wouter";
 
 interface UserStats {
   chatCount: number;
@@ -51,9 +52,24 @@ interface AdminAnalytics {
 export default function AdminPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "student">("all");
   const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("all");
+
+  // Redirect if not logged in or not an admin
+  if (!user) {
+    return <Redirect to="/auth" />;
+  }
+
+  if (!user.isAdmin) {
+    toast({
+      title: "Access Denied",
+      description: "You must be an administrator to access this page",
+      variant: "destructive",
+    });
+    return <Redirect to="/" />;
+  }
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -292,6 +308,9 @@ export default function AdminPage() {
                       <TableRow>
                         <TableHead>Username</TableHead>
                         <TableHead>Role</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Country</TableHead>
                         <TableHead>Joined Date</TableHead>
                         <TableHead>Study Sessions</TableHead>
                         <TableHead>Documents</TableHead>
@@ -312,6 +331,9 @@ export default function AdminPage() {
                               {user.isAdmin ? 'Admin' : 'Student'}
                             </span>
                           </TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.phoneNumber || '-'}</TableCell>
+                          <TableCell>{user.country || '-'}</TableCell>
                           <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                           <TableCell>{analytics?.userStats[user.id]?.studySessionCount || 0}</TableCell>
                           <TableCell>{analytics?.userStats[user.id]?.totalDocuments || 0}</TableCell>
