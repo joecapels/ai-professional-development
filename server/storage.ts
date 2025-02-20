@@ -13,11 +13,19 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({
-      pool,
-      tableName: 'session',
-      createTableIfMissing: true 
-    });
+    try {
+      this.sessionStore = new PostgresSessionStore({
+        pool,
+        tableName: 'session',
+        createTableIfMissing: true,
+        pruneSessionInterval: 60 * 15 // Prune every 15 minutes
+      });
+
+      console.log('Session store initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize session store:', error);
+      throw error;
+    }
   }
 
   async getAllUsers(): Promise<User[]> {
@@ -30,24 +38,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    try {
+      console.log('Looking up user by username:', username);
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      console.log('User lookup result:', user ? { id: user.id, username: user.username, isAdmin: user.isAdmin } : 'Not found');
+      return user;
+    } catch (error) {
+      console.error('Error looking up user:', error);
+      throw error;
+    }
   }
 
   async createUser(userData: InsertUser & { isAdmin?: boolean }): Promise<User> {
-    const now = new Date();
-    const [newUser] = await db.insert(users).values({
-      username: userData.username,
-      password: userData.password,
-      email: userData.email,
-      phoneNumber: userData.phoneNumber || "",
-      country: userData.country || "",
-      isAdmin: userData.isAdmin || false,
-      createdAt: now,
-      updatedAt: now,
-      learningPreferences: {}
-    }).returning();
-    return newUser;
+    try {
+      console.log('Creating user with data:', { ...userData, password: '[REDACTED]' });
+      const now = new Date();
+      const [newUser] = await db.insert(users).values({
+        username: userData.username,
+        password: userData.password,
+        email: userData.email || `${userData.username}@example.com`,
+        phoneNumber: userData.phoneNumber || "",
+        country: userData.country || "",
+        isAdmin: userData.isAdmin || false,
+        createdAt: now,
+        updatedAt: now,
+        learningPreferences: {}
+      }).returning();
+
+      console.log('User created successfully:', { id: newUser.id, username: newUser.username, isAdmin: newUser.isAdmin });
+      return newUser;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
   }
 
   async updateUserPreferences(userId: number, preferences: z.infer<typeof learningPreferencesSchema>): Promise<User> {

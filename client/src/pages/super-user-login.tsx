@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Key, UserPlus, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient"; // Fix: Import queryClient
 
 export default function SuperUserLoginPage() {
   const [, setLocation] = useLocation();
@@ -37,9 +37,9 @@ export default function SuperUserLoginPage() {
         username,
         password,
         isAdmin: true,
-        email: `${username}@admin.com`, // Add default email for admin
-        phoneNumber: "", // Add empty phone number
-        country: "", // Add empty country
+        email: `${username}@admin.com`,
+        phoneNumber: "",
+        country: "",
       });
 
       if (!response.ok) {
@@ -51,7 +51,7 @@ export default function SuperUserLoginPage() {
       if (!data.isAdmin) {
         throw new Error("Insufficient privileges");
       }
-      
+
       // Force refresh auth state
       await queryClient.invalidateQueries(["/api/user"]);
 
