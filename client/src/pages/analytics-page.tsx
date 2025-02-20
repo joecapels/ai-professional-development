@@ -45,9 +45,6 @@ interface SubjectPerformance {
   totalAttempts: number;
   lastAttemptDate: string;
   improvement: number;
-  chatAnalytics?: {
-    contentTypes: { type: string; count: number }[];
-  };
 }
 
 interface StudyPlan {
@@ -391,40 +388,6 @@ export default function AnalyticsPage() {
                       ))}
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Chat Content Distribution */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Chat Content Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={subjectPerformance[0]?.chatAnalytics?.contentTypes || []}
-                        dataKey="count"
-                        nameKey="type"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={160}
-                        fill="hsl(var(--primary))"
-                        label={({ type, percent }) => `${type} (${(percent * 100).toFixed(0)}%)`}
-                      >
-                        {subjectPerformance[0]?.chatAnalytics?.contentTypes?.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={`hsl(${(index * 45) % 360}, 70%, 50%)`}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
