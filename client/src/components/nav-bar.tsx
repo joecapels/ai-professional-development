@@ -77,6 +77,7 @@ export function NavBar() {
     { path: "/chat", label: "Learn", dataTour: "learn" },
     { path: "/quiz", label: "Practice", dataTour: "practice" },
     { path: "/flashcards", label: "Flashcards", dataTour: "flashcards" },
+    { path: "/skill-tree", label: "Skill Tree", dataTour: "skill-tree" },
     { path: "/documents", label: "Documents", dataTour: "documents" },
     { path: "/badges", label: "Achievements", dataTour: "achievements" },
     { path: "/analytics", label: "Analytics", dataTour: "analytics" },
