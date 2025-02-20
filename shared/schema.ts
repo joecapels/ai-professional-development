@@ -170,6 +170,7 @@ export const quizResults = pgTable("quiz_results", {
   quizId: integer("quiz_id").notNull().references(() => quizzes.id),
   userId: integer("user_id").notNull().references(() => users.id),
   score: integer("score").notNull(),
+  totalQuestions: integer("total_questions").notNull(),
   answers: jsonb("answers").$type<{
     questionIndex: number;
     selectedAnswer: string;

@@ -16,11 +16,16 @@ import {
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  BarChart,
+  Bar,
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { Progress } from "@/components/ui/progress"; // Add Progress component import
-
+import { Progress } from "@/components/ui/progress";
 
 interface PerformanceMetrics {
   overallScore: number;
@@ -52,41 +57,52 @@ interface StudyPlan {
   }[];
 }
 
+interface AnswerPatterns {
+  correctVsIncorrect: { category: string; count: number }[];
+  topicAccuracy: { topic: string; accuracy: number }[];
+  mistakeFrequency: { mistake: string; count: number }[];
+}
+
+interface QuizAnalysis {
+  topicBreakdown: {
+    topic: string;
+    correctAnswers: number;
+    totalQuestions: number;
+  }[];
+  commonMistakes: {
+    topic: string;
+    description: string;
+    frequency: number;
+  }[];
+  timeOfDayPerformance: {
+    timeSlot: string;
+    averageScore: number;
+  }[];
+  answerPatterns: AnswerPatterns;
+}
+
+interface DocumentAnalysis {
+  topicsDistribution: {
+    topic: string;
+    count: number;
+  }[];
+  complexityTrend: {
+    month: string;
+    averageComplexity: number;
+  }[];
+  conceptConnections: {
+    concept: string;
+    relatedConcepts: string[];
+    strength: number;
+  }[];
+}
+
 interface AnalyticsData {
   performanceMetrics: PerformanceMetrics;
   subjectPerformance: SubjectPerformance[];
   nextStepRecommendations: string[];
-  quizAnalysis: {
-    topicBreakdown: {
-      topic: string;
-      correctAnswers: number;
-      totalQuestions: number;
-    }[];
-    commonMistakes: {
-      topic: string;
-      description: string;
-      frequency: number;
-    }[];
-    timeOfDayPerformance: {
-      timeSlot: string;
-      averageScore: number;
-    }[];
-  };
-  documentAnalysis: {
-    topicsDistribution: {
-      topic: string;
-      count: number;
-    }[];
-    complexityTrend: {
-      month: string;
-      averageComplexity: number;
-    }[];
-    conceptConnections: {
-      concept: string;
-      relatedConcepts: string[];
-      strength: number;
-    }[];
-  };
+  quizAnalysis: QuizAnalysis;
+  documentAnalysis: DocumentAnalysis;
 }
 
 export default function AnalyticsPage() {
@@ -209,6 +225,68 @@ export default function AnalyticsPage() {
                             activeDot={{ r: 6 }}
                           />
                         </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Answer Patterns Analysis */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Answer Patterns Analysis</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* Correct vs Incorrect Distribution */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Answer Distribution</h3>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={quizAnalysis.answerPatterns.correctVsIncorrect}
+                            dataKey="count"
+                            nameKey="category"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            fill="hsl(var(--primary))"
+                          >
+                            {quizAnalysis.answerPatterns.correctVsIncorrect.map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={index === 0 ? "hsl(var(--primary))" : "hsl(var(--destructive))"}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Topic Accuracy */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Topic Accuracy</h3>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={quizAnalysis.answerPatterns.topicAccuracy}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="topic" />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="accuracy" fill="hsl(var(--primary))">
+                            {quizAnalysis.answerPatterns.topicAccuracy.map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={entry.accuracy >= 70 ? "hsl(var(--primary))" : "hsl(var(--warning))"}
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
                       </ResponsiveContainer>
                     </div>
                   </div>

@@ -59,7 +59,11 @@ export default function QuizPage() {
   });
 
   const submitAnswerMutation = useMutation({
-    mutationFn: async (data: { quizId: number; answers: { questionIndex: number; selectedAnswer: string; isCorrect: boolean }[] }) => {
+    mutationFn: async (data: { 
+      quizId: number; 
+      totalQuestions: number;
+      answers: { questionIndex: number; selectedAnswer: string; isCorrect: boolean }[] 
+    }) => {
       const res = await apiRequest("POST", "/api/quiz-results", data);
       return res.json();
     },
@@ -76,15 +80,17 @@ export default function QuizPage() {
   const handleEndQuiz = () => {
     if (!currentQuiz?.questions) return;
 
+    const totalQuestions = currentQuiz.questions.length;
+
     // Calculate score based on answered questions
     const answers = selectedAnswers.map((selectedAnswer, index) => ({
       questionIndex: index,
       selectedAnswer: selectedAnswer || "",
-      isCorrect: selectedAnswer === currentQuiz.questions[index]?.correctAnswer,
+      isCorrect: selectedAnswer === currentQuiz.questions![index]?.correctAnswer,
     }));
 
     // Add empty answers for unanswered questions
-    while (answers.length < currentQuiz.questions.length) {
+    while (answers.length < totalQuestions) {
       answers.push({
         questionIndex: answers.length,
         selectedAnswer: "",
@@ -94,6 +100,7 @@ export default function QuizPage() {
 
     submitAnswerMutation.mutate({
       quizId: currentQuiz.id,
+      totalQuestions,
       answers,
     });
   };
@@ -110,6 +117,7 @@ export default function QuizPage() {
       // Submit quiz if it's the last question
       submitAnswerMutation.mutate({
         quizId: currentQuiz!.id,
+        totalQuestions: currentQuiz!.questions.length,
         answers: newAnswers.map((selectedAnswer, index) => ({
           questionIndex: index,
           selectedAnswer,
