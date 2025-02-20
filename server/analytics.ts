@@ -125,7 +125,7 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
     // Calculate questions count for each quiz result
     const processedResults = userQuizResults.map(quiz => ({
       ...quiz,
-      totalQuestions: quiz.answers?.length || 10, // Fallback to 10 if answers array is not available
+      totalQuestions: quiz.totalQuestions || 10, // Use the stored totalQuestions or fallback to 10
       correctAnswers: quiz.answers?.filter(a => a.isCorrect).length || Math.round(quiz.score / 10)
     }));
 
@@ -141,7 +141,7 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
           count: processedResults.reduce((acc, quiz) => acc + (quiz.totalQuestions - quiz.correctAnswers), 0)
         }
       ],
-      topicAccuracy: processedResults.reduce((acc, quiz) => {
+      topicAccuracy: processedResults.reduce((acc: { topic: string; accuracy: number }[], quiz) => {
         const topic = quiz.subject || "General";
         const existing = acc.find(item => item.topic === topic);
         if (existing) {
@@ -150,7 +150,7 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
           acc.push({ topic, accuracy: quiz.score });
         }
         return acc;
-      }, [] as { topic: string; accuracy: number }[]),
+      }, []),
       mistakeFrequency: [] // This would be populated with actual mistake data when available
     };
 
@@ -183,7 +183,7 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
         totalAttempts: processedResults.filter(quiz => quiz.subject === topic.topic).length,
         lastAttemptDate: processedResults
           .filter(quiz => quiz.subject === topic.topic)
-          .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())[0]?.completedAt || new Date().toISOString(),
+          .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())[0]?.completedAt.toISOString() || new Date().toISOString(),
         improvement: trends.rate
       })),
       nextStepRecommendations: generateRecommendations(performanceMetrics, answerPatterns),
