@@ -19,6 +19,7 @@ import BadgesPage from "@/pages/badges-page";
 import AdminPage from "@/pages/admin-page";
 import NotificationsPage from "@/pages/notifications-page";
 import UpgradesPage from "@/pages/upgrades-page";
+import SkillTreePage from "@/pages/skill-tree-page";
 
 function Router() {
   return (
@@ -34,6 +35,7 @@ function Router() {
       <ProtectedRoute path="/notifications" component={NotificationsPage} />
       <ProtectedRoute path="/admin" component={AdminPage} />
       <ProtectedRoute path="/upgrades" component={UpgradesPage} />
+      <ProtectedRoute path="/skill-tree" component={SkillTreePage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
