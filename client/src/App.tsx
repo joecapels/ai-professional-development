@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { AppTour } from "@/components/app-tour";
-import { OnboardingWizard } from "@/components/onboarding-wizard";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import HomePage from "@/pages/home-page";
@@ -22,12 +21,9 @@ import NotificationsPage from "@/pages/notifications-page";
 import UpgradesPage from "@/pages/upgrades-page";
 
 function Router() {
-  // Check if user needs onboarding
-  const needsOnboarding = !localStorage.getItem("onboardingComplete");
-
   return (
     <Switch>
-      <Route path="/" component={needsOnboarding ? OnboardingWizard : HomePage} />
+      <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/chat" component={ChatPage} />
       <ProtectedRoute path="/quiz" component={QuizPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
