@@ -3,7 +3,7 @@ import { Badge, UserAchievement } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Award, Lock } from "lucide-react";
+import { AlertCircle, Award, Lock, Star, Brain, Library, Flame } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
@@ -23,6 +23,14 @@ const rarityTextColors = {
   rare: "text-blue-600",
   epic: "text-purple-600",
   legendary: "text-amber-600"
+};
+
+// Map badge types to Lucide icons
+const badgeIcons = {
+  quick_learner: Star,
+  quiz_master: Brain,
+  knowledge_explorer: Library,
+  study_streak: Flame
 };
 
 export default function BadgesPage() {
@@ -101,6 +109,7 @@ export default function BadgesPage() {
             const achievement = achievements?.find(a => a.badgeId === badge.id);
             const isEarned = !!achievement;
             const progress = achievement?.progress;
+            const BadgeIcon = badgeIcons[badge.type] || Award;
 
             return (
               <motion.div
@@ -123,8 +132,7 @@ export default function BadgesPage() {
                         "transition-colors duration-200",
                         isEarned ? rarityTextColors[badge.rarity] : "text-muted-foreground"
                       )}>
-                        <div dangerouslySetInnerHTML={{ __html: badge.imageUrl }} 
-                             className="w-12 h-12" />
+                        <BadgeIcon className="w-12 h-12" />
                       </div>
                       {!isEarned && (
                         <div className="absolute inset-0 flex items-center justify-center">
