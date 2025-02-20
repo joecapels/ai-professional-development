@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import {
   Loader2, Users, BookOpen, Trophy, Activity,
   MessageSquare, Brain, Clock, FileText,
-  BarChart2
+  BarChart2, Search, Filter
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +15,13 @@ import { useToast } from "@/hooks/use-toast";
 import type { StudyMaterial, User } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useState, useMemo } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface UserStats {
   chatCount: number;
@@ -44,8 +51,10 @@ interface AdminAnalytics {
 export default function AdminPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "student">("all");
+  const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("all");
 
-  // Fetch data
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
@@ -86,6 +95,22 @@ export default function AdminPage() {
     },
   });
 
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+
+    return users.filter(user => {
+      const matchesSearch = user.username.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesRole = roleFilter === "all" ? true :
+        (roleFilter === "admin" ? user.isAdmin : !user.isAdmin);
+      const isActive = (analytics?.userStats[user.id]?.studySessionCount || 0) > 0;
+      const matchesActivity = activityFilter === "all" ? true :
+        (activityFilter === "active" ? isActive : !isActive);
+
+      return matchesSearch && matchesRole && matchesActivity;
+    });
+  }, [users, searchQuery, roleFilter, activityFilter, analytics]);
+
+
   if (usersLoading || materialsLoading || analyticsLoading) {
     return (
       <div className="min-h-screen">
@@ -97,7 +122,6 @@ export default function AdminPage() {
     );
   }
 
-  // Format duration in minutes
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
@@ -112,7 +136,6 @@ export default function AdminPage() {
         <div className="space-y-6">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
 
-          {/* Primary Statistics */}
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -152,7 +175,6 @@ export default function AdminPage() {
             </Card>
           </div>
 
-          {/* Detailed Analytics */}
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -205,12 +227,65 @@ export default function AdminPage() {
           </div>
 
           <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
-            {/* User Management Section */}
             <Card className="col-span-2">
               <CardHeader>
                 <CardTitle>User Management</CardTitle>
               </CardHeader>
               <CardContent>
+                <div className="mb-4 flex flex-col sm:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search users..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="flex items-center gap-2">
+                          <Filter className="h-4 w-4" />
+                          Role: {roleFilter.charAt(0).toUpperCase() + roleFilter.slice(1)}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => setRoleFilter("all")}>
+                          All Roles
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setRoleFilter("admin")}>
+                          Admins Only
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setRoleFilter("student")}>
+                          Students Only
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="flex items-center gap-2">
+                          <Activity className="h-4 w-4" />
+                          Activity: {activityFilter.charAt(0).toUpperCase() + activityFilter.slice(1)}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => setActivityFilter("all")}>
+                          All Users
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setActivityFilter("active")}>
+                          Active Users
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setActivityFilter("inactive")}>
+                          Inactive Users
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
@@ -227,7 +302,7 @@ export default function AdminPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users?.map((user) => (
+                      {filteredUsers.map((user) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">{user.username}</TableCell>
                           <TableCell>
@@ -250,16 +325,15 @@ export default function AdminPage() {
                       ))}
                     </TableBody>
                   </Table>
-                  {(!users || users.length === 0) && (
+                  {(!filteredUsers || filteredUsers.length === 0) && (
                     <div className="text-center py-4 text-muted-foreground">
-                      No users found.
+                      {users?.length ? 'No users match the current filters.' : 'No users found.'}
                     </div>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Study Materials Management */}
             <Card>
               <CardHeader>
                 <CardTitle>Study Materials</CardTitle>
