@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,7 @@ import { useForm } from "react-hook-form";
 import {
   Loader2, Users, BookOpen, Trophy, Activity,
   MessageSquare, Brain, Clock, FileText,
-  BarChart2, Search, Filter
+  BarChart2, Search, Filter, Star, Calendar
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,22 +16,25 @@ import { useToast } from "@/hooks/use-toast";
 import type { StudyMaterial, User } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useState, useMemo } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
 
-interface UserStats {
-  chatCount: number;
-  quizCount: number;
-  studySessionCount: number;
-  averageSessionDuration: number;
-  totalDocuments: number;
-  totalFlashcards: number;
-  achievements: number;
+// Previous interfaces remain unchanged
+
+interface Achievement {
+  id: number;
+  userId: number;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  icon: string;
 }
 
 interface AdminAnalytics {
@@ -46,7 +50,19 @@ interface AdminAnalytics {
     totalDocuments: number;
     totalFlashcards: number;
   };
+  recentAchievements: Achievement[];
 }
+
+interface UserStats {
+  chatCount: number;
+  quizCount: number;
+  studySessionCount: number;
+  averageSessionDuration: number;
+  totalDocuments: number;
+  totalFlashcards: number;
+  achievements: number;
+}
+
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -54,6 +70,7 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "student">("all");
   const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("all");
+  const [timelineFilter, setTimelineFilter] = useState<"all" | "academic" | "engagement" | "milestone">("all");
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -393,6 +410,91 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* New Activity Timeline Section */}
+          <Card className="mt-6">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  User Activity Timeline
+                </CardTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      {timelineFilter.charAt(0).toUpperCase() + timelineFilter.slice(1)}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setTimelineFilter("all")}>
+                      All Activities
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTimelineFilter("academic")}>
+                      Academic Progress
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTimelineFilter("engagement")}>
+                      Platform Engagement
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTimelineFilter("milestone")}>
+                      Milestones
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-8">
+                <AnimatePresence>
+                  {analytics?.recentAchievements
+                    ?.filter(achievement =>
+                      timelineFilter === "all" || achievement.type === timelineFilter
+                    )
+                    .map((achievement, index) => (
+                      <motion.div
+                        key={achievement.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        className="relative pl-8 pb-8 last:pb-0"
+                      >
+                        {/* Timeline connector */}
+                        <div className="absolute left-[11px] top-2 bottom-0 w-[2px] bg-border" />
+
+                        {/* Timeline node */}
+                        <div className={`absolute left-0 p-1 rounded-full ${
+                          achievement.type === 'milestone' ? 'bg-primary' :
+                            achievement.type === 'academic' ? 'bg-green-500' : 'bg-blue-500'
+                        }`}>
+                          <Star className="h-4 w-4 text-white" />
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card rounded-lg p-4 border shadow-sm">
+                          <div>
+                            <h4 className="font-semibold text-sm">{achievement.title}</h4>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {achievement.description}
+                            </p>
+                          </div>
+                          <time className="text-sm text-muted-foreground whitespace-nowrap">
+                            {format(new Date(achievement.timestamp), 'MMM d, yyyy h:mm a')}
+                          </time>
+                        </div>
+                      </motion.div>
+                    ))}
+                </AnimatePresence>
+
+                {(!analytics?.recentAchievements || analytics.recentAchievements.length === 0) && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Trophy className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                    <p className="mt-2">No recent achievements to display</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
