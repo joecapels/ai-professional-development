@@ -1,17 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge, UserAchievement } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
-import { AnimatedBadge } from "@/components/ui/animated-badge"; //Note:  The path here might need adjustment depending on your project structure.  The original code had "@/components/animated-badge", but the edited code uses "@/components/ui/animated-badge".  I've used the edited version's path.
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Award, Lock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+
+const rarityColors = {
+  common: "bg-slate-100 border-slate-200",
+  uncommon: "bg-green-50 border-green-100",
+  rare: "bg-blue-50 border-blue-100",
+  epic: "bg-purple-50 border-purple-100",
+  legendary: "bg-amber-50 border-amber-100"
+};
+
+const rarityTextColors = {
+  common: "text-slate-600",
+  uncommon: "text-green-600",
+  rare: "text-blue-600",
+  epic: "text-purple-600",
+  legendary: "text-amber-600"
+};
 
 export default function BadgesPage() {
-  const { toast } = useToast();
-
   const { data: badges, isLoading: loadingBadges, error: badgesError } = useQuery<Badge[]>({
     queryKey: ["/api/badges"],
   });
@@ -25,14 +39,16 @@ export default function BadgesPage() {
       <div className="min-h-screen bg-background">
         <NavBar />
         <main className="container mx-auto px-4 py-8">
-          <h1 className="text-4xl font-bold mb-8">Learning Achievements</h1>
+          <h1 className="text-4xl font-bold mb-8">Achievement Badges</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="p-6">
-                <div className="space-y-3">
-                  <Skeleton className="h-24 w-24 rounded-full mx-auto" />
-                  <Skeleton className="h-6 w-3/4 mx-auto" />
-                  <Skeleton className="h-4 w-full" />
+              <div key={i} className="p-6 bg-card rounded-lg border">
+                <div className="space-y-4">
+                  <Skeleton className="h-20 w-20 rounded-full mx-auto" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-3/4 mx-auto" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
                 </div>
               </div>
             ))}
@@ -59,28 +75,26 @@ export default function BadgesPage() {
     );
   }
 
-  const totalAchieved = achievements?.length ?? 0;
+  const totalEarned = achievements?.length ?? 0;
   const totalBadges = badges?.length ?? 0;
-  const achievementPercentage = totalBadges > 0 ? (totalAchieved / totalBadges) * 100 : 0;
+  const progressPercentage = totalBadges > 0 ? (totalEarned / totalBadges) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
       <main className="container mx-auto px-4 py-8">
-        <motion.div 
-          className="mb-8 space-y-4"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1 className="text-4xl font-bold">Learning Achievements</h1>
-          <div className="flex items-center gap-4">
-            <Progress value={achievementPercentage} className="w-64" />
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <Award className="h-8 w-8 text-primary" />
+            <h1 className="text-4xl font-bold">Achievement Badges</h1>
+          </div>
+          <div className="flex items-center gap-4 mb-2">
+            <Progress value={progressPercentage} className="w-64" />
             <span className="text-sm text-muted-foreground">
-              {totalAchieved} of {totalBadges} badges earned
+              {totalEarned} of {totalBadges} earned
             </span>
           </div>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {badges?.map((badge, index) => {
@@ -93,23 +107,46 @@ export default function BadgesPage() {
                 key={badge.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -5 }}
-                className="relative group"
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="group relative"
               >
-                <div className="p-6 bg-card rounded-lg border shadow-sm">
+                <div className={cn(
+                  "p-6 rounded-lg border transition-all duration-200",
+                  "hover:shadow-lg hover:-translate-y-1",
+                  isEarned ? rarityColors[badge.rarity] : "bg-card/50 border-muted"
+                )}>
                   <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="relative w-24 h-24">
-                      <img 
-                        src={badge.imageUrl} 
-                        alt={badge.name}
-                        className={`w-full h-full ${isEarned ? 'text-primary' : 'text-muted-foreground opacity-50'}`}
-                      />
+                    {/* Badge Icon */}
+                    <div className="relative">
+                      <div className={cn(
+                        "w-20 h-20 rounded-full flex items-center justify-center",
+                        "transition-colors duration-200",
+                        isEarned ? rarityTextColors[badge.rarity] : "text-muted-foreground"
+                      )}>
+                        <div dangerouslySetInnerHTML={{ __html: badge.imageUrl }} 
+                             className="w-12 h-12" />
+                      </div>
+                      {!isEarned && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Lock className="w-6 h-6 text-muted-foreground/50" />
+                        </div>
+                      )}
                     </div>
+
+                    {/* Badge Info */}
                     <div>
-                      <h3 className="text-lg font-semibold">{badge.name}</h3>
-                      <p className="text-sm text-muted-foreground">{badge.description}</p>
+                      <h3 className={cn(
+                        "text-lg font-semibold mb-1",
+                        isEarned ? rarityTextColors[badge.rarity] : "text-muted-foreground"
+                      )}>
+                        {badge.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {badge.description}
+                      </p>
                     </div>
+
+                    {/* Progress Bar */}
                     {progress && (
                       <div className="w-full">
                         <Progress 
@@ -121,17 +158,20 @@ export default function BadgesPage() {
                         </p>
                       </div>
                     )}
+
+                    {/* Rarity Tag */}
+                    <span className={cn(
+                      "text-xs px-2 py-1 rounded-full capitalize",
+                      rarityColors[badge.rarity],
+                      rarityTextColors[badge.rarity]
+                    )}>
+                      {badge.rarity}
+                    </span>
                   </div>
                 </div>
               </motion.div>
             );
           })}
-
-          {badges?.length === 0 && (
-            <div className="col-span-full text-center py-8">
-              <p className="text-muted-foreground">No badges available yet. Start learning to earn some!</p>
-            </div>
-          )}
         </div>
       </main>
     </div>
