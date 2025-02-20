@@ -28,7 +28,6 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
-// Add type for passport authenticate callback parameters
 type AuthenticateCallback = (
   error: any,
   user?: Express.User | false,
@@ -90,14 +89,21 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
+      // Validate required fields
+      if (!req.body.email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
       const user = await storage.createUser({
         ...req.body,
         password: await hashPassword(req.body.password),
+        isAdmin: false,
       });
 
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json({ id: user.id, username: user.username });
+        const { password, ...userWithoutPassword } = user;
+        res.status(201).json(userWithoutPassword);
       });
     } catch (error) {
       next(error);
@@ -129,7 +135,6 @@ export function setupAuth(app: Express) {
     res.json(userWithoutPassword);
   });
 
-  // Add super user login endpoint
   app.post("/api/super-login", async (req, res, next) => {
     try {
       const { username, password } = req.body;
@@ -141,54 +146,45 @@ export function setupAuth(app: Express) {
 
       req.login(user, (err) => {
         if (err) return next(err);
-        res.json({
-          id: user.id,
-          username: user.username,
-          isAdmin: user.isAdmin,
-        });
+        const { password: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
       });
     } catch (error) {
       next(error);
     }
   });
 
-  // Update super user registration endpoint with correct types
   app.post("/api/super-register", async (req, res, next) => {
     try {
       const { username, password, isAdmin } = req.body;
 
-      // Validate admin flag is true
       if (!isAdmin) {
         return res.status(400).json({ message: "Must register as administrator" });
       }
 
-      // Check if user already exists
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      // Create new admin user with correct type
       const user = await storage.createUser({
         username,
         password: await hashPassword(password),
+        email: `${username}@admin.com`,
+        phoneNumber: req.body.phoneNumber || "",
+        country: req.body.country || "",
         isAdmin: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
       });
 
-      // Log them in automatically
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json({
-          id: user.id,
-          username: user.username,
-          isAdmin: user.isAdmin,
-        });
+        const { password: _, ...userWithoutPassword } = user;
+        res.status(201).json(userWithoutPassword);
       });
     } catch (error) {
       next(error);
     }
   });
+
   return app;
 }

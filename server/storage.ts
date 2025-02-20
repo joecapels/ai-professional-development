@@ -34,11 +34,15 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(userData: InsertUser): Promise<User> {
+  async createUser(userData: InsertUser & { isAdmin?: boolean }): Promise<User> {
     const now = new Date();
     const [newUser] = await db.insert(users).values({
-      ...userData,
-      isAdmin: false,
+      username: userData.username,
+      password: userData.password,
+      email: userData.email,
+      phoneNumber: userData.phoneNumber || "",
+      country: userData.country || "",
+      isAdmin: userData.isAdmin || false,
       createdAt: now,
       updatedAt: now,
       learningPreferences: {}

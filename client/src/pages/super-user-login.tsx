@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Key, UserPlus, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function SuperUserLoginPage() {
   const [, setLocation] = useLocation();
@@ -32,22 +33,22 @@ export default function SuperUserLoginPage() {
 
     try {
       const endpoint = isRegistering ? "/api/super-register" : "/api/super-login";
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          password,
-          isAdmin: true, // Ensure the user is created with admin privileges
-        }),
+      const response = await apiRequest("POST", endpoint, {
+        username,
+        password,
+        isAdmin: true,
+        email: `${username}@admin.com`, // Add default email for admin
+        phoneNumber: "", // Add empty phone number
+        country: "", // Add empty country
       });
 
       if (!response.ok) {
-        throw new Error(isRegistering ? "Failed to register super user" : "Invalid super user credentials");
+        const error = await response.json();
+        throw new Error(error.message || (isRegistering ? "Failed to register super user" : "Invalid super user credentials"));
       }
 
-      const user = await response.json();
-      if (!user.isAdmin) {
+      const data = await response.json();
+      if (!data.isAdmin) {
         throw new Error("Insufficient privileges");
       }
 

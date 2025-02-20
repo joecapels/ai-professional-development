@@ -6,145 +6,142 @@ import helmet from "helmet";
 import compression from "compression";
 
 const app = express();
-const PORT = 5000; // Explicitly set to 5000 as per repository requirements
+const PORT = 5000;
 
-// Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", process.env.NODE_ENV === "development" ? "*" : ""]
-    }
+// Enhanced logging middleware with request timing
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/api/')) {
+    const start = Date.now();
+    log(`[${req.method}] ${req.path} - Starting request`);
+
+    // Log response time on completion
+    _res.on('finish', () => {
+      const duration = Date.now() - start;
+      log(`[${req.method}] ${req.path} - Completed in ${duration}ms`);
+    });
   }
-}));
-
-// Performance middleware
-app.use(compression());
+  next();
+});
 
 // Essential middleware only
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Health check endpoint - keep this simple and early
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    environment: app.get("env"),
-    uptime: process.uptime()
-  });
+// Health check endpoint - keep this minimal
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' });
 });
 
 async function startServer() {
   let server: any = null;
 
   try {
-    // Register minimal routes first
-    log('Initializing minimal server routes...');
+    log('Starting minimal server setup...');
+
+    // Register critical routes only
+    log('Setting up essential API routes...');
     server = await registerRoutes(app);
+    log('API routes setup complete');
 
-    // Start server with better error handling for port conflicts
-    await new Promise<void>((resolve, reject) => {
-      log(`Starting server on port ${PORT}...`);
-
-      // Try to create server first
-      server = app.listen(PORT, '0.0.0.0', () => {
-        log(`Server successfully bound to port ${PORT}`);
-        log(`Server running in ${app.get("env")} mode`);
-        log('Required environment variables:', [
-          'DATABASE_URL',
-          'SESSION_SECRET',
-          'PORT',
-        ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
-        resolve();
-      });
-
-      // Enhanced error handling
-      server.on('error', (error: Error & { code?: string }) => {
-        if (error.code === 'EADDRINUSE') {
-          log(`Port ${PORT} is already in use`);
-          // Try to find an alternative port
-          const altPort = PORT + 1;
-          log(`Attempting to use alternative port ${altPort}...`);
-          server = app.listen(altPort, '0.0.0.0', () => {
-            log(`Server started on alternative port ${altPort}`);
-            resolve();
-          });
-        } else {
-          log(`Error starting server: ${error.message}`);
+    // Simple port binding with a single retry
+    const bindPort = async (port: number): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        log(`Attempting to bind to port ${port}...`);
+        server = app.listen(port, '0.0.0.0', () => {
+          log(`Server successfully bound to port ${port}`);
+          resolve();
+        }).on('error', (error: Error & { code?: string }) => {
           reject(error);
-        }
+        });
       });
-    });
+    };
+
+    try {
+      await bindPort(PORT);
+    } catch (error: any) {
+      if (error.code === 'EADDRINUSE') {
+        log(`Port ${PORT} is in use, trying ${PORT + 1}...`);
+        await bindPort(PORT + 1);
+      } else {
+        throw error;
+      }
+    }
+
+    // Minimal logging
+    log(`Server running in ${app.get("env")} mode`);
+
+    // Defer non-critical setup
+    setTimeout(() => {
+      // Security middleware
+      app.use(helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "blob:"],
+            connectSrc: ["'self'", process.env.NODE_ENV === "development" ? "*" : ""]
+          }
+        }
+      }));
+
+      // Performance middleware
+      app.use(compression());
+
+      // Development features
+      if (app.get("env") === "development") {
+        log('Setting up development features...');
+        setupVite(app, server).catch(error => {
+          log(`Vite setup warning: ${error}`);
+        });
+      } else {
+        app.set('trust proxy', 1);
+        serveStatic(app);
+      }
+
+      // Initialize badges
+      storage.createInitialBadges().catch(error => {
+        log('Badge initialization error:', error);
+      });
+    }, 1000);
 
     // Global error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-      log(`Error: ${status} - ${message}`);
 
-      // Don't expose error details in production
-      const response = app.get("env") === "development"
-        ? { message, stack: err.stack }
-        : { message: "Internal Server Error" };
+      log(`Error [${status}]:`, {
+        message,
+        path: _req.path,
+        stack: app.get("env") === "development" ? err.stack : undefined
+      });
 
-      res.status(status).json(response);
+      res.status(status).json({
+        message: app.get("env") === "development" ? message : "Internal Server Error",
+        ...(app.get("env") === "development" && { stack: err.stack })
+      });
     });
 
-    // Once server is confirmed running, add additional features
-    if (app.get("env") === "development") {
-      log('Setting up Vite development server...');
-      try {
-        await setupVite(app, server);
-        log('Vite development server setup complete');
-      } catch (error) {
-        log(`Warning: Vite setup failed - ${error}. Continuing without Vite.`);
-      }
-    } else {
-      log('Setting up static file serving...');
-      app.set('trust proxy', 1); // trust first proxy
-      serveStatic(app);
-    }
-
-    // Initialize badges as the last step
-    log('Scheduling badge initialization...');
-    setTimeout(async () => {
-      try {
-        await storage.createInitialBadges();
-        log('Initial badges created successfully');
-      } catch (error) {
-        log('Error creating initial badges:', String(error));
-      }
-    }, 2000);
-
-    // Register shutdown handlers
+    // Graceful shutdown
     const shutdown = async (signal: string) => {
-      log(`Received ${signal}, starting graceful shutdown...`);
+      log(`Received ${signal}, shutting down...`);
       if (server) {
-        await new Promise<void>((resolve) => {
-          server.close(() => {
-            log('Closed out remaining connections');
-            resolve();
-          });
-
-          // Force close after timeout
-          setTimeout(() => {
-            log('Could not close connections in time, forcing shutdown');
-            resolve();
-          }, 10000);
+        server.close(() => {
+          log('Server closed');
+          process.exit(0);
         });
+        setTimeout(() => {
+          log('Forcing exit after timeout');
+          process.exit(1);
+        }, 5000);
       }
-      process.exit(0);
     };
 
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
 
   } catch (error) {
-    log(`Fatal error during startup: ${error}`);
+    log('Fatal server error:', error);
     process.exit(1);
   }
 }
