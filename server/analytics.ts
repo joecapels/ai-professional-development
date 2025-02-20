@@ -122,19 +122,26 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
       return getDefaultData();
     }
 
-    // Analyze quiz answers
+    // Calculate questions count for each quiz result
+    const processedResults = userQuizResults.map(quiz => ({
+      ...quiz,
+      totalQuestions: quiz.answers?.length || 10, // Fallback to 10 if answers array is not available
+      correctAnswers: quiz.answers?.filter(a => a.isCorrect).length || Math.round(quiz.score / 10)
+    }));
+
+    // Analyze quiz answers with processed results
     const answerPatterns = {
       correctVsIncorrect: [
         { 
           category: "Correct Answers", 
-          count: userQuizResults.reduce((acc, quiz) => acc + (quiz.score * quiz.totalQuestions / 100), 0)
+          count: processedResults.reduce((acc, quiz) => acc + quiz.correctAnswers, 0)
         },
         {
           category: "Incorrect Answers",
-          count: userQuizResults.reduce((acc, quiz) => acc + (quiz.totalQuestions - (quiz.score * quiz.totalQuestions / 100)), 0)
+          count: processedResults.reduce((acc, quiz) => acc + (quiz.totalQuestions - quiz.correctAnswers), 0)
         }
       ],
-      topicAccuracy: userQuizResults.reduce((acc, quiz) => {
+      topicAccuracy: processedResults.reduce((acc, quiz) => {
         const topic = quiz.subject || "General";
         const existing = acc.find(item => item.topic === topic);
         if (existing) {
@@ -148,8 +155,8 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
     };
 
     // Calculate basic statistics
-    const overallScore = calculateBasicScore(userQuizResults);
-    const trends = calculatePerformanceTrends(userQuizResults);
+    const overallScore = calculateBasicScore(processedResults);
+    const trends = calculatePerformanceTrends(processedResults);
 
     // Enhanced performance metrics
     const performanceMetrics: PerformanceMetrics = {
@@ -160,7 +167,7 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
       improvementAreas: answerPatterns.topicAccuracy
         .filter(topic => topic.accuracy < 70)
         .map(topic => topic.topic),
-      learningTrends: userQuizResults.map(result => ({
+      learningTrends: processedResults.map(result => ({
         period: new Date(result.completedAt).toLocaleDateString(),
         score: result.score
       })),
@@ -173,8 +180,8 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
       subjectPerformance: answerPatterns.topicAccuracy.map(topic => ({
         subject: topic.topic,
         averageScore: topic.accuracy,
-        totalAttempts: userQuizResults.filter(quiz => quiz.subject === topic.topic).length,
-        lastAttemptDate: userQuizResults
+        totalAttempts: processedResults.filter(quiz => quiz.subject === topic.topic).length,
+        lastAttemptDate: processedResults
           .filter(quiz => quiz.subject === topic.topic)
           .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())[0]?.completedAt || new Date().toISOString(),
         improvement: trends.rate
@@ -186,8 +193,8 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
           correctAnswers: Math.round(topic.accuracy * 100),
           totalQuestions: 100
         })),
-        commonMistakes: generateCommonMistakes(userQuizResults),
-        timeOfDayPerformance: generateTimeOfDayPerformance(userQuizResults),
+        commonMistakes: generateCommonMistakes(processedResults),
+        timeOfDayPerformance: generateTimeOfDayPerformance(processedResults),
         answerPatterns
       },
       documentAnalysis: {
