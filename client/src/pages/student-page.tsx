@@ -80,14 +80,14 @@ export default function StudentPage() {
     ? Math.round(quizResults.reduce((acc, quiz) => acc + quiz.score, 0) / quizResults.length)
     : 0;
   const latestQuiz = quizResults?.sort((a, b) =>
-    new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+    new Date(b.completedAt || Date.now()).getTime() - new Date(a.completedAt || Date.now()).getTime()
   )[0];
 
   // Calculate chat statistics
   const chatDocuments = documents?.filter(doc => doc.type === "chat") || [];
   const totalChats = chatDocuments.length;
   const latestChat = chatDocuments.sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    new Date(b.createdAt || Date.now()).getTime() - new Date(a.createdAt || Date.now()).getTime()
   )[0];
 
   return (
@@ -163,7 +163,7 @@ export default function StudentPage() {
                         <div>
                           <p className="text-base md:text-lg font-semibold truncate">{latestChat.title}</p>
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(latestChat.createdAt), "MMM d, yyyy")}
+                            {latestChat?.createdAt ? format(new Date(latestChat.createdAt), "MMM d, yyyy") : "No date"}
                           </p>
                         </div>
                       ) : (
@@ -336,7 +336,7 @@ export default function StudentPage() {
                         <div>
                           <p className="font-medium text-sm md:text-base truncate">{doc.title}</p>
                           <p className="text-xs md:text-sm text-muted-foreground">
-                            {doc.type} • {format(new Date(doc.createdAt), "MMM d, yyyy")}
+                            {doc.type} • {doc.createdAt ? format(new Date(doc.createdAt), "MMM d, yyyy") : "No date"}
                           </p>
                         </div>
                       </motion.div>
