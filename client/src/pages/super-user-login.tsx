@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Key, UserPlus, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/hooks/use-auth";
 
 export default function SuperUserLoginPage() {
   const [, setLocation] = useLocation();
@@ -16,7 +15,6 @@ export default function SuperUserLoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { loginMutation } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +38,7 @@ export default function SuperUserLoginPage() {
         body: JSON.stringify({
           username,
           password,
-          isAdmin: true,
+          isAdmin: true, // Ensure the user is created with admin privileges
         }),
       });
 
@@ -53,18 +51,12 @@ export default function SuperUserLoginPage() {
         throw new Error("Insufficient privileges");
       }
 
-      // Use the login mutation to properly set the auth context
-      await loginMutation.mutateAsync({ username, password });
-
       toast({
         title: isRegistering ? "Registration Successful" : "Welcome, Administrator",
         description: isRegistering ? "Super user account created successfully" : "Successfully logged in as super user",
       });
 
-      // Add a small delay to ensure auth context is updated
-      setTimeout(() => {
-        setLocation("/admin");
-      }, 100);
+      setLocation("/admin");
     } catch (error: any) {
       toast({
         title: "Authentication Failed",
