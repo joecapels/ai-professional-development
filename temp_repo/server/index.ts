@@ -7,7 +7,7 @@ import helmet from "helmet";
 import compression from "compression";
 
 const app = express();
-const PORT = Number(process.env.PORT) || 5000;
+const PORT = process.env.PORT || 5000;
 
 // Security middleware
 app.use(helmet({
@@ -46,36 +46,33 @@ async function startServer() {
   let server: any = null;
 
   try {
-    // Step 1: Initialize essential routes
-    log('[Startup] Initializing essential routes...');
+    log('Initializing server routes...');
     server = await registerRoutes(app);
 
-    // Step 2: Bind to port quickly
-    log('[Startup] Attempting to bind to port...');
     await new Promise<void>((resolve, reject) => {
+      log(`Starting server on port ${PORT}...`);
+
       server = app.listen(PORT, '0.0.0.0', () => {
-        log('[Startup] Successfully bound to port ' + PORT);
+        log(`Server successfully started on port ${PORT}`);
+        log(`Server running in ${app.get("env")} mode`);
+        log('Required environment variables:', [
+          'DATABASE_URL',
+          'SESSION_SECRET'
+        ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
         resolve();
       });
 
       server.on('error', (error: Error & { code?: string }) => {
-        log(`[Startup] Server binding error: ${error.message}`);
+        log(`Error starting server: ${error.message}`);
         reject(error);
       });
     });
 
-    // Step 3: Log successful startup
-    log(`[Startup] Server running in ${app.get("env")} mode`);
-    log('[Startup] Environment check:', [
-      'DATABASE_URL',
-      'SESSION_SECRET'
-    ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
-
-    // Step 4: Set up error handling
+    // Global error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-      log(`[Error] ${status} - ${message}`);
+      log(`Error: ${status} - ${message}`);
 
       const response = app.get("env") === "development"
         ? { message, stack: err.stack }
@@ -84,47 +81,34 @@ async function startServer() {
       res.status(status).json(response);
     });
 
-    // Step 5: Initialize development/production features async
-    setTimeout(async () => {
-      try {
-        if (app.get("env") === "development") {
-          log('[Setup] Initializing Vite development server...');
-          await setupVite(app, server);
-          log('[Setup] Vite development server initialized');
-        } else {
-          log('[Setup] Setting up static file serving...');
-          app.set('trust proxy', 1);
-          serveStatic(app);
-          log('[Setup] Static file serving configured');
-        }
-      } catch (error) {
-        log(`[Setup] Warning: Development setup error: ${error}`);
-      }
-    }, 100);
+    // Setup development/production specific features
+    if (app.get("env") === "development") {
+      log('Setting up Vite development server...');
+      await setupVite(app, server);
+      log('Vite development server setup complete');
+    } else {
+      log('Setting up static file serving...');
+      app.set('trust proxy', 1);
+      serveStatic(app);
+    }
 
-    // Step 6: Initialize badges async
-    setTimeout(async () => {
-      try {
-        log('[Setup] Starting badge initialization...');
-        await storage.createInitialBadges();
-        log('[Setup] Badge initialization completed');
-      } catch (error) {
-        log(`[Setup] Warning: Badge initialization error: ${error}`);
-      }
-    }, 500);
+    // Initialize badges
+    log('Initializing badges...');
+    await storage.createInitialBadges();
+    log('Initial badges created successfully');
 
-    // Step 7: Register shutdown handlers
+    // Register shutdown handlers
     const shutdown = async (signal: string) => {
-      log(`[Shutdown] Received ${signal}, starting graceful shutdown...`);
+      log(`Received ${signal}, starting graceful shutdown...`);
       if (server) {
         await new Promise<void>((resolve) => {
           server.close(() => {
-            log('[Shutdown] Closed out remaining connections');
+            log('Closed out remaining connections');
             resolve();
           });
 
           setTimeout(() => {
-            log('[Shutdown] Could not close connections in time, forcing shutdown');
+            log('Could not close connections in time, forcing shutdown');
             resolve();
           }, 10000);
         });
@@ -136,7 +120,7 @@ async function startServer() {
     process.on('SIGINT', () => shutdown('SIGINT'));
 
   } catch (error) {
-    log(`[Fatal] Startup error: ${error}`);
+    log(`Fatal error during startup: ${error}`);
     process.exit(1);
   }
 }
