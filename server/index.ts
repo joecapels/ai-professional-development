@@ -8,9 +8,10 @@ import compression from "compression";
 import { Server } from "http";
 
 const app = express();
-// Use port 5000 explicitly for consistency
-const PORT = process.env.PORT || 3000;
-log(`[Config] Using port: ${PORT}`);
+// Try multiple ports if the default is taken
+const BASE_PORT = parseInt(process.env.PORT || "3000", 10);
+let PORT = BASE_PORT;
+log(`[Config] Initial port: ${PORT}`);
 
 // Essential middleware that must be registered immediately
 app.use(express.json());
@@ -37,119 +38,124 @@ app.get('/api/health', (_req, res) => {
 
 async function startServer() {
   let server: Server | null = null;
+  let retries = 3;
 
-  try {
-    log('[Startup] Starting server initialization...');
+  while (retries > 0) {
+    try {
+      log(`[Startup] Attempting to start server on port ${PORT}...`);
 
-    // Step 1: Bind to port immediately
-    server = app.listen(PORT, '0.0.0.0');
-
-    // Wait for server to be ready
-    await new Promise<void>((resolve, reject) => {
-      if (!server) {
-        reject(new Error('Server instance is null'));
-        return;
-      }
-
-      server.once('listening', () => {
-        const address = server?.address();
-        if (typeof address === 'object' && address) {
-          log(`[Startup] Server is listening on port ${address.port}`);
-        }
-        resolve();
-      });
-
-      server.once('error', (error: Error & { code?: string }) => {
-        log(`[Startup] Failed to bind to port ${PORT}: ${error.message}`);
-        if (error.code === 'EADDRINUSE') {
-          log('[Startup] Port is already in use. Please make sure no other service is using this port.');
-        }
-        reject(error);
-      });
-    });
-
-    // Step 2: Initialize remaining features asynchronously
-    process.nextTick(async () => {
-      try {
-        // Setup auth first as it's required for routes
-        log('[Setup] Configuring authentication...');
-        setupAuth(app);
-        log('[Setup] Authentication configured successfully');
-
-        // Register routes
-        log('[Setup] Registering routes...');
-        await registerRoutes(app);
-        log('[Setup] Routes registered successfully');
-
-        // Setup development/production specific features
-        if (app.get("env") === "development") {
-          log('[Setup] Initializing Vite development server...');
-          try {
-            await setupVite(app, server!);
-            log('[Setup] Vite development server initialized successfully');
-          } catch (error) {
-            log(`[Setup] Error initializing Vite: ${error}`);
-            // Continue without Vite in case of error
-          }
-        } else {
-          log('[Setup] Setting up static file serving...');
-          app.set('trust proxy', 1);
-          serveStatic(app);
-          log('[Setup] Static file serving configured successfully');
-        }
-
-        log('[Setup] Server initialization completed successfully');
-
-      } catch (error) {
-        const err = error as Error;
-        log(`[Setup] Error during initialization: ${err.message}`);
-        log(`[Setup] Stack trace: ${err.stack}`);
-        // Don't exit process on initialization error, just log it
-        log('[Setup] Server will continue running with limited functionality');
-      }
-    });
-
-    // Error handling middleware
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      log(`[Error] ${status} - ${message}`);
-
-      const response = app.get("env") === "development"
-        ? { message, stack: err.stack }
-        : { message: "Internal Server Error" };
-
-      res.status(status).json(response);
-    });
-
-    // Graceful shutdown handler
-    const shutdown = async (signal: string) => {
-      log(`[Shutdown] Received ${signal}, starting graceful shutdown...`);
-      if (server) {
-        await new Promise<void>((resolve) => {
-          server!.close(() => {
-            log('[Shutdown] Closed out remaining connections');
-            resolve();
-          });
-
-          setTimeout(() => {
-            log('[Shutdown] Could not close connections in time, forcing shutdown');
-            resolve();
-          }, 10000);
+      // Create server instance with proper error handling
+      server = await new Promise<Server>((resolve, reject) => {
+        const srv = app.listen(PORT, () => {
+          log(`[Startup] Server successfully started on port ${PORT}`);
+          resolve(srv);
         });
+
+        srv.on('error', (error: Error & { code?: string }) => {
+          if (error.code === 'EADDRINUSE') {
+            log(`[Startup] Port ${PORT} is in use, trying next port...`);
+            PORT++;
+            reject(new Error('PORT_IN_USE'));
+          } else {
+            log(`[Startup] Server error: ${error.message}`);
+            reject(error);
+          }
+        });
+      });
+
+      // If we get here, server started successfully
+      break;
+    } catch (error) {
+      if (error instanceof Error && error.message === 'PORT_IN_USE') {
+        retries--;
+        if (retries === 0) {
+          throw new Error(`Unable to find available port after trying ports ${BASE_PORT}-${PORT}`);
+        }
+        continue;
       }
-      process.exit(0);
-    };
-
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
-
-  } catch (error) {
-    const err = error as Error;
-    log(`[Fatal] Server startup failed: ${err.message}`);
-    log(`[Fatal] Stack trace: ${err.stack}`);
-    process.exit(1);
+      throw error;
+    }
   }
+
+  // Initialize remaining features asynchronously
+  process.nextTick(async () => {
+    try {
+      // Setup auth first as it's required for routes
+      log('[Setup] Configuring authentication...');
+      setupAuth(app);
+      log('[Setup] Authentication configured successfully');
+
+      // Register routes
+      log('[Setup] Registering routes...');
+      await registerRoutes(app);
+      log('[Setup] Routes registered successfully');
+
+      // Setup development/production specific features
+      if (app.get("env") === "development") {
+        log('[Setup] Initializing Vite development server...');
+        try {
+          await setupVite(app, server!);
+          log('[Setup] Vite development server initialized successfully');
+        } catch (error) {
+          log(`[Setup] Error initializing Vite: ${error}`);
+          // Continue without Vite in case of error
+        }
+      } else {
+        log('[Setup] Setting up static file serving...');
+        app.set('trust proxy', 1);
+        serveStatic(app);
+        log('[Setup] Static file serving configured successfully');
+      }
+
+      log('[Setup] Server initialization completed successfully');
+
+    } catch (error) {
+      const err = error as Error;
+      log(`[Setup] Error during initialization: ${err.message}`);
+      log(`[Setup] Stack trace: ${err.stack}`);
+      // Don't exit process on initialization error, just log it
+      log('[Setup] Server will continue running with limited functionality');
+    }
+  });
+
+  // Error handling middleware
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    log(`[Error] ${status} - ${message}`);
+
+    const response = app.get("env") === "development"
+      ? { message, stack: err.stack }
+      : { message: "Internal Server Error" };
+
+    res.status(status).json(response);
+  });
+
+  // Graceful shutdown handler
+  const shutdown = async (signal: string) => {
+    log(`[Shutdown] Received ${signal}, starting graceful shutdown...`);
+    if (server) {
+      await new Promise<void>((resolve) => {
+        server!.close(() => {
+          log('[Shutdown] Closed out remaining connections');
+          resolve();
+        });
+
+        setTimeout(() => {
+          log('[Shutdown] Could not close connections in time, forcing shutdown');
+          resolve();
+        }, 10000);
+      });
+    }
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-startServer();
+startServer().catch((error) => {
+  log(`[Fatal] Server startup failed: ${error.message}`);
+  log(`[Fatal] Stack trace: ${error.stack}`);
+  process.exit(1);
+});

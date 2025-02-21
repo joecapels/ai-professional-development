@@ -8,13 +8,24 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Redirect } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
+  const { toast } = useToast();
 
-  const loginForm = useForm<InsertUser>({
-    resolver: zodResolver(insertUserSchema.pick({ username: true, password: true })),
-    defaultValues: { username: "", password: "" },
+  // Create a simpler schema for login
+  const loginForm = useForm<Pick<InsertUser, "username" | "password">>({
+    resolver: zodResolver(
+      insertUserSchema.pick({ 
+        username: true, 
+        password: true 
+      })
+    ),
+    defaultValues: { 
+      username: "", 
+      password: "" 
+    },
   });
 
   const registerForm = useForm<InsertUser>({
@@ -32,6 +43,44 @@ export default function AuthPage() {
     return <Redirect to="/" />;
   }
 
+  const handleLogin = async (data: Pick<InsertUser, "username" | "password">) => {
+    try {
+      console.log("Attempting login with:", { username: data.username });
+      await loginMutation.mutateAsync(data);
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      toast({
+        title: "Login failed",
+        description: "Please check your credentials and try again",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRegister = async (data: InsertUser) => {
+    try {
+      console.log("Attempting registration with:", { username: data.username, email: data.email });
+      await registerMutation.mutateAsync(data);
+      toast({
+        title: "Registration Successful",
+        description: "Please check your email to verify your account.",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast({
+        title: "Registration failed",
+        description: "Please check your information and try again",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -47,7 +96,7 @@ export default function AuthPage() {
 
             <TabsContent value="login">
               <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-4">
+                <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
                   <FormField
                     control={loginForm.control}
                     name="username"
@@ -74,16 +123,25 @@ export default function AuthPage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
-                    Login
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={loginMutation.isPending}
+                  >
+                    {loginMutation.isPending ? "Logging in..." : "Login"}
                   </Button>
+                  {loginForm.formState.errors.root && (
+                    <p className="text-sm text-destructive mt-2">
+                      {loginForm.formState.errors.root.message}
+                    </p>
+                  )}
                 </form>
               </Form>
             </TabsContent>
 
             <TabsContent value="register">
               <Form {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit((data) => registerMutation.mutate(data))} className="space-y-4">
+                <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
                   <FormField
                     control={registerForm.control}
                     name="username"
@@ -149,9 +207,18 @@ export default function AuthPage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
-                    Register
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={registerMutation.isPending}
+                  >
+                    {registerMutation.isPending ? "Registering..." : "Register"}
                   </Button>
+                  {registerForm.formState.errors.root && (
+                    <p className="text-sm text-destructive mt-2">
+                      {registerForm.formState.errors.root.message}
+                    </p>
+                  )}
                 </form>
               </Form>
             </TabsContent>
