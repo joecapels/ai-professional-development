@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { Progress } from "@shared/schema";
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+// the newest OpenAI model is "gpt-4" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Enhanced system prompt to handle multi-modal interactions
@@ -23,7 +23,7 @@ export async function generateStudyRecommendations(
     Respond with a JSON array of string recommendations.`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -80,7 +80,7 @@ export async function generatePracticeQuestions(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -125,7 +125,7 @@ export async function enhanceStudyContent(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -160,7 +160,7 @@ export async function analyzePerformance(progress: Progress[]): Promise<string> 
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -200,7 +200,7 @@ export async function handleStudyChat(
       encouraging: "Be encouraging and motivating. Celebrate student successes and provide positive reinforcement. Use phrases like 'Great question!' and 'You're making excellent progress!'",
       socratic: "Use the Socratic method. Guide students to answers through questioning. Help them discover solutions themselves rather than providing direct answers.",
       professional: "Maintain a professional and formal tone. Focus on clear, concise explanations with academic language.",
-      friendly: "Be casual and approachable. Use conversational language and relatable examples. Make learning feel fun and informal.",
+      friendly: "Be casual and approachable. Use conversational language and relatable examples.",
     };
 
     const personalityPrompt = preferences?.chatbotPersonality
@@ -237,7 +237,7 @@ export async function handleStudyChat(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -272,7 +272,7 @@ export async function generateMoodSuggestion(mood: string): Promise<string> {
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -323,7 +323,7 @@ export async function generateFlashcardsFromContent(contentText: string): Promis
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
