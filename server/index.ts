@@ -5,13 +5,7 @@ import helmet from "helmet";
 
 const app = express();
 // Try multiple ports, starting with the environment-provided port and 5000
-const PORTS = [
-  Number(process.env.PORT) || 3000,
-  3000,
-  3001,
-  3002,
-  3003
-];
+const PORT = Number(process.env.PORT) || 3000;
 
 // Essential middleware only
 app.use(compression());
@@ -52,11 +46,13 @@ async function startServer() {
       log(`[Startup] Attempting to start minimal server on port ${port}...`);
 
       const server = await new Promise((resolve, reject) => {
-        const srv = app.listen(port, '0.0.0.0', async () => {
-  const baseUrl = `http://0.0.0.0:${port}`.replace(/([^:]\/)\/+/g, "$1");
-  console.log(`Server running at ${baseUrl}`);
-          // Ensure CORS headers are set for WebSocket upgrade
+        const srv = app.listen(PORT, '0.0.0.0', async () => {
+          console.log(`Server running at http://0.0.0.0:${PORT}`);
+          
+          // Set up WebSocket handling
           srv.on('upgrade', (request, socket, head) => {
+            socket.setKeepAlive(true);
+            socket.setTimeout(30000);
             socket.on('error', (err) => {
               console.error('WebSocket error:', err);
             });
