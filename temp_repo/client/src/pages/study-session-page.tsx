@@ -12,103 +12,69 @@ export default function StudySessionPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const wsRef = useRef<WebSocket | null>(null);
-  const [status, setStatus] = useState<'active' | 'paused' | 'connecting' | 'error'>('connecting');
+  const [status, setStatus] = useState<'active' | 'paused'>('active');
   const [duration, setDuration] = useState(0);
   const timerRef = useRef<NodeJS.Timeout>();
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
   const connectWebSocket = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log('WebSocket already connected');
-      return;
-    }
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    wsRef.current = ws;
 
-    try {
-      setStatus('connecting');
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-      wsRef.current = ws;
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      reconnectAttempts.current = 0;
+      toast({
+        title: "Connected",
+        description: "Study session connection established",
+      });
+    };
 
-      ws.onopen = () => {
-        console.log('WebSocket connected');
-        reconnectAttempts.current = 0;
-        setStatus('active');
-        toast({
-          title: "Connected",
-          description: "Study session connection established",
-        });
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          if (message.type === 'error') {
-            setStatus('error');
-            toast({
-              title: "Session Error",
-              description: message.message,
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'error') {
           toast({
-            title: "Message Error",
-            description: "Failed to process server message",
+            title: "Session Error",
+            description: message.message,
             variant: "destructive",
           });
         }
-      };
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error);
+      }
+    };
 
-      ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        setStatus('error');
-
-        if (reconnectAttempts.current < maxReconnectAttempts) {
-          reconnectAttempts.current++;
-          const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000);
-
-          // Clear any existing reconnect timeout
-          if (reconnectTimeoutRef.current) {
-            clearTimeout(reconnectTimeoutRef.current);
-          }
-
-          reconnectTimeoutRef.current = setTimeout(connectWebSocket, timeout);
-
-          toast({
-            title: "Disconnected",
-            description: `Attempting to reconnect (${reconnectAttempts.current}/${maxReconnectAttempts})...`,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Connection Failed",
-            description: "Please refresh the page to reconnect",
-            variant: "destructive",
-          });
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setStatus('error');
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      if (reconnectAttempts.current < maxReconnectAttempts) {
+        reconnectAttempts.current++;
+        const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000);
+        setTimeout(connectWebSocket, timeout);
         toast({
-          title: "Connection Error",
-          description: "Failed to connect to study session",
+          title: "Disconnected",
+          description: "Attempting to reconnect...",
           variant: "destructive",
         });
-      };
-    } catch (error) {
-      console.error('Failed to create WebSocket:', error);
-      setStatus('error');
+      } else {
+        toast({
+          title: "Connection Failed",
+          description: "Please refresh the page to reconnect",
+          variant: "destructive",
+        });
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
       toast({
         title: "Connection Error",
-        description: "Failed to establish study session connection",
+        description: "Failed to connect to study session",
         variant: "destructive",
       });
-    }
+    };
   };
 
   useEffect(() => {
@@ -124,9 +90,6 @@ export default function StudySessionPage() {
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
       }
       if (wsRef.current) {
         wsRef.current.close();
@@ -147,23 +110,13 @@ export default function StudySessionPage() {
     } else {
       toast({
         title: "Connection Error",
-        description: "Cannot send message, connection lost. Attempting to reconnect...",
+        description: "Cannot send message, connection lost",
         variant: "destructive",
       });
-      connectWebSocket(); // Attempt to reconnect
     }
   };
 
   const togglePause = () => {
-    if (status === 'error' || status === 'connecting') {
-      toast({
-        title: "Cannot Pause/Resume",
-        description: "Please wait for connection to be established",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const newStatus = status === 'active' ? 'paused' : 'active';
     sendMessage({
       type: newStatus === 'active' ? 'resume' : 'pause',
@@ -202,14 +155,11 @@ export default function StudySessionPage() {
         </motion.div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className={`bg-gradient-to-br ${status === 'error' ? 'from-red-500/5 to-red-500/10' : 'from-primary/5 to-primary/10'}`}>
+          <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Timer className="h-5 w-5" />
                 Session Timer
-                {status === 'connecting' && (
-                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
-                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -227,7 +177,6 @@ export default function StudySessionPage() {
                     variant="outline"
                     size="lg"
                     onClick={togglePause}
-                    disabled={status === 'error' || status === 'connecting'}
                     className="flex items-center gap-2"
                   >
                     {status === 'active' ? (
@@ -246,7 +195,6 @@ export default function StudySessionPage() {
                     variant="destructive"
                     size="lg"
                     onClick={endSession}
-                    disabled={status === 'connecting'}
                     className="flex items-center gap-2"
                   >
                     <StopCircle className="h-4 w-4" />

@@ -8,8 +8,11 @@ import compression from "compression";
 import { Server } from "http";
 
 const app = express();
+// Ensure PORT is properly parsed as a number and log for debugging
+const PORT = Number(process.env.PORT) || 5000;
+log(`[Config] Port configuration: process.env.PORT=${process.env.PORT}, using port: ${PORT}`);
 
-// Initialize essential middleware first
+// Essential middleware that must be registered immediately
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(compression());
@@ -18,11 +21,11 @@ app.use(compression());
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", process.env.NODE_ENV === "development" ? "*" : ""]
+      defaultSrc: ["'self'", "*.replit.dev"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "*.replit.dev"],
+      styleSrc: ["'self'", "'unsafe-inline'", "*.replit.dev"],
+      imgSrc: ["'self'", "data:", "blob:", "*.replit.dev"],
+      connectSrc: ["'self'", "*.replit.dev", process.env.NODE_ENV === "development" ? "*" : ""]
     }
   }
 }));
@@ -32,40 +35,12 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Function to find an available port
-async function findAvailablePort(startPort: number): Promise<number> {
-  return new Promise((resolve) => {
-    const server = app.listen(startPort, '0.0.0.0', () => {
-      const port = (server.address() as any).port;
-      server.close(() => resolve(port));
-    });
-
-    server.on('error', () => {
-      log(`[Port] Port ${startPort} is busy, trying next port`);
-      resolve(findAvailablePort(startPort + 1));
-    });
-  });
-}
-
 async function startServer() {
   let server: Server | null = null;
 
   try {
-    log('[Startup] Beginning server initialization...');
-
-    // Try to use the configured port first, then find an available one if needed
-    const preferredPort = Number(process.env.PORT) || 5000; // Changed from 3001 to 5000
-    log(`[Config] Attempting to start with preferred port: ${preferredPort}`);
-
-    const port = await findAvailablePort(preferredPort);
-    if (port !== preferredPort) {
-      log(`[Config] Port ${preferredPort} was busy, using port ${port} instead`);
-    }
-    log(`[Config] Final port configuration: ${port}`);
-
-    // Step 1: Bind to port
-    server = app.listen(port, '0.0.0.0');
-    log('[Startup] Server instance created');
+    // Step 1: Bind to port immediately
+    server = app.listen(PORT, '0.0.0.0');
 
     // Wait for server to be ready
     await new Promise<void>((resolve, reject) => {
@@ -83,7 +58,10 @@ async function startServer() {
       });
 
       server.once('error', (error: Error & { code?: string }) => {
-        log(`[Startup] Server error: ${error.message}`);
+        log(`[Startup] Failed to bind to port ${PORT}: ${error.message}`);
+        if (error.code === 'EADDRINUSE') {
+          log('[Startup] Port is already in use. Please make sure no other service is using this port.');
+        }
         reject(error);
       });
     });
@@ -100,6 +78,18 @@ async function startServer() {
         log('[Setup] Registering routes...');
         await registerRoutes(app);
         log('[Setup] Routes registered');
+
+        // Setup development/production specific features
+        if (app.get("env") === "development") {
+          log('[Setup] Initializing Vite development server...');
+          await setupVite(app, server!);
+          log('[Setup] Vite development server ready');
+        } else {
+          log('[Setup] Setting up static file serving...');
+          app.set('trust proxy', 1);
+          serveStatic(app);
+          log('[Setup] Static file serving configured');
+        }
 
         // Initialize badges last as it's not critical for server operation
         log('[Setup] Initializing badges...');
