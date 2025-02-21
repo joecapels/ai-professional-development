@@ -53,7 +53,8 @@ async function startServer() {
 
       const server = await new Promise((resolve, reject) => {
         const srv = app.listen(port, '0.0.0.0', async () => {
-  console.log(`Server running at http://0.0.0.0:${port}`);
+  const baseUrl = `http://0.0.0.0:${port}`.replace(/([^:]\/)\/+/g, "$1");
+  console.log(`Server running at ${baseUrl}`);
           // Ensure CORS headers are set for WebSocket upgrade
           srv.on('upgrade', (request, socket, head) => {
             socket.on('error', (err) => {
