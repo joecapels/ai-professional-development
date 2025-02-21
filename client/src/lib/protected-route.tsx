@@ -2,9 +2,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
 
-const ADMIN_ONLY_ROUTES = ['/admin'];
-const USER_ONLY_ROUTES = ['/', '/chat', '/quiz', '/settings', '/documents', '/analytics', '/flashcards', '/badges', '/notifications'];
-
 export function ProtectedRoute({
   path,
   component: Component,
@@ -32,23 +29,5 @@ export function ProtectedRoute({
     );
   }
 
-  // Redirect non-admin users trying to access admin routes
-  if (ADMIN_ONLY_ROUTES.includes(path) && !user.isAdmin) {
-    return (
-      <Route path={path}>
-        <Redirect to="/" />
-      </Route>
-    );
-  }
-
-  // Redirect admin users trying to access regular user routes
-  if (USER_ONLY_ROUTES.includes(path) && user.isAdmin) {
-    return (
-      <Route path={path}>
-        <Redirect to="/admin" />
-      </Route>
-    );
-  }
-
-  return <Route path={path}><Component /></Route>
+  return <Component />
 }

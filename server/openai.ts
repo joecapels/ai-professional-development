@@ -1,13 +1,11 @@
 import OpenAI from "openai";
 import { Progress } from "@shared/schema";
 
-// the newest OpenAI model is "gpt-4" which was released May 13, 2024. do not change this unless explicitly requested by the user
+// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Enhanced system prompt to handle multi-modal interactions
-const SYSTEM_PROMPT = `You are an AI tutor focused on providing personalized learning recommendations and generating practice questions.
-Your responses should be educational, encouraging, and tailored to the student's level and interests.
-You can understand and respond to various types of inputs including text, images, and complex concepts.
+const SYSTEM_PROMPT = `You are an AI tutor focused on providing personalized learning recommendations and generating practice questions. 
+Your responses should be educational, encouraging, and tailored to the student's educational level and research interests.
 Adjust your language, examples, and complexity based on the student's grade level.`;
 
 export async function generateStudyRecommendations(
@@ -23,7 +21,7 @@ export async function generateStudyRecommendations(
     Respond with a JSON array of string recommendations.`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -80,7 +78,7 @@ export async function generatePracticeQuestions(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -108,6 +106,7 @@ export async function generatePracticeQuestions(
   }
 }
 
+// Content enhancer function to add AI-generated examples and explanations
 export async function enhanceStudyContent(
   content: string,
   subject: string
@@ -125,7 +124,7 @@ export async function enhanceStudyContent(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -146,6 +145,7 @@ export async function enhanceStudyContent(
   }
 }
 
+// Performance analyzer to provide detailed feedback
 export async function analyzePerformance(progress: Progress[]): Promise<string> {
   try {
     const prompt = `Analyze the student's performance data and provide detailed feedback
@@ -160,7 +160,7 @@ export async function analyzePerformance(progress: Progress[]): Promise<string> 
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -187,10 +187,11 @@ interface LearningPreferences {
   explanationDetail: string;
   exampleFrequency: string;
   chatbotPersonality?: "encouraging" | "socratic" | "professional" | "friendly";
-  gradeLevel: string;
-  researchAreas?: string[];
+  gradeLevel: string; // Added gradeLevel
+  researchAreas?: string[]; // Added researchAreas
 }
 
+// Update the handleStudyChat function
 export async function handleStudyChat(
   message: string,
   preferences?: LearningPreferences | null
@@ -200,7 +201,7 @@ export async function handleStudyChat(
       encouraging: "Be encouraging and motivating. Celebrate student successes and provide positive reinforcement. Use phrases like 'Great question!' and 'You're making excellent progress!'",
       socratic: "Use the Socratic method. Guide students to answers through questioning. Help them discover solutions themselves rather than providing direct answers.",
       professional: "Maintain a professional and formal tone. Focus on clear, concise explanations with academic language.",
-      friendly: "Be casual and approachable. Use conversational language and relatable examples.",
+      friendly: "Be casual and approachable. Use conversational language and relatable examples. Make learning feel fun and informal.",
     };
 
     const personalityPrompt = preferences?.chatbotPersonality
@@ -237,7 +238,7 @@ export async function handleStudyChat(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -258,6 +259,7 @@ export async function handleStudyChat(
   }
 }
 
+// Add this function to the existing openai.ts file
 export async function generateMoodSuggestion(mood: string): Promise<string> {
   try {
     console.log(`Generating mood suggestion for mood: ${mood}`);
@@ -272,7 +274,7 @@ export async function generateMoodSuggestion(mood: string): Promise<string> {
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -301,147 +303,3 @@ export async function generateMoodSuggestion(mood: string): Promise<string> {
     return "Keep going, you're doing great!";
   }
 }
-
-export async function generateFlashcardsFromContent(contentText: string): Promise<{ front: string; back: string; difficulty: number }[]> {
-  try {
-    const prompt = `Generate a set of flashcards from the following content. Each flashcard should have a front (question/concept) and back (answer/explanation).
-    The flashcards should cover key concepts and be suitable for effective learning.
-    Ensure the cards are clear, concise, and focus on important information.
-
-    Content to process:
-    ${contentText}
-
-    Respond with a JSON object in this format:
-    {
-      "flashcards": [
-        {
-          "front": "question or concept",
-          "back": "answer or explanation",
-          "difficulty": number between 1-5
-        }
-      ]
-    }`;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: prompt }
-      ],
-      response_format: { type: "json_object" }
-    });
-
-    const responseContent = response.choices[0].message.content;
-    if (!responseContent) {
-      throw new Error("No content in response");
-    }
-
-    const result = JSON.parse(responseContent);
-    return result.flashcards || [];
-  } catch (error) {
-    console.error("Error generating flashcards:", error);
-    throw new Error("Failed to generate flashcards from content");
-  }
-}
-
-// Add new interface for multi-modal messages
-interface MultiModalMessage {
-  type: 'text' | 'image' | 'code' | 'math';
-  content: string;
-  metadata?: {
-    format?: string;
-    language?: string;
-  };
-}
-
-// Enhanced chat handler for multi-modal support
-export async function handleMultiModalChat(
-  messages: MultiModalMessage[],
-  preferences?: LearningPreferences | null
-): Promise<string> {
-  try {
-    const formattedMessages = messages.map(msg => {
-      if (msg.type === 'image') {
-        return {
-          role: "user" as const,
-          content: [
-            {
-              type: "text" as const,
-              text: "Please analyze this image:"
-            },
-            {
-              type: "image_url" as const,
-              image_url: { url: msg.content }
-            }
-          ]
-        };
-      } else if (msg.type === 'code') {
-        return {
-          role: "user" as const,
-          content: `\`\`\`${msg.metadata?.language || ''}\n${msg.content}\n\`\`\``
-        };
-      } else if (msg.type === 'math') {
-        return {
-          role: "user" as const,
-          content: `Here's a mathematical expression to analyze: ${msg.content}`
-        };
-      }
-      return {
-        role: "user" as const,
-        content: msg.content
-      };
-    });
-
-    const personalityPrompt = preferences?.chatbotPersonality
-      ? getPersonalityPrompt(preferences.chatbotPersonality)
-      : getPersonalityPrompt('professional');
-
-    const preferencesContext = preferences
-      ? generatePreferencesContext(preferences)
-      : '';
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview", // Using vision model for image support
-      messages: [
-        { 
-          role: "system" as const, 
-          content: `${SYSTEM_PROMPT}\n${personalityPrompt}\n${preferencesContext}` 
-        },
-        ...formattedMessages as any // Type assertion needed for mixed content types
-      ],
-      max_tokens: 1000
-    });
-
-    return response.choices[0].message.content || "I apologize, but I couldn't process your request.";
-  } catch (error) {
-    console.error("Error in multi-modal chat:", error);
-    return "I apologize, but I'm having trouble processing your input. Please try again.";
-  }
-}
-
-// Helper function to generate personality prompt
-function getPersonalityPrompt(personality: "encouraging" | "socratic" | "professional" | "friendly"): string {
-  const prompts = {
-    encouraging: "Be encouraging and motivating. Celebrate student successes and provide positive reinforcement.",
-    socratic: "Use the Socratic method. Guide students to answers through questioning.",
-    professional: "Maintain a professional and formal tone. Focus on clear, concise explanations.",
-    friendly: "Be casual and approachable. Use conversational language and relatable examples."
-  };
-  return prompts[personality];
-}
-
-// Helper function to generate preferences context
-function generatePreferencesContext(preferences: LearningPreferences): string {
-  return `
-    Consider these learning preferences:
-    - Educational Level: ${preferences.gradeLevel}
-    - Research Interests: ${preferences.researchAreas?.join(", ")}
-    - Learning Style: ${preferences.learningStyle}
-    - Pace: ${preferences.pacePreference}
-    - Detail Level: ${preferences.explanationDetail}
-    - Example Frequency: ${preferences.exampleFrequency}
-  `;
-}
-
-// Export new types and interfaces
-export type { MultiModalMessage };

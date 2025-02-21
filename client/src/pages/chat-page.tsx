@@ -6,7 +6,7 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
-      <main className="container mx-auto px-3 md:px-6 lg:px-8 py-4 md:py-8 max-w-4xl">
+      <main className="container max-w-4xl py-8">
         <StudyChat />
       </main>
     </div>

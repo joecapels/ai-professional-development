@@ -15,7 +15,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { useLocation } from "wouter";
 import type { Quiz, QuizResult } from "@shared/schema";
 
 interface Question {
@@ -27,7 +26,6 @@ interface Question {
 
 export default function QuizPage() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
   const [subject, setSubject] = useState("");
   const [difficulty, setDifficulty] = useState<number>(1);
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
@@ -59,11 +57,7 @@ export default function QuizPage() {
   });
 
   const submitAnswerMutation = useMutation({
-    mutationFn: async (data: { 
-      quizId: number; 
-      totalQuestions: number;
-      answers: { questionIndex: number; selectedAnswer: string; isCorrect: boolean }[] 
-    }) => {
+    mutationFn: async (data: { quizId: number; answers: { questionIndex: number; selectedAnswer: string; isCorrect: boolean }[] }) => {
       const res = await apiRequest("POST", "/api/quiz-results", data);
       return res.json();
     },
@@ -73,66 +67,29 @@ export default function QuizPage() {
         description: `Your score: ${result.score}%`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
-      setLocation("/"); // Redirect to home page after quiz completion
     },
   });
-
-  const handleEndQuiz = () => {
-    if (!currentQuiz?.questions || !currentQuiz.id) {
-      toast({
-        title: "Error",
-        description: "Quiz data is invalid",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const totalQuestions = currentQuiz.questions.length;
-    const answers = selectedAnswers.map((selectedAnswer, index) => ({
-      questionIndex: index,
-      selectedAnswer: selectedAnswer || "",
-      isCorrect: selectedAnswer === currentQuiz.questions[index]?.correctAnswer,
-    }));
-
-    // Add empty answers for unanswered questions
-    while (answers.length < totalQuestions) {
-      answers.push({
-        questionIndex: answers.length,
-        selectedAnswer: "",
-        isCorrect: false,
-      });
-    }
-
-    submitAnswerMutation.mutate({
-      quizId: currentQuiz.id,
-      totalQuestions,
-      answers,
-    });
-  };
 
   const currentQuestion: Question | undefined = currentQuiz?.questions?.[currentQuestionIndex];
 
   const handleAnswerSelect = (answer: string) => {
-    if (!currentQuiz?.questions) return;
-
     const newAnswers = [...selectedAnswers];
     newAnswers[currentQuestionIndex] = answer;
     setSelectedAnswers(newAnswers);
     setShowExplanation(true);
 
-    if (currentQuestionIndex === currentQuiz.questions.length - 1) {
-      // Submit quiz if it's the last question
-      if (currentQuiz.id) {
-        submitAnswerMutation.mutate({
-          quizId: currentQuiz.id,
-          totalQuestions: currentQuiz.questions.length,
-          answers: newAnswers.map((selectedAnswer, index) => ({
-            questionIndex: index,
-            selectedAnswer,
-            isCorrect: selectedAnswer === currentQuiz.questions[index]?.correctAnswer,
-          })),
-        });
-      }
+    if (currentQuestionIndex === (currentQuiz?.questions?.length || 0) - 1) {
+      // Submit quiz
+      const answers = newAnswers.map((selectedAnswer, index) => ({
+        questionIndex: index,
+        selectedAnswer,
+        isCorrect: selectedAnswer === currentQuiz?.questions[index].correctAnswer,
+      }));
+
+      submitAnswerMutation.mutate({
+        quizId: currentQuiz!.id,
+        answers,
+      });
     }
   };
 
@@ -189,18 +146,11 @@ export default function QuizPage() {
           </Card>
         ) : currentQuestion ? (
           <Card className="max-w-3xl mx-auto">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <CardTitle>
                 Question {currentQuestionIndex + 1} of{" "}
                 {currentQuiz.questions?.length}
               </CardTitle>
-              <Button 
-                variant="outline" 
-                onClick={handleEndQuiz}
-                disabled={submitAnswerMutation.isPending}
-              >
-                End Quiz
-              </Button>
             </CardHeader>
             <CardContent className="space-y-6">
               <p className="text-lg font-medium">{currentQuestion.question}</p>

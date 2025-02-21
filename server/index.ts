@@ -1,140 +1,100 @@
-import express from "express";
-import compression from "compression";
-import { log, setupVite, serveStatic } from "./vite";
-import helmet from "helmet";
+import express, { type Request, Response, NextFunction } from "express";
+import { registerRoutes } from "./routes";
+import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-// Try multiple ports, starting with the environment-provided port and 5000
-const PORT = Number(process.env.PORT) || 3000;
-const HOST = '0.0.0.0';
-
-// Essential middleware only
-app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Enable CORS for development
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+
+      log(logLine);
+    }
+  });
+
   next();
 });
 
-// Security headers with development-friendly CSP
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", "ws:", "wss:"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'self'"],
-    },
-  },
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-}));
+(async () => {
+  const server = await registerRoutes(app);
 
-// Basic health check endpoint
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
 
-async function startServer() {
-  let lastError = null;
-  log(`[Config] Available ports: ${PORTS.join(', ')}, environment PORT=${process.env.PORT}`);
+    res.status(status).json({ message });
+    throw err;
+  });
 
-  // Try each port in sequence
-  for (const port of PORTS) {
-    try {
-      log(`[Startup] Attempting to start minimal server on port ${port}...`);
-
-      const server = await new Promise((resolve, reject) => {
-        const srv = app.listen(PORT, '0.0.0.0', async () => {
-          console.log(`Server running at http://0.0.0.0:${PORT}`);
-          
-          // Set up WebSocket handling
-          srv.on('upgrade', (request, socket, head) => {
-            socket.setKeepAlive(true);
-            socket.setTimeout(30000);
-            socket.on('error', (err) => {
-              console.error('WebSocket error:', err);
-            });
-          });
-          const address = srv.address();
-          if (typeof address === 'object' && address) {
-            log(`[Startup] Minimal server is listening on port ${address.port}`);
-          }
-
-          // Set up Vite middleware in development
-          if (process.env.NODE_ENV !== 'production') {
-            await setupVite(app, srv);
-          } else {
-            // Serve static files in production
-            serveStatic(app);
-          }
-
-          resolve(srv);
-        });
-
-        srv.on('error', (error: Error & { code?: string }) => {
-          log(`[Startup] Failed to bind to port ${port}: ${error.message}`);
-          reject(error);
-        });
-      });
-
-      // Basic error handling
-      app.use((err: any, _req: any, res: any, _next: any) => {
-        const status = err.status || err.statusCode || 500;
-        const message = err.message || "Internal Server Error";
-        log(`[Error] ${status} - ${message}`);
-
-        const response = app.get("env") === "development"
-          ? { message, stack: err.stack }
-          : { message: "Internal Server Error" };
-
-        res.status(status).json(response);
-      });
-
-      // Graceful shutdown
-      const shutdown = async (signal: string) => {
-        log(`[Shutdown] Received ${signal}, starting graceful shutdown...`);
-        if (server) {
-          server.close(() => {
-            log('[Shutdown] Closed out remaining connections');
-            process.exit(0);
-          });
-
-          // Force shutdown after timeout
-          setTimeout(() => {
-            log('[Shutdown] Could not close connections in time, forcing shutdown');
-            process.exit(1);
-          }, 10000);
-        }
-      };
-
-      process.on('SIGTERM', () => shutdown('SIGTERM'));
-      process.on('SIGINT', () => shutdown('SIGINT'));
-
-      // Successfully bound to a port
-      log(`[Success] Server successfully started on port ${port}`);
-      return;
-
-    } catch (error) {
-      lastError = error;
-      log(`[Startup] Failed to start server on port ${port}, trying next port...`);
-      continue;
-    }
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
   }
 
-  // If we get here, we failed to bind to any port
-  log(`[Fatal] Server startup failed on all ports. Last error: ${lastError}`);
-  process.exit(1);
-}
+  // Handle graceful shutdown
+  const shutdown = () => {
+    log('Received kill signal, shutting down gracefully');
+    server.close(() => {
+      log('Closed out remaining connections');
+      process.exit(0);
+    });
 
-startServer();
+    // Force shutdown after 10s
+    setTimeout(() => {
+      log('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+
+  const PORT = process.env.PORT || 5000;
+  const MAX_RETRIES = 3;
+  let retries = 0;
+
+  const startServer = () => {
+    server.listen(PORT, "0.0.0.0", () => {
+      log(`serving on port ${PORT}`);
+    }).on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        log(`Port ${PORT} is in use`);
+        if (retries < MAX_RETRIES) {
+          retries++;
+          log(`Retrying in 1 second... (Attempt ${retries}/${MAX_RETRIES})`);
+          setTimeout(startServer, 1000);
+        } else {
+          log('Max retries reached. Could not start server.');
+          process.exit(1);
+        }
+      } else {
+        log(`Error starting server: ${error.message}`);
+        process.exit(1);
+      }
+    });
+  };
+
+  startServer();
+})();

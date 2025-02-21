@@ -33,20 +33,17 @@ export default function SettingsPage() {
     queryKey: ["/api/preferences"],
   });
 
-  const defaultValues: LearningPreferences = {
-    learningStyle: "visual",
-    pacePreference: "moderate",
-    explanationDetail: "detailed",
-    exampleFrequency: "moderate",
-    chatbotPersonality: "encouraging",
-    gradeLevel: "high_school",
-    researchAreas: ["computer_science"],
-    ...preferences
-  };
-
   const form = useForm<LearningPreferences>({
     resolver: zodResolver(learningPreferencesSchema),
-    defaultValues,
+    defaultValues: preferences || {
+      learningStyle: "visual",
+      pacePreference: "moderate",
+      explanationDetail: "detailed",
+      exampleFrequency: "moderate",
+      chatbotPersonality: "encouraging",
+      gradeLevel: "high_school",
+      researchAreas: ["computer_science"],
+    },
   });
 
   const updatePreferencesMutation = useMutation({
@@ -136,8 +133,8 @@ export default function SettingsPage() {
                         Select areas you're interested in studying (at least one)
                       </FormDescription>
                       <Select
-                        onValueChange={(value) => field.onChange([value])}
-                        value={field.value?.[0]}
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>

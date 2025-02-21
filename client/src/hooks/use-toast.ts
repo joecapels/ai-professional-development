@@ -126,10 +126,6 @@ export const reducer = (state: State, action: Action): State => {
   }
 }
 
-interface State {
-  toasts: Array<{ id: string; message: string; type?: 'success' | 'error' | 'info' }>;
-}
-
 const listeners: Array<(state: State) => void> = []
 
 let memoryState: State = { toasts: [] }

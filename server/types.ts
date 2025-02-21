@@ -1,4 +1,4 @@
-import { User, StudyMaterial, Progress, Quiz, QuizResult, SavedDocument, InsertUser, InsertStudyMaterial, InsertProgress, InsertQuiz, InsertQuizResult, InsertDocument, Flashcard, InsertFlashcard } from "@shared/schema";
+import { User, StudyMaterial, Progress, Quiz, QuizResult, SavedDocument, InsertUser, InsertStudyMaterial, InsertProgress, InsertQuiz, InsertQuizResult, InsertDocument } from "@shared/schema";
 import type { Store } from "express-session";
 
 export interface IStorage {
@@ -6,14 +6,7 @@ export interface IStorage {
 
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUserPassword(userId: number, newPassword: string): Promise<void>;
-
-  // Password reset functionality
-  saveResetToken(userId: number, token: string, expiry: Date): Promise<void>;
-  getResetToken(token: string): Promise<{ userId: number; expiry: Date } | undefined>;
-  deleteResetToken(token: string): Promise<void>;
 
   getMaterial(id: number): Promise<StudyMaterial | undefined>;
   getAllMaterials(): Promise<StudyMaterial[]>;
@@ -40,8 +33,4 @@ export interface IStorage {
   updateStudySessionBreaks(sessionId: number, breakData: { startTime?: string; endTime?: string }): Promise<void>;
   updateStudySessionMetrics(sessionId: number, metrics: { focusScore?: number; completedTasks?: string[]; milestones?: string[] }): Promise<void>;
   completeStudySession(sessionId: number): Promise<void>;
-
-  // Add flashcard methods
-  getFlashcardsByUser(userId: number): Promise<Flashcard[]>;
-  saveFlashcards(flashcards: (Omit<InsertFlashcard, "id">)[]): Promise<Flashcard[]>;
 }
