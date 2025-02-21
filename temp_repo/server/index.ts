@@ -5,11 +5,19 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import helmet from "helmet";
 import compression from "compression";
+import { Server } from "http";
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+// Ensure PORT is properly parsed as a number
+const PORT = Number(process.env.PORT) || 3001;
+log(`[Config] Port configuration: process.env.PORT=${process.env.PORT}, using port: ${PORT}`);
 
-// Security middleware
+// Essential middleware that must be registered immediately
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(compression());
+
+// Basic security middleware
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -22,57 +30,84 @@ app.use(helmet({
   }
 }));
 
-// Performance middleware
-app.use(compression());
-
-// Essential middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-// Set up authentication
-setupAuth(app);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    environment: app.get("env"),
-    uptime: process.uptime()
-  });
+// Register health check endpoint immediately
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 async function startServer() {
-  let server: any = null;
+  let server: Server | null = null;
 
   try {
-    log('Initializing server routes...');
-    server = await registerRoutes(app);
+    // Step 1: Bind to port immediately
+    server = app.listen(PORT, '0.0.0.0');
 
+    // Wait for server to be ready
     await new Promise<void>((resolve, reject) => {
-      log(`Starting server on port ${PORT}...`);
+      if (!server) {
+        reject(new Error('Server instance is null'));
+        return;
+      }
 
-      server = app.listen(PORT, '0.0.0.0', () => {
-        log(`Server successfully started on port ${PORT}`);
-        log(`Server running in ${app.get("env")} mode`);
-        log('Required environment variables:', [
-          'DATABASE_URL',
-          'SESSION_SECRET'
-        ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
+      server.once('listening', () => {
+        const address = server?.address();
+        if (typeof address === 'object' && address) {
+          log(`[Startup] Server is listening on port ${address.port}`);
+        }
         resolve();
       });
 
-      server.on('error', (error: Error & { code?: string }) => {
-        log(`Error starting server: ${error.message}`);
+      server.once('error', (error: Error & { code?: string }) => {
+        log(`[Startup] Failed to bind to port ${PORT}: ${error.message}`);
+        if (error.code === 'EADDRINUSE') {
+          log('[Startup] Port is already in use. Please make sure no other service is using this port.');
+        }
         reject(error);
       });
     });
 
-    // Global error handler
+    // Step 2: Initialize remaining features asynchronously
+    process.nextTick(async () => {
+      try {
+        // Setup auth first as it's required for routes
+        log('[Setup] Configuring authentication...');
+        setupAuth(app);
+        log('[Setup] Authentication configured');
+
+        // Register routes
+        log('[Setup] Registering routes...');
+        await registerRoutes(app);
+        log('[Setup] Routes registered');
+
+        // Setup development/production specific features
+        if (app.get("env") === "development") {
+          log('[Setup] Initializing Vite development server...');
+          await setupVite(app, server!);
+          log('[Setup] Vite development server ready');
+        } else {
+          log('[Setup] Setting up static file serving...');
+          app.set('trust proxy', 1);
+          serveStatic(app);
+          log('[Setup] Static file serving configured');
+        }
+
+        // Initialize badges last as it's not critical for server operation
+        log('[Setup] Initializing badges...');
+        await storage.createInitialBadges();
+        log('[Setup] Badge initialization complete');
+
+      } catch (error) {
+        log(`[Setup] Error during initialization: ${error}`);
+        // Don't exit process on initialization error, just log it
+        log('[Setup] Server will continue running with limited functionality');
+      }
+    });
+
+    // Error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-      log(`Error: ${status} - ${message}`);
+      log(`[Error] ${status} - ${message}`);
 
       const response = app.get("env") === "development"
         ? { message, stack: err.stack }
@@ -81,34 +116,18 @@ async function startServer() {
       res.status(status).json(response);
     });
 
-    // Setup development/production specific features
-    if (app.get("env") === "development") {
-      log('Setting up Vite development server...');
-      await setupVite(app, server);
-      log('Vite development server setup complete');
-    } else {
-      log('Setting up static file serving...');
-      app.set('trust proxy', 1);
-      serveStatic(app);
-    }
-
-    // Initialize badges
-    log('Initializing badges...');
-    await storage.createInitialBadges();
-    log('Initial badges created successfully');
-
-    // Register shutdown handlers
+    // Graceful shutdown handler
     const shutdown = async (signal: string) => {
-      log(`Received ${signal}, starting graceful shutdown...`);
+      log(`[Shutdown] Received ${signal}, starting graceful shutdown...`);
       if (server) {
         await new Promise<void>((resolve) => {
-          server.close(() => {
-            log('Closed out remaining connections');
+          server!.close(() => {
+            log('[Shutdown] Closed out remaining connections');
             resolve();
           });
 
           setTimeout(() => {
-            log('Could not close connections in time, forcing shutdown');
+            log('[Shutdown] Could not close connections in time, forcing shutdown');
             resolve();
           }, 10000);
         });
@@ -120,7 +139,7 @@ async function startServer() {
     process.on('SIGINT', () => shutdown('SIGINT'));
 
   } catch (error) {
-    log(`Fatal error during startup: ${error}`);
+    log(`[Fatal] Server startup failed: ${error}`);
     process.exit(1);
   }
 }
