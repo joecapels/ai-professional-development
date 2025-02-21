@@ -8,9 +8,9 @@ import compression from "compression";
 import { Server } from "http";
 
 const app = express();
-// Ensure PORT is properly parsed as a number and log for debugging
-const PORT = Number(process.env.PORT) || 5000;
-log(`[Config] Port configuration: process.env.PORT=${process.env.PORT}, using port: ${PORT}`);
+// Use port 5000 explicitly for consistency
+const PORT = 5000;
+log(`[Config] Using port: ${PORT}`);
 
 // Essential middleware that must be registered immediately
 app.use(express.json());

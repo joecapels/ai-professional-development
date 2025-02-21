@@ -1,19 +1,28 @@
 import { IStorage } from "./types";
-import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument, Flashcard, InsertFlashcard, Badge, InsertBadge, UserAchievement, InsertUserAchievement, learningPreferencesSchema } from "@shared/schema";
-import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments, studySessions, flashcards, badges, userAchievements } from "./db";
+import { 
+  User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, 
+  InsertProgress, Quiz, InsertQuiz, QuizResult, InsertQuizResult, 
+  SavedDocument, InsertDocument, Flashcard, InsertFlashcard, 
+  resetTokens, Badge, InsertBadge, UserAchievement, InsertUserAchievement,
+  badges, userAchievements, learningPreferencesSchema
+} from "@shared/schema";
+import { 
+  db, users, studyMaterials, progress, quizzes, quizResults, 
+  savedDocuments, studySessions, flashcards 
+} from "./db";
 import { eq, desc, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 import * as z from 'zod';
 
-const PostgresSessionStore = connectPg(session);
+const PostgresStore = connectPg(session);
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({
+    this.sessionStore = new PostgresStore({
       pool,
       tableName: 'session',
       createTableIfMissing: true 
@@ -90,6 +99,48 @@ export class DatabaseStorage implements IStorage {
       }
       throw error;
     }
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async updateUserPassword(userId: number, newPassword: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        password: newPassword,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async saveResetToken(userId: number, token: string, expiry: Date): Promise<void> {
+    await db.insert(resetTokens).values({
+      userId,
+      token,
+      expiry,
+      createdAt: new Date()
+    });
+  }
+
+  async getResetToken(token: string): Promise<{ userId: number; expiry: Date } | undefined> {
+    const [resetToken] = await db
+      .select({
+        userId: resetTokens.userId,
+        expiry: resetTokens.expiry
+      })
+      .from(resetTokens)
+      .where(eq(resetTokens.token, token));
+
+    return resetToken;
+  }
+
+  async deleteResetToken(token: string): Promise<void> {
+    await db
+      .delete(resetTokens)
+      .where(eq(resetTokens.token, token));
   }
 
   async getMaterial(id: number): Promise<StudyMaterial | undefined> {
@@ -432,7 +483,7 @@ export class DatabaseStorage implements IStorage {
       ));
   }
 
-  async getUserBadgeProgress(userId: number, badgeId: number): Promise<UserAchievement | undefined> {
+  async getUserBadgeProgress(userId: number, badgeId: number): Promise<any | undefined> {
     const [achievement] = await db
       .select()
       .from(userAchievements)

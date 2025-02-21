@@ -284,6 +284,20 @@ export type Flashcard = typeof flashcards.$inferSelect;
 export type InsertFlashcard = z.infer<typeof insertFlashcardSchema>;
 
 
+// Add reset_tokens table definition
+export const resetTokens = pgTable("reset_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  token: text("token").notNull().unique(),
+  expiry: timestamp("expiry", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Add insert schema for reset tokens
+export const insertResetTokenSchema = createInsertSchema(resetTokens);
+export type ResetToken = typeof resetTokens.$inferSelect;
+export type InsertResetToken = z.infer<typeof insertResetTokenSchema>;
+
 // Add new schemas
 export const insertBadgeSchema = createInsertSchema(badges);
 export const insertUserAchievementSchema = createInsertSchema(userAchievements);

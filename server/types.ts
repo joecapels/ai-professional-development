@@ -6,7 +6,14 @@ export interface IStorage {
 
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserPassword(userId: number, newPassword: string): Promise<void>;
+
+  // Password reset functionality
+  saveResetToken(userId: number, token: string, expiry: Date): Promise<void>;
+  getResetToken(token: string): Promise<{ userId: number; expiry: Date } | undefined>;
+  deleteResetToken(token: string): Promise<void>;
 
   getMaterial(id: number): Promise<StudyMaterial | undefined>;
   getAllMaterials(): Promise<StudyMaterial[]>;
