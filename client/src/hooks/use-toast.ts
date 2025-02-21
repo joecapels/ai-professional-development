@@ -6,7 +6,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 3000 // Changed from 1000000 to 3000ms (3 seconds)
 
 type ToasterToast = ToastProps & {
   id: string
@@ -124,10 +124,6 @@ export const reducer = (state: State, action: Action): State => {
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
       }
   }
-}
-
-interface State {
-  toasts: Array<{ id: string; message: string; type?: 'success' | 'error' | 'info' }>;
 }
 
 const listeners: Array<(state: State) => void> = []
