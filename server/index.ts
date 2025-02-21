@@ -9,7 +9,7 @@ import { Server } from "http";
 
 const app = express();
 // Use port 5000 explicitly for consistency
-const PORT = 5000;
+const PORT = process.env.PORT || 3000;
 log(`[Config] Using port: ${PORT}`);
 
 // Essential middleware that must be registered immediately
