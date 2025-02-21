@@ -40,7 +40,7 @@ async function startServer() {
 
   try {
     // Step 1: Bind to port immediately
-    server = app.listen(PORT);
+    server = app.listen(PORT, '0.0.0.0');
 
     // Wait for server to be ready
     await new Promise<void>((resolve, reject) => {
