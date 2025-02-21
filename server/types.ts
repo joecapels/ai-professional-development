@@ -1,4 +1,4 @@
-import { User, StudyMaterial, Progress, Quiz, QuizResult, SavedDocument, InsertUser, InsertStudyMaterial, InsertProgress, InsertQuiz, InsertQuizResult, InsertDocument } from "@shared/schema";
+import { User, StudyMaterial, Progress, Quiz, QuizResult, SavedDocument, InsertUser, InsertStudyMaterial, InsertProgress, InsertQuiz, InsertQuizResult, InsertDocument, Flashcard, InsertFlashcard } from "@shared/schema";
 import type { Store } from "express-session";
 
 export interface IStorage {
@@ -33,4 +33,8 @@ export interface IStorage {
   updateStudySessionBreaks(sessionId: number, breakData: { startTime?: string; endTime?: string }): Promise<void>;
   updateStudySessionMetrics(sessionId: number, metrics: { focusScore?: number; completedTasks?: string[]; milestones?: string[] }): Promise<void>;
   completeStudySession(sessionId: number): Promise<void>;
+
+  // Add flashcard methods
+  getFlashcardsByUser(userId: number): Promise<Flashcard[]>;
+  saveFlashcards(flashcards: (Omit<InsertFlashcard, "id">)[]): Promise<Flashcard[]>;
 }

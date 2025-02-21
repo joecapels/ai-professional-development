@@ -23,82 +23,42 @@ interface SubjectPerformance {
   averageScore: number;
   totalAttempts: number;
   lastAttemptDate: string;
-  improvement: number; // percentage improvement over time
+  improvement: number;
 }
 
-// Generate demo data for development and testing
-function generateDemoData() {
-  const subjects = [
-    "Biology",
-    "History",
-    "Music Theory",
-    "Art History",
-    "Physics",
-    "Literature",
-    "Mathematics",
-    "Chemistry",
-    "World Geography",
-    "Computer Science"
-  ];
-
-  const demoPerformanceMetrics: PerformanceMetrics = {
-    overallScore: 78,
-    strengthAreas: [
-      "Biology - Cell Structure and Function",
-      "Music Theory - Scales and Harmony",
-      "Art History - Renaissance Period",
-      "History - Ancient Civilizations"
-    ],
-    improvementAreas: [
-      "Physics - Quantum Mechanics",
-      "Chemistry - Organic Compounds",
-      "Mathematics - Calculus",
-      "Literature - Modern Poetry"
-    ],
-    learningTrends: [
-      { period: "Week 1", score: 65 },
-      { period: "Week 2", score: 70 },
-      { period: "Week 3", score: 75 },
-      { period: "Week 4", score: 78 },
-      { period: "Week 5", score: 82 }
-    ],
-    recommendedTopics: [
-      "Advanced Cell Biology",
-      "Baroque Music Composition",
-      "Modern Art Movements",
-      "World History - Industrial Revolution"
-    ],
-    predictedDifficulty: 3
-  };
-
-  const demoSubjectPerformance: SubjectPerformance[] = subjects.map(subject => ({
-    subject,
-    averageScore: 60 + Math.floor(Math.random() * 30),
-    totalAttempts: 5 + Math.floor(Math.random() * 10),
-    lastAttemptDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-    improvement: Math.floor(Math.random() * 15)
-  }));
-
-  const demoRecommendations = [
-    "Focus on practical applications in Physics to strengthen understanding",
-    "Review fundamental concepts in Organic Chemistry",
-    "Practice more Calculus problems with real-world examples",
-    "Explore contemporary literature to build analysis skills",
-    "Continue excellent progress in Biology and Music Theory"
-  ];
-
-  return {
-    performanceMetrics: demoPerformanceMetrics,
-    subjectPerformance: demoSubjectPerformance,
-    nextStepRecommendations: demoRecommendations
-  };
+// Add new interface for quiz answer analysis
+interface QuizAnswerAnalysis {
+  topic: string;
+  correctCount: number;
+  incorrectCount: number;
+  mostCommonMistakes: {
+    question: string;
+    incorrectAnswer: string;
+    frequency: number;
+  }[];
+  timeSpentAverage: number; // in seconds
 }
 
-// Default data for non-demo users
+// Default data function for new users or when data is not available
 function getDefaultData(): {
   performanceMetrics: PerformanceMetrics;
   subjectPerformance: SubjectPerformance[];
   nextStepRecommendations: string[];
+  quizAnalysis: {
+    topicBreakdown: { topic: string; correctAnswers: number; totalQuestions: number }[];
+    commonMistakes: { topic: string; description: string; frequency: number }[];
+    timeOfDayPerformance: { timeSlot: string; averageScore: number }[];
+    answerPatterns: {
+      correctVsIncorrect: { category: string; count: number }[];
+      topicAccuracy: { topic: string; accuracy: number }[];
+      mistakeFrequency: { mistake: string; count: number }[];
+    };
+  };
+  documentAnalysis: {
+    topicsDistribution: { topic: string; count: number }[];
+    complexityTrend: { month: string; averageComplexity: number }[];
+    conceptConnections: { concept: string; relatedConcepts: string[]; strength: number }[];
+  };
 } {
   return {
     performanceMetrics: {
@@ -124,113 +84,225 @@ function getDefaultData(): {
       "Begin with foundational courses",
       "Take initial assessment tests",
       "Set your learning preferences"
-    ]
+    ],
+    quizAnalysis: {
+      topicBreakdown: [],
+      commonMistakes: [],
+      timeOfDayPerformance: [],
+      answerPatterns: {
+        correctVsIncorrect: [
+          { category: "Correct Answers", count: 0 },
+          { category: "Incorrect Answers", count: 0 }
+        ],
+        topicAccuracy: [],
+        mistakeFrequency: []
+      }
+    },
+    documentAnalysis: {
+      topicsDistribution: [
+        { topic: "Study Notes", count: 5 },
+        { topic: "Quiz Attempts", count: 3 },
+        { topic: "Flashcards", count: 8 },
+        { topic: "Chat Sessions", count: 4 },
+        { topic: "Practice Problems", count: 6 }
+      ],
+      complexityTrend: [],
+      conceptConnections: []
+    }
   };
 }
 
+// Enhanced analytics function
 export async function generateAdvancedAnalytics(userId: number): Promise<{
   performanceMetrics: PerformanceMetrics;
   subjectPerformance: SubjectPerformance[];
   nextStepRecommendations: string[];
+  quizAnalysis: {
+    topicBreakdown: { topic: string; correctAnswers: number; totalQuestions: number }[];
+    commonMistakes: { topic: string; description: string; frequency: number }[];
+    timeOfDayPerformance: { timeSlot: string; averageScore: number }[];
+    answerPatterns: {
+      correctVsIncorrect: { category: string; count: number }[];
+      topicAccuracy: { topic: string; accuracy: number }[];
+      mistakeFrequency: { mistake: string; count: number }[];
+    };
+  };
+  documentAnalysis: {
+    topicsDistribution: { topic: string; count: number }[];
+    complexityTrend: { month: string; averageComplexity: number }[];
+    conceptConnections: { concept: string; relatedConcepts: string[]; strength: number }[];
+  };
 }> {
   try {
-    // Check if the user is "joe"
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    // Get the user's quiz results
+    const userQuizResults = await db.select().from(quizResults).where(eq(quizResults.userId, userId));
 
-    if (user && user.username === "joe") {
-      return generateDemoData();
+    if (userQuizResults.length === 0) {
+      return getDefaultData();
     }
 
-    return getDefaultData();
+    // Calculate questions count for each quiz result
+    const processedResults = userQuizResults.map(quiz => ({
+      ...quiz,
+      totalQuestions: quiz.totalQuestions || 10, // Use the stored totalQuestions or fallback to 10
+      correctAnswers: quiz.answers?.filter(a => a.isCorrect).length || Math.round(quiz.score / 10)
+    }));
+
+    // Analyze quiz answers with processed results
+    const answerPatterns = {
+      correctVsIncorrect: [
+        {
+          category: "Correct Answers",
+          count: processedResults.reduce((acc, quiz) => acc + quiz.correctAnswers, 0)
+        },
+        {
+          category: "Incorrect Answers",
+          count: processedResults.reduce((acc, quiz) => acc + (quiz.totalQuestions - quiz.correctAnswers), 0)
+        }
+      ],
+      topicAccuracy: processedResults.reduce((acc: { topic: string; accuracy: number }[], quiz) => {
+        const topic = quiz.subject || "General";
+        const existing = acc.find(item => item.topic === topic);
+        if (existing) {
+          existing.accuracy = (existing.accuracy + quiz.score) / 2;
+        } else {
+          acc.push({ topic, accuracy: quiz.score });
+        }
+        return acc;
+      }, []),
+      mistakeFrequency: [] // This would be populated with actual mistake data when available
+    };
+
+    // Calculate basic statistics
+    const overallScore = calculateBasicScore(processedResults);
+    const trends = calculatePerformanceTrends(processedResults);
+
+    // Enhanced performance metrics
+    const performanceMetrics: PerformanceMetrics = {
+      overallScore,
+      strengthAreas: answerPatterns.topicAccuracy
+        .filter(topic => topic.accuracy >= 70)
+        .map(topic => topic.topic),
+      improvementAreas: answerPatterns.topicAccuracy
+        .filter(topic => topic.accuracy < 70)
+        .map(topic => topic.topic),
+      learningTrends: processedResults.map(result => ({
+        period: new Date(result.completedAt).toLocaleDateString(),
+        score: result.score
+      })),
+      recommendedTopics: [],
+      predictedDifficulty: Math.min(3, Math.max(1, Math.ceil(overallScore / 33))),
+    };
+
+    return {
+      performanceMetrics,
+      subjectPerformance: answerPatterns.topicAccuracy.map(topic => ({
+        subject: topic.topic,
+        averageScore: topic.accuracy,
+        totalAttempts: processedResults.filter(quiz => quiz.subject === topic.topic).length,
+        lastAttemptDate: processedResults
+          .filter(quiz => quiz.subject === topic.topic)
+          .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())[0]?.completedAt.toISOString() || new Date().toISOString(),
+        improvement: trends.rate
+      })),
+      nextStepRecommendations: generateRecommendations(performanceMetrics, answerPatterns),
+      quizAnalysis: {
+        topicBreakdown: answerPatterns.topicAccuracy.map(topic => ({
+          topic: topic.topic,
+          correctAnswers: Math.round(topic.accuracy * 100),
+          totalQuestions: 100
+        })),
+        commonMistakes: generateCommonMistakes(processedResults),
+        timeOfDayPerformance: generateTimeOfDayPerformance(processedResults),
+        answerPatterns
+      },
+      documentAnalysis: {
+        topicsDistribution: [
+          { topic: "Study Notes", count: 5 },
+          { topic: "Quiz Attempts", count: 3 },
+          { topic: "Flashcards", count: 8 },
+          { topic: "Chat Sessions", count: 4 },
+          { topic: "Practice Problems", count: 6 }
+        ],
+        complexityTrend: [],
+        conceptConnections: []
+      }
+    };
   } catch (error) {
-    console.error("Error checking user:", error);
+    console.error("Error generating analytics:", error);
     return getDefaultData();
   }
 }
 
-// Helper function to calculate basic score when ML analysis fails
+// Helper function to generate recommendations
+function generateRecommendations(
+  metrics: PerformanceMetrics,
+  patterns: { topicAccuracy: { topic: string; accuracy: number }[] }
+): string[] {
+  const recommendations = [];
+
+  // Add recommendations based on performance
+  if (metrics.overallScore < 50) {
+    recommendations.push("Focus on fundamental concepts");
+    recommendations.push("Consider reviewing basic materials");
+  } else if (metrics.overallScore < 75) {
+    recommendations.push("Practice intermediate level questions");
+    recommendations.push("Focus on weak areas identified in quizzes");
+  } else {
+    recommendations.push("Challenge yourself with advanced topics");
+    recommendations.push("Help others by sharing your knowledge");
+  }
+
+  // Add topic-specific recommendations
+  patterns.topicAccuracy
+    .filter(topic => topic.accuracy < 70)
+    .forEach(topic => {
+      recommendations.push(`Review ${topic.topic} materials and practice more questions`);
+    });
+
+  return recommendations;
+}
+
+// Helper function to generate common mistakes analysis
+function generateCommonMistakes(quizResults: QuizResult[]): { topic: string; description: string; frequency: number }[] {
+  const topics = new Set(quizResults.map(result => result.subject || "General"));
+  const mistakes = Array.from(topics).map(topic => {
+    const topicResults = quizResults.filter(result => result.subject === topic);
+    const avgScore = calculateBasicScore(topicResults);
+    return {
+      topic,
+      description: `Average score: ${avgScore}%. ${avgScore < 70 ? 'Needs improvement' : 'Good performance'}`,
+      frequency: 100 - avgScore
+    };
+  });
+  return mistakes;
+}
+
+// Helper function to generate time of day performance analysis
+function generateTimeOfDayPerformance(quizResults: QuizResult[]): { timeSlot: string; averageScore: number }[] {
+  const timeSlots = ['Morning (6-12)', 'Afternoon (12-18)', 'Evening (18-24)', 'Night (0-6)'];
+  return timeSlots.map(slot => {
+    const slotResults = quizResults.filter(result => {
+      const hour = new Date(result.completedAt).getHours();
+      switch (slot) {
+        case 'Morning (6-12)': return hour >= 6 && hour < 12;
+        case 'Afternoon (12-18)': return hour >= 12 && hour < 18;
+        case 'Evening (18-24)': return hour >= 18 && hour < 24;
+        case 'Night (0-6)': return hour >= 0 && hour < 6;
+      }
+    });
+    return {
+      timeSlot: slot,
+      averageScore: slotResults.length ? calculateBasicScore(slotResults) : 0
+    };
+  });
+}
+
+// Helper function to calculate basic score
 function calculateBasicScore(quizResults: QuizResult[]): number {
   if (quizResults.length === 0) return 0;
   const totalScore = quizResults.reduce((sum, result) => sum + result.score, 0);
   return Math.round(totalScore / quizResults.length);
-}
-
-// Generate personalized study plan based on analytics
-export async function generatePersonalizedStudyPlan(
-  userId: number,
-  metrics: PerformanceMetrics
-): Promise<{
-  dailyGoals: string[];
-  focusAreas: string[];
-  estimatedTimeInvestment: number;
-  milestones: { description: string; targetDate: string }[];
-}> {
-  try {
-    // Check if the user is "joe"
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-
-    if (user && user.username === "joe") {
-      // Return demo study plan for joe
-      return {
-        dailyGoals: [
-          "Review Biology Chapter 5: Cell Division",
-          "Practice Music Theory scales for 30 minutes",
-          "Study Art History: Modern Period",
-          "Complete 2 Physics practice problems"
-        ],
-        focusAreas: metrics.improvementAreas,
-        estimatedTimeInvestment: 2.5,
-        milestones: [
-          {
-            description: "Complete Biology Module Assessment",
-            targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            description: "Master Basic Music Theory Concepts",
-            targetDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            description: "Finish Art History Period Overview",
-            targetDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
-          }
-        ],
-      };
-    }
-
-    // Return default study plan for other users
-    return {
-      dailyGoals: [
-        "Complete your profile settings",
-        "Take initial assessments",
-        "Explore available courses"
-      ],
-      focusAreas: ["Basic concepts", "Fundamentals"],
-      estimatedTimeInvestment: 1,
-      milestones: [
-        {
-          description: "Complete profile setup",
-          targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          description: "Finish initial assessments",
-          targetDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        }
-      ],
-    };
-  } catch (error) {
-    console.error("Error checking user:", error);
-    return {
-      dailyGoals: ["Set up your profile"],
-      focusAreas: ["Getting started"],
-      estimatedTimeInvestment: 0.5,
-      milestones: [
-        {
-          description: "Complete initial setup",
-          targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        }
-      ],
-    };
-  }
 }
 
 // Calculate performance trends over time
@@ -258,4 +330,50 @@ export function calculatePerformanceTrends(quizResults: QuizResult[]): {
     trend: averageChange > 1 ? "improving" : averageChange < -1 ? "declining" : "stable",
     rate: Number(averageChange.toFixed(2)),
   };
+}
+
+// Generate personalized study plan based on analytics
+export async function generatePersonalizedStudyPlan(
+  userId: number,
+  metrics: PerformanceMetrics
+): Promise<{
+  dailyGoals: string[];
+  focusAreas: string[];
+  estimatedTimeInvestment: number;
+  milestones: { description: string; targetDate: string }[];
+}> {
+  try {
+    return {
+      dailyGoals: [
+        "Complete your profile settings",
+        "Take initial assessments",
+        "Explore available courses"
+      ],
+      focusAreas: ["Basic concepts", "Fundamentals"],
+      estimatedTimeInvestment: 1,
+      milestones: [
+        {
+          description: "Complete profile setup",
+          targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          description: "Finish initial assessments",
+          targetDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        }
+      ],
+    };
+  } catch (error) {
+    console.error("Error generating study plan:", error);
+    return {
+      dailyGoals: ["Set up your profile"],
+      focusAreas: ["Getting started"],
+      estimatedTimeInvestment: 0.5,
+      milestones: [
+        {
+          description: "Complete initial setup",
+          targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        }
+      ],
+    };
+  }
 }
