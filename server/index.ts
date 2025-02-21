@@ -21,11 +21,11 @@ app.use(compression());
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", process.env.NODE_ENV === "development" ? "*" : ""]
+      defaultSrc: ["'self'", "*.replit.dev"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "*.replit.dev"],
+      styleSrc: ["'self'", "'unsafe-inline'", "*.replit.dev"],
+      imgSrc: ["'self'", "data:", "blob:", "*.replit.dev"],
+      connectSrc: ["'self'", "*.replit.dev", process.env.NODE_ENV === "development" ? "*" : ""]
     }
   }
 }));
