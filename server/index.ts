@@ -1,145 +1,127 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import { storage } from "./storage";
-import { setupAuth } from "./auth";
-import helmet from "helmet";
+import express from "express";
 import compression from "compression";
-import { Server } from "http";
+import { log, setupVite, serveStatic } from "./vite";
+import helmet from "helmet";
 
 const app = express();
-// Ensure PORT is properly parsed as a number and use Replit's port
-const PORT = Number(process.env.PORT) || 3000;
-log(`[Config] Port configuration: process.env.PORT=${process.env.PORT}, using port: ${PORT}`);
+// Try multiple ports, starting with the environment-provided port and 5000
+const PORTS = [
+  Number(process.env.PORT) || 5000,
+  5000,
+  3001,
+  3002,
+  3003
+];
 
-// Essential middleware that must be registered immediately
+// Essential middleware only
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(compression());
 
-// Basic security middleware
+// Security headers with development-friendly CSP
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", process.env.NODE_ENV === "development" ? "*" : ""]
-    }
-  }
+      connectSrc: ["'self'", "ws:", "wss:"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 
-// Register health check endpoint immediately
+// Basic health check endpoint
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 async function startServer() {
-  let server: Server | null = null;
+  let lastError = null;
+  log(`[Config] Available ports: ${PORTS.join(', ')}, environment PORT=${process.env.PORT}`);
 
-  try {
-    // Step 1: Bind to port immediately
-    server = app.listen(PORT, '0.0.0.0');
+  // Try each port in sequence
+  for (const port of PORTS) {
+    try {
+      log(`[Startup] Attempting to start minimal server on port ${port}...`);
 
-    // Wait for server to be ready
-    await new Promise<void>((resolve, reject) => {
-      if (!server) {
-        reject(new Error('Server instance is null'));
-        return;
-      }
+      const server = await new Promise((resolve, reject) => {
+        const srv = app.listen(port, '0.0.0.0', async () => {
+          const address = srv.address();
+          if (typeof address === 'object' && address) {
+            log(`[Startup] Minimal server is listening on port ${address.port}`);
+          }
 
-      server.once('listening', () => {
-        const address = server?.address();
-        if (typeof address === 'object' && address) {
-          log(`[Startup] Server is listening on port ${address.port}`);
-        }
-        resolve();
-      });
+          // Set up Vite middleware in development
+          if (process.env.NODE_ENV !== 'production') {
+            await setupVite(app, srv);
+          } else {
+            // Serve static files in production
+            serveStatic(app);
+          }
 
-      server.once('error', (error: Error & { code?: string }) => {
-        log(`[Startup] Failed to bind to port ${PORT}: ${error.message}`);
-        if (error.code === 'EADDRINUSE') {
-          log('[Startup] Port is already in use. Please make sure no other service is using this port.');
-        }
-        reject(error);
-      });
-    });
-
-    // Step 2: Initialize remaining features asynchronously
-    process.nextTick(async () => {
-      try {
-        // Setup auth first as it's required for routes
-        log('[Setup] Configuring authentication...');
-        setupAuth(app);
-        log('[Setup] Authentication configured');
-
-        // Register routes
-        log('[Setup] Registering routes...');
-        await registerRoutes(app);
-        log('[Setup] Routes registered');
-
-        // Setup development/production specific features
-        if (app.get("env") === "development") {
-          log('[Setup] Initializing Vite development server...');
-          await setupVite(app, server!);
-          log('[Setup] Vite development server ready');
-        } else {
-          log('[Setup] Setting up static file serving...');
-          app.set('trust proxy', 1);
-          serveStatic(app);
-          log('[Setup] Static file serving configured');
-        }
-
-        // Initialize badges last as it's not critical for server operation
-        log('[Setup] Initializing badges...');
-        await storage.createInitialBadges();
-        log('[Setup] Badge initialization complete');
-
-      } catch (error) {
-        log(`[Setup] Error during initialization: ${error}`);
-        // Don't exit process on initialization error, just log it
-        log('[Setup] Server will continue running with limited functionality');
-      }
-    });
-
-    // Error handling middleware
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      log(`[Error] ${status} - ${message}`);
-
-      const response = app.get("env") === "development"
-        ? { message, stack: err.stack }
-        : { message: "Internal Server Error" };
-
-      res.status(status).json(response);
-    });
-
-    // Graceful shutdown handler
-    const shutdown = async (signal: string) => {
-      log(`[Shutdown] Received ${signal}, starting graceful shutdown...`);
-      if (server) {
-        server.close(() => {
-          log('[Shutdown] Closed out remaining connections');
-          process.exit(0);
+          resolve(srv);
         });
 
-        // Force shutdown after timeout
-        setTimeout(() => {
-          log('[Shutdown] Could not close connections in time, forcing shutdown');
-          process.exit(1);
-        }, 10000);
-      }
-    };
+        srv.on('error', (error: Error & { code?: string }) => {
+          log(`[Startup] Failed to bind to port ${port}: ${error.message}`);
+          reject(error);
+        });
+      });
 
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
+      // Basic error handling
+      app.use((err: any, _req: any, res: any, _next: any) => {
+        const status = err.status || err.statusCode || 500;
+        const message = err.message || "Internal Server Error";
+        log(`[Error] ${status} - ${message}`);
 
-  } catch (error) {
-    log(`[Fatal] Server startup failed: ${error}`);
-    process.exit(1);
+        const response = app.get("env") === "development"
+          ? { message, stack: err.stack }
+          : { message: "Internal Server Error" };
+
+        res.status(status).json(response);
+      });
+
+      // Graceful shutdown
+      const shutdown = async (signal: string) => {
+        log(`[Shutdown] Received ${signal}, starting graceful shutdown...`);
+        if (server) {
+          server.close(() => {
+            log('[Shutdown] Closed out remaining connections');
+            process.exit(0);
+          });
+
+          // Force shutdown after timeout
+          setTimeout(() => {
+            log('[Shutdown] Could not close connections in time, forcing shutdown');
+            process.exit(1);
+          }, 10000);
+        }
+      };
+
+      process.on('SIGTERM', () => shutdown('SIGTERM'));
+      process.on('SIGINT', () => shutdown('SIGINT'));
+
+      // Successfully bound to a port
+      log(`[Success] Server successfully started on port ${port}`);
+      return;
+
+    } catch (error) {
+      lastError = error;
+      log(`[Startup] Failed to start server on port ${port}, trying next port...`);
+      continue;
+    }
   }
+
+  // If we get here, we failed to bind to any port
+  log(`[Fatal] Server startup failed on all ports. Last error: ${lastError}`);
+  process.exit(1);
 }
 
 startServer();
