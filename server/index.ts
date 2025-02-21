@@ -17,36 +17,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(compression());
 
-// Production-ready security middleware with appropriate CSP
+// Basic security middleware with relaxed CSP for development
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: [
-        "'self'",
-        process.env.NODE_ENV === "development" ? "'unsafe-inline' 'unsafe-eval'" : "",
-        "https:",
-      ],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", process.env.NODE_ENV === "development" ? "*" : ""],
-      fontSrc: ["'self'", "data:"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'self'"],
+      defaultSrc: ["'self'", "*.replit.dev"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*.replit.dev"],
+      styleSrc: ["'self'", "'unsafe-inline'", "*.replit.dev"],
+      imgSrc: ["'self'", "data:", "blob:", "*.replit.dev"],
+      connectSrc: ["'self'", "*.replit.dev", process.env.NODE_ENV === "development" ? "*" : ""]
     }
-  },
-  crossOriginEmbedderPolicy: process.env.NODE_ENV === "production",
-  crossOriginOpenerPolicy: process.env.NODE_ENV === "production",
-  crossOriginResourcePolicy: { policy: process.env.NODE_ENV === "production" ? "same-site" : "cross-origin" },
-  dnsPrefetchControl: true,
-  frameguard: { action: "deny" },
-  hidePoweredBy: true,
-  hsts: process.env.NODE_ENV === "production",
-  ieNoOpen: true,
-  noSniff: true,
-  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-  xssFilter: true
+  }
 }));
 
 // Register health check endpoint immediately
