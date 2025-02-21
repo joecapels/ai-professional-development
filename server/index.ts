@@ -17,12 +17,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(compression());
 
-// Basic security middleware
+// Basic security middleware with relaxed CSP for development
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'", "*.replit.dev"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "*.replit.dev"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "*.replit.dev"],
       styleSrc: ["'self'", "'unsafe-inline'", "*.replit.dev"],
       imgSrc: ["'self'", "data:", "blob:", "*.replit.dev"],
       connectSrc: ["'self'", "*.replit.dev", process.env.NODE_ENV === "development" ? "*" : ""]
@@ -83,19 +83,20 @@ async function startServer() {
 
         // Setup development/production specific features
         if (app.get("env") === "development") {
-          log('[Setup] Development mode detected, skipping Vite initialization for debugging');
-          // Temporarily comment out Vite setup for debugging
-          // await setupVite(app, server!);
+          log('[Setup] Initializing Vite development server...');
+          try {
+            await setupVite(app, server!);
+            log('[Setup] Vite development server initialized successfully');
+          } catch (error) {
+            log(`[Setup] Error initializing Vite: ${error}`);
+            // Continue without Vite in case of error
+          }
         } else {
           log('[Setup] Setting up static file serving...');
           app.set('trust proxy', 1);
           serveStatic(app);
           log('[Setup] Static file serving configured successfully');
         }
-
-        // Temporarily skip badge initialization for debugging
-        log('[Setup] Skipping badge initialization for debugging');
-        // await storage.createInitialBadges();
 
         log('[Setup] Server initialization completed successfully');
 
