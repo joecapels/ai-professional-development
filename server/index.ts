@@ -6,8 +6,8 @@ import helmet from "helmet";
 const app = express();
 // Try multiple ports, starting with the environment-provided port and 5000
 const PORTS = [
-  Number(process.env.PORT) || 5000,
-  5000,
+  Number(process.env.PORT) || 3000,
+  3000,
   3001,
   3002,
   3003
@@ -53,6 +53,12 @@ async function startServer() {
 
       const server = await new Promise((resolve, reject) => {
         const srv = app.listen(port, '0.0.0.0', async () => {
+          // Ensure CORS headers are set for WebSocket upgrade
+          srv.on('upgrade', (request, socket, head) => {
+            socket.on('error', (err) => {
+              console.error('WebSocket error:', err);
+            });
+          });
           const address = srv.address();
           if (typeof address === 'object' && address) {
             log(`[Startup] Minimal server is listening on port ${address.port}`);
