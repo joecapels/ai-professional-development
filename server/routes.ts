@@ -712,10 +712,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Created quiz with ID: ${quiz.id}`);
       res.json(quiz);
     } catch (error) {
-      console.error("Error in quiz generation:", error);
+      const err = error as Error;
+      console.error("Error in quiz generation:", err);
       res.status(500).json({
         error: "Failed to create quiz",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
       });
     }
   });
@@ -746,10 +747,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Quiz ${quizId}: Results saved successfully`);
       res.json(result);
     } catch (error) {
-      console.error("Error processing quiz results:", error);
+      const err = error as Error;
+      console.error("Error processing quiz results:", err);
       res.status(500).json({
         error: "Failed to create quiz result",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
       });
     }
   });

@@ -9,7 +9,7 @@ import { Server } from "http";
 
 const app = express();
 // Ensure PORT is properly parsed as a number and log for debugging
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 5000;
 log(`[Config] Port configuration: process.env.PORT=${process.env.PORT}, using port: ${PORT}`);
 
 // Essential middleware that must be registered immediately
@@ -39,6 +39,8 @@ async function startServer() {
   let server: Server | null = null;
 
   try {
+    log('[Startup] Starting server initialization...');
+
     // Step 1: Bind to port immediately
     server = app.listen(PORT, '0.0.0.0');
 
@@ -72,32 +74,35 @@ async function startServer() {
         // Setup auth first as it's required for routes
         log('[Setup] Configuring authentication...');
         setupAuth(app);
-        log('[Setup] Authentication configured');
+        log('[Setup] Authentication configured successfully');
 
         // Register routes
         log('[Setup] Registering routes...');
         await registerRoutes(app);
-        log('[Setup] Routes registered');
+        log('[Setup] Routes registered successfully');
 
         // Setup development/production specific features
         if (app.get("env") === "development") {
-          log('[Setup] Initializing Vite development server...');
-          await setupVite(app, server!);
-          log('[Setup] Vite development server ready');
+          log('[Setup] Development mode detected, skipping Vite initialization for debugging');
+          // Temporarily comment out Vite setup for debugging
+          // await setupVite(app, server!);
         } else {
           log('[Setup] Setting up static file serving...');
           app.set('trust proxy', 1);
           serveStatic(app);
-          log('[Setup] Static file serving configured');
+          log('[Setup] Static file serving configured successfully');
         }
 
-        // Initialize badges last as it's not critical for server operation
-        log('[Setup] Initializing badges...');
-        await storage.createInitialBadges();
-        log('[Setup] Badge initialization complete');
+        // Temporarily skip badge initialization for debugging
+        log('[Setup] Skipping badge initialization for debugging');
+        // await storage.createInitialBadges();
+
+        log('[Setup] Server initialization completed successfully');
 
       } catch (error) {
-        log(`[Setup] Error during initialization: ${error}`);
+        const err = error as Error;
+        log(`[Setup] Error during initialization: ${err.message}`);
+        log(`[Setup] Stack trace: ${err.stack}`);
         // Don't exit process on initialization error, just log it
         log('[Setup] Server will continue running with limited functionality');
       }
@@ -139,7 +144,9 @@ async function startServer() {
     process.on('SIGINT', () => shutdown('SIGINT'));
 
   } catch (error) {
-    log(`[Fatal] Server startup failed: ${error}`);
+    const err = error as Error;
+    log(`[Fatal] Server startup failed: ${err.message}`);
+    log(`[Fatal] Stack trace: ${err.stack}`);
     process.exit(1);
   }
 }
