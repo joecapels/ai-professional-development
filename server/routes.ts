@@ -342,6 +342,7 @@ async function registerAdminRoutes(app: Express) {
         : 0;
 
 
+
       const userStats = {
         user: {
           id: user.id,
@@ -684,35 +685,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/quizzes", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
-    const { subject, difficulty } = req.body;
-    const questions = await generatePracticeQuestions(subject, difficulty);
+    try {
+      const { subject, difficulty } = req.body;
+      console.log(`Generating quiz for subject: ${subject}, difficulty: ${difficulty}`);
 
-    const quiz = await storage.createQuiz({
-      userId: req.user.id,
-      subject,
-      difficulty,
-      questions,
-    });
+      if (!subject || !difficulty) {
+        return res.status(400).json({ error: "Subject and difficulty are required" });
+      }
 
-    res.json(quiz);
+      const questions = await generatePracticeQuestions(subject, difficulty);
+
+      if (!questions || !Array.isArray(questions)) {
+        console.error("Failed to generate questions:", questions);
+        return res.status(500).json({ error: "Failed to generate quiz questions" });
+      }
+
+      console.log(`Generated ${questions.length} questions successfully`);
+
+      const quiz = await storage.createQuiz({
+        userId: req.user.id,
+        subject,
+        difficulty,
+        questions,
+      });
+
+      console.log(`Created quiz with ID: ${quiz.id}`);
+      res.json(quiz);
+    } catch (error) {
+      console.error("Error in quiz generation:", error);
+      res.status(500).json({
+        error: "Failed to create quiz",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
   });
 
   app.post("/api/quiz-results", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
+      console.log(`Processing quiz results for user: ${req.user.id}`);
+      const { quizId, totalQuestions, answers } = req.body;
+
+      if (!quizId || !totalQuestions || !answers) {
+        return res.status(400).json({ error: "Missing required quiz result data" });
+      }
+
+      console.log(`Quiz ${quizId}: Processing ${answers.length} answers`);
+      const score = calculateScore(answers);
+      console.log(`Quiz ${quizId}: Final score: ${score}%`);
+
       const result = await storage.createQuizResult({
         ...req.body,
         userId: req.user.id,
-        score: calculateScore(req.body.answers),
+        score,
       });
 
       // Check and update badges after quiz completion
       await storage.checkAndAwardBadges(req.user.id);
 
+      console.log(`Quiz ${quizId}: Results saved successfully`);
       res.json(result);
     } catch (error) {
-      console.error("Error creating quiz result:", error);
-      res.status(500).json({ error: "Failed to create quiz result" });
+      console.error("Error processing quiz results:", error);
+      res.status(500).json({
+        error: "Failed to create quiz result",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
