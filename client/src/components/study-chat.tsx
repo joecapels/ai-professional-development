@@ -99,7 +99,6 @@ export function StudyChat() {
             timestamp: now.toISOString(),
           },
           createdAt: now,
-          updatedAt: now,
         };
         return [...old, optimisticDoc];
       });
