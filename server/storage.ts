@@ -452,6 +452,7 @@ export class DatabaseStorage implements IStorage {
 
   async createInitialBadges(): Promise<void> {
     const initialBadges = [
+      // Existing badges
       {
         name: "Quick Learner",
         description: "Complete your first study session",
@@ -495,6 +496,101 @@ export class DatabaseStorage implements IStorage {
           type: "consecutive_days",
           threshold: 7
         }
+      },
+      // New adaptive badges
+      {
+        name: "Visual Master",
+        description: "Complete 10 visual-based learning sessions",
+        type: "learning_style_master",
+        rarity: "rare",
+        imageUrl: "/badges/visual-master.svg",
+        criteria: {
+          type: "learning_style_sessions",
+          style: "visual",
+          threshold: 10
+        }
+      },
+      {
+        name: "Audio Ace",
+        description: "Complete 10 audio-based learning sessions",
+        type: "learning_style_master",
+        rarity: "rare",
+        imageUrl: "/badges/audio-ace.svg",
+        criteria: {
+          type: "learning_style_sessions",
+          style: "auditory",
+          threshold: 10
+        }
+      },
+      {
+        name: "Reading Champion",
+        description: "Complete 10 reading-based learning sessions",
+        type: "learning_style_master",
+        rarity: "rare",
+        imageUrl: "/badges/reading-champion.svg",
+        criteria: {
+          type: "learning_style_sessions",
+          style: "reading",
+          threshold: 10
+        }
+      },
+      {
+        name: "Hands-on Hero",
+        description: "Complete 10 kinesthetic learning sessions",
+        type: "learning_style_master",
+        rarity: "rare",
+        imageUrl: "/badges/hands-on-hero.svg",
+        criteria: {
+          type: "learning_style_sessions",
+          style: "kinesthetic",
+          threshold: 10
+        }
+      },
+      {
+        name: "Fast Track Master",
+        description: "Complete 5 fast-paced learning sessions with high retention",
+        type: "pace_master",
+        rarity: "epic",
+        imageUrl: "/badges/fast-track.svg",
+        criteria: {
+          type: "pace_preference",
+          pace: "fast",
+          threshold: 5
+        }
+      },
+      {
+        name: "Deep Dive Scholar",
+        description: "Complete 5 detailed learning sessions with comprehensive understanding",
+        type: "detail_master",
+        rarity: "epic",
+        imageUrl: "/badges/deep-dive.svg",
+        criteria: {
+          type: "explanation_detail",
+          detail: "detailed",
+          threshold: 5
+        }
+      },
+      {
+        name: "Consistent Learner",
+        description: "Maintain a study streak matching your preferred pace",
+        type: "consistency_master",
+        rarity: "legendary",
+        imageUrl: "/badges/consistent-learner.svg",
+        criteria: {
+          type: "pace_consistency",
+          threshold: 14
+        }
+      },
+      {
+        name: "Research Pioneer",
+        description: "Explore and excel in your chosen research areas",
+        type: "research_master",
+        rarity: "epic",
+        imageUrl: "/badges/research-pioneer.svg",
+        criteria: {
+          type: "research_areas",
+          threshold: 3
+        }
       }
     ];
 
@@ -512,6 +608,10 @@ export class DatabaseStorage implements IStorage {
 
   async checkAndAwardBadges(userId: number): Promise<void> {
     const allBadges = await this.getAllBadges();
+    const user = await this.getUser(userId);
+    if (!user) return;
+
+    const userPreferences = user.learningPreferences;
 
     for (const badge of allBadges) {
       const existingAchievement = await this.getUserBadgeProgress(userId, badge.id);
@@ -579,6 +679,73 @@ export class DatabaseStorage implements IStorage {
           });
 
           progress.current = streak;
+          break;
+        }
+        case "learning_style_master": {
+          if (badge.criteria?.style === userPreferences.learningStyle) {
+            const sessions = await db
+              .select()
+              .from(studySessions)
+              .where(eq(studySessions.userId, userId));
+            progress.current = sessions.length;
+          }
+          break;
+        }
+        case "pace_master": {
+          if (badge.criteria?.pace === userPreferences.pacePreference) {
+            const sessions = await db
+              .select()
+              .from(studySessions)
+              .where(and(
+                eq(studySessions.userId, userId),
+                eq(studySessions.status, 'completed')
+              ));
+            progress.current = sessions.length;
+          }
+          break;
+        }
+        case "detail_master": {
+          if (badge.criteria?.detail === userPreferences.explanationDetail) {
+            const sessions = await db
+              .select()
+              .from(studySessions)
+              .where(and(
+                eq(studySessions.userId, userId),
+                eq(studySessions.status, 'completed')
+              ));
+            progress.current = sessions.length;
+          }
+          break;
+        }
+        case "consistency_master": {
+          const sessions = await db
+            .select()
+            .from(studySessions)
+            .where(eq(studySessions.userId, userId))
+            .orderBy(studySessions.startTime);
+
+          let consistentDays = 0;
+          let lastDate: Date | null = null;
+
+          sessions.forEach(session => {
+            const sessionDate = new Date(session.startTime);
+            if (!lastDate || 
+                (sessionDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24) === 1) {
+              consistentDays++;
+            } else {
+              consistentDays = 1;
+            }
+            lastDate = sessionDate;
+          });
+
+          progress.current = consistentDays;
+          break;
+        }
+        case "research_master": {
+          if (userPreferences.researchAreas) {
+            const uniqueAreas = new Set(userPreferences.researchAreas);
+            progress.current = uniqueAreas.size;
+          }
           break;
         }
       }
