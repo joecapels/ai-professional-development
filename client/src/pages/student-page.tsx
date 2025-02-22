@@ -86,9 +86,9 @@ export default function StudentPage() {
   // Calculate chat statistics
   const chatDocuments = documents?.filter(doc => doc.type === "chat") || [];
   const totalChats = chatDocuments.length;
-  const latestChat = chatDocuments.sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  )[0];
+  const latestChat = chatDocuments
+    .filter(doc => doc.createdAt && !isNaN(new Date(doc.createdAt).getTime()))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || {};
 
   return (
     <div className="min-h-screen bg-background">
@@ -159,7 +159,7 @@ export default function StudentPage() {
                     </div>
                     <div className="space-y-1 md:space-y-2">
                       <p className="text-sm font-medium text-muted-foreground">Latest Chat</p>
-                      {latestChat ? (
+                      {latestChat && latestChat.createdAt ? (
                         <div>
                           <p className="text-base md:text-lg font-semibold truncate">{latestChat.title}</p>
                           <p className="text-sm text-muted-foreground">
@@ -336,7 +336,7 @@ export default function StudentPage() {
                         <div>
                           <p className="font-medium text-sm md:text-base truncate">{doc.title}</p>
                           <p className="text-xs md:text-sm text-muted-foreground">
-                            {doc.type} • {format(new Date(doc.createdAt), "MMM d, yyyy")}
+                            {doc.type} • {doc.createdAt ? format(new Date(doc.createdAt), "MMM d, yyyy") : "Invalid Date"}
                           </p>
                         </div>
                       </motion.div>
