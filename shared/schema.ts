@@ -277,15 +277,76 @@ export type Flashcard = typeof flashcards.$inferSelect;
 export type InsertFlashcard = z.infer<typeof insertFlashcardSchema>;
 
 
+// Add practice problem types
+export const problemType = [
+  "coding",
+  "theory",
+  "algorithm",
+  "debugging",
+  "system_design"
+] as const;
+
+export const problemDifficulty = [
+  "beginner",
+  "intermediate",
+  "advanced",
+  "expert"
+] as const;
+
+// Add practice problems table
+export const practiceProblems = pgTable("practice_problems", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  type: text("type").$type<typeof problemType[number]>().notNull(),
+  difficulty: text("difficulty").$type<typeof problemDifficulty[number]>().notNull(),
+  topic: text("topic").notNull(),
+  hints: jsonb("hints").$type<string[]>(),
+  testCases: jsonb("test_cases").$type<{
+    input: string;
+    expectedOutput: string;
+    explanation: string;
+  }[]>(),
+  solution: text("solution").notNull(),
+  solutionExplanation: text("solution_explanation").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+});
+
+// Add problem submissions table
+export const problemSubmissions = pgTable("problem_submissions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  problemId: integer("problem_id").notNull().references(() => practiceProblems.id),
+  submission: text("submission").notNull(),
+  isCorrect: boolean("is_correct").notNull(),
+  executionTime: integer("execution_time"), // in milliseconds
+  feedback: jsonb("feedback").$type<{
+    testCase: number;
+    passed: boolean;
+    actualOutput: string;
+    message: string;
+  }[]>(),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Add new schemas
 export const insertBadgeSchema = createInsertSchema(badges);
 export const insertUserAchievementSchema = createInsertSchema(userAchievements);
+// Add new schemas for practice problems
+export const insertPracticeProblemSchema = createInsertSchema(practiceProblems);
+export const insertProblemSubmissionSchema = createInsertSchema(problemSubmissions);
 
 // Add new types
 export type Badge = typeof badges.$inferSelect;
 export type UserAchievement = typeof userAchievements.$inferSelect;
+// Add new types for practice problems
+export type PracticeProblem = typeof practiceProblems.$inferSelect;
+export type ProblemSubmission = typeof problemSubmissions.$inferSelect;
 export type InsertBadge = z.infer<typeof insertBadgeSchema>;
 export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
+export type InsertPracticeProblem = z.infer<typeof insertPracticeProblemSchema>;
+export type InsertProblemSubmission = z.infer<typeof insertProblemSubmissionSchema>;
 
 // Keep existing types and exports
 export type User = typeof users.$inferSelect;
