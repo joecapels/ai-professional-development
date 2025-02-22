@@ -175,31 +175,7 @@ export default function StudentPage() {
               </Card>
             </motion.div>
 
-            {/* Quiz Statistics Card */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
-              className="w-full"
-            >
-              <Card className="h-full bg-gradient-to-br from-green-500/5 to-green-600/10 hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-2 md:pb-4">
-                  <CardTitle className="flex items-center gap-2 text-green-600 dark:text-green-400 text-lg md:text-xl">
-                    <Brain className="h-5 w-5" />
-                    Quiz Performance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-3">
-                    <div className="space-y-1 md:space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">Total Quizzes</p>
-                      <p className="text-xl md:text-2xl font-bold">{totalQuizzes}</p>
-                    </div>
-                    <div className="space-y-1 md:space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">Average Score</p>
-                      <p className="text-xl md:text-2xl font-bold">{averageScore}%</p>
-                    </div>
-                    <div className="space-y-1 md:space-y-2 col-span-2 md:col-span-1">
+            ">
                       <p className="text-sm font-medium text-muted-foreground">Latest Quiz</p>
                       {latestQuiz ? (
                         <div>
