@@ -54,11 +54,6 @@ async function startServer() {
       server = app.listen(PORT, '0.0.0.0', () => {
         log(`Server successfully bound to port ${PORT}`);
         log(`Server running in ${app.get("env")} mode`);
-        log('Required environment variables:', [
-          'DATABASE_URL',
-          'SESSION_SECRET',
-          'PORT',
-        ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
         resolve();
       });
 
@@ -66,17 +61,21 @@ async function startServer() {
       server.on('error', (error: Error & { code?: string }) => {
         if (error.code === 'EADDRINUSE') {
           log(`Port ${PORT} is already in use`);
-          // Try to find an alternative port
-          const altPort = PORT + 1;
-          log(`Attempting to use alternative port ${altPort}...`);
-          server = app.listen(altPort, '0.0.0.0', () => {
-            log(`Server started on alternative port ${altPort}`);
-            resolve();
-          });
+          reject(new Error(`Port ${PORT} is already in use`));
         } else {
           log(`Error starting server: ${error.message}`);
           reject(error);
         }
+      });
+
+      // Add timeout to detect slow startup
+      const startupTimeout = setTimeout(() => {
+        reject(new Error(`Server startup timed out after 15 seconds`));
+      }, 15000);
+
+      // Clear timeout on successful start
+      server.on('listening', () => {
+        clearTimeout(startupTimeout);
       });
     });
 
@@ -94,23 +93,19 @@ async function startServer() {
       res.status(status).json(response);
     });
 
-    // Once server is confirmed running, add additional features
+    // Once server is confirmed running, setup development or production environment
     if (app.get("env") === "development") {
       log('Setting up Vite development server...');
-      try {
-        await setupVite(app, server);
-        log('Vite development server setup complete');
-      } catch (error) {
-        log(`Warning: Vite setup failed - ${error}. Continuing without Vite.`);
-      }
+      await setupVite(app, server);
+      log('Vite development server setup complete');
     } else {
       log('Setting up static file serving...');
-      app.set('trust proxy', 1); // trust first proxy
+      app.set('trust proxy', 1);
       serveStatic(app);
     }
 
-    // Initialize badges as the last step
-    log('Scheduling badge initialization...');
+    // Initialize badges asynchronously
+    log('Initializing badges in background...');
     setTimeout(async () => {
       try {
         await storage.createInitialBadges();
@@ -118,26 +113,23 @@ async function startServer() {
       } catch (error) {
         log('Error creating initial badges:', String(error));
       }
-    }, 2000);
+    }, 0);
 
     // Register shutdown handlers
     const shutdown = async (signal: string) => {
       log(`Received ${signal}, starting graceful shutdown...`);
       if (server) {
-        await new Promise<void>((resolve) => {
-          server.close(() => {
-            log('Closed out remaining connections');
-            resolve();
-          });
-
-          // Force close after timeout
-          setTimeout(() => {
-            log('Could not close connections in time, forcing shutdown');
-            resolve();
-          }, 10000);
+        server.close(() => {
+          log('Closed out remaining connections');
+          process.exit(0);
         });
+
+        // Force close after timeout
+        setTimeout(() => {
+          log('Could not close connections in time, forcing shutdown');
+          process.exit(1);
+        }, 10000);
       }
-      process.exit(0);
     };
 
     process.on('SIGTERM', () => shutdown('SIGTERM'));

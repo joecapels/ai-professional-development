@@ -26,7 +26,7 @@ interface WebSocketRequestWithSession extends IncomingMessage {
 }
 
 // Track active study sessions with proper typing
-const activeSessions = new Map<number, StudySessionData>();
+const activeSessionsMap = new Map<number, StudySessionData>();
 
 // Add new routes before the registerRoutes function
 
@@ -187,7 +187,7 @@ async function registerAdminRoutes(app: Express) {
     }
     try {
       // Get active study sessions count
-      const activeSessionsCount = activeSessions.size;
+      const activeSessionsCount = activeSessionsMap.size;
 
       // Get all users and their data
       const users = await storage.getAllUsers();
@@ -453,13 +453,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('error', async (error) => {
       console.error(`WebSocket error for user ${userId}:`, error);
       try {
-        const activeSessions = Array.from(activeSessions.entries())
+        // Get sessions associated with this websocket
+        const sessionsToClean = Array.from(activeSessionsMap.entries())
           .filter(([_, session]) => session.ws === ws);
-          
-        await Promise.all(activeSessions.map(async ([sessionId, _]) => {
+
+        await Promise.all(sessionsToClean.map(async ([sessionId, _]) => {
           try {
             await storage.completeStudySession(sessionId);
-            activeSessions.delete(sessionId);
+            activeSessionsMap.delete(sessionId);
           } catch (err) {
             console.error(`Error completing session ${sessionId}:`, err);
           }
@@ -486,7 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 subject: validatedMessage.data?.subject || 'General',
                 status: 'active',
               });
-              activeSessions.set(session.id, { ws, userId, sessionData: session });
+              activeSessionsMap.set(session.id, { ws, userId, sessionData: session });
               ws.send(JSON.stringify({ type: 'session_started', sessionId: session.id }));
             } catch (error) {
               console.error('Error starting study session:', error);
@@ -525,7 +526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           case 'end': {
             await storage.completeStudySession(validatedMessage.sessionId);
-            activeSessions.delete(validatedMessage.sessionId);
+            activeSessionsMap.delete(validatedMessage.sessionId);
             ws.send(JSON.stringify({
               type: 'session_ended',
               sessionId: validatedMessage.sessionId
@@ -560,12 +561,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('close', () => {
       console.log(`WebSocket connection closed for user ${userId}`);
       // Clean up any active sessions for this connection
-      for (const [sessionId, session] of Array.from(activeSessions.entries())) {
+      for (const [sessionId, session] of Array.from(activeSessionsMap.entries())) {
         if (session.ws === ws) {
           storage.completeStudySession(sessionId).catch(err => {
             console.error(`Error completing session ${sessionId}:`, err);
           });
-          activeSessions.delete(sessionId);
+          activeSessionsMap.delete(sessionId);
         }
       }
     });
@@ -704,11 +705,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Subject and difficulty are required" });
       }
 
+      console.log(`Generating quiz for subject: ${subject}, difficulty: ${difficulty}`);
       const questions = await generatePracticeQuestions(subject, difficulty);
+
       if (!questions || questions.length === 0) {
+        console.error("No questions generated");
         return res.status(500).json({ error: "Failed to generate questions" });
       }
 
+      console.log(`Successfully generated ${questions.length} questions`);
       const quiz = await storage.createQuiz({
         userId: req.user.id,
         subject,
@@ -719,7 +724,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(quiz);
     } catch (error) {
       console.error("Error generating quiz:", error);
-      res.status(500).json({ error: "Failed to create quiz" });
+      res.status(500).json({ 
+        error: "Failed to create quiz",
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 

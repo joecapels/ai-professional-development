@@ -3,7 +3,6 @@ import OpenAI from "openai";
 import { db, progress, quizResults, studyMaterials, users } from "./db";
 import { eq } from "drizzle-orm";
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 interface PerformanceMetrics {
@@ -112,7 +111,7 @@ function getDefaultData(): {
   };
 }
 
-// Enhanced analytics function
+// Enhanced analytics function with better error handling
 export async function generateAdvancedAnalytics(userId: number): Promise<{
   performanceMetrics: PerformanceMetrics;
   subjectPerformance: SubjectPerformance[];
@@ -134,10 +133,13 @@ export async function generateAdvancedAnalytics(userId: number): Promise<{
   };
 }> {
   try {
+    console.log(`Generating analytics for user ${userId}`);
+
     // Get the user's quiz results
     const userQuizResults = await db.select().from(quizResults).where(eq(quizResults.userId, userId));
 
     if (userQuizResults.length === 0) {
+      console.log(`No quiz results found for user ${userId}, returning default data`);
       return getDefaultData();
     }
 
@@ -332,7 +334,7 @@ export function calculatePerformanceTrends(quizResults: QuizResult[]): {
   };
 }
 
-// Generate personalized study plan based on analytics
+// Generate personalized study plan based on analytics with proper error handling
 export async function generatePersonalizedStudyPlan(
   userId: number,
   metrics: PerformanceMetrics
@@ -343,24 +345,34 @@ export async function generatePersonalizedStudyPlan(
   milestones: { description: string; targetDate: string }[];
 }> {
   try {
-    return {
-      dailyGoals: [
-        "Complete your profile settings",
-        "Take initial assessments",
-        "Explore available courses"
-      ],
-      focusAreas: ["Basic concepts", "Fundamentals"],
-      estimatedTimeInvestment: 1,
-      milestones: [
+    console.log(`Generating personalized study plan for user ${userId}`);
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
         {
-          description: "Complete profile setup",
-          targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          role: "system",
+          content: "You are an expert learning advisor. Generate a personalized study plan based on the user's performance metrics."
         },
         {
-          description: "Finish initial assessments",
-          targetDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+          role: "user",
+          content: JSON.stringify(metrics)
         }
       ],
+      response_format: { type: "json_object" }
+    });
+
+    const suggestedPlan = JSON.parse(response.choices[0].message.content);
+
+    return {
+      dailyGoals: suggestedPlan.dailyGoals || ["Complete your profile settings"],
+      focusAreas: suggestedPlan.focusAreas || ["Basic concepts"],
+      estimatedTimeInvestment: suggestedPlan.estimatedTimeInvestment || 1,
+      milestones: suggestedPlan.milestones || [
+        {
+          description: "Complete initial setup",
+          targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        }
+      ]
     };
   } catch (error) {
     console.error("Error generating study plan:", error);
