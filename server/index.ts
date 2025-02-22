@@ -9,7 +9,7 @@ import path from "path";
 const app = express();
 const DEFAULT_PORT = 5000;
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : DEFAULT_PORT;
-const FALLBACK_PORTS = [3000, 3001, 3002, 5000, 5001, 8080];
+const FALLBACK_PORTS = [5000, 5001, 3000, 3001, 3002, 8080];
 
 // Security middleware with relaxed CSP for development
 app.use(helmet({
