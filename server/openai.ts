@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { Progress } from "@shared/schema";
 
-// Using gpt-4-turbo-preview as the default model for optimal performance
+// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Enhanced system prompt to handle multi-modal interactions
@@ -20,10 +20,13 @@ export async function generateStudyRecommendations(
     Progress Data:
     ${JSON.stringify(progress, null, 2)}
 
-    Respond with a JSON array of string recommendations.`;
+    Respond with a JSON object in this format:
+    {
+      "recommendations": ["recommendation1", "recommendation2", "recommendation3"]
+    }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -67,7 +70,7 @@ export async function generatePracticeQuestions(
     - The correct answer
     - A brief explanation
 
-    Respond with a JSON object containing an array of questions with the following structure:
+    Respond with a JSON object containing an array of questions in this format:
     {
       "questions": [
         {
@@ -80,7 +83,7 @@ export async function generatePracticeQuestions(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -108,6 +111,13 @@ export async function generatePracticeQuestions(
   }
 }
 
+interface PracticeQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
+}
+
 export async function enhanceStudyContent(
   content: string,
   subject: string
@@ -125,7 +135,7 @@ export async function enhanceStudyContent(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -160,7 +170,7 @@ export async function analyzePerformance(progress: Progress[]): Promise<string> 
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -237,7 +247,7 @@ export async function handleStudyChat(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -272,7 +282,7 @@ export async function generateMoodSuggestion(mood: string): Promise<string> {
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -323,7 +333,7 @@ export async function generateFlashcardsFromContent(contentText: string): Promis
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -401,7 +411,7 @@ export async function handleMultiModalChat(
       : '';
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview", // Using vision model for image support
+      model: "gpt-4o", //Using gpt-4o for consistency
       messages: [
         { 
           role: "system" as const, 

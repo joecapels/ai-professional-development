@@ -6,7 +6,7 @@ import helmet from "helmet";
 import compression from "compression";
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+const PORT = 5000; // Force port 5000 for consistency
 
 // Security middleware
 app.use(helmet({
@@ -57,7 +57,7 @@ async function startServer() {
         log('Required environment variables:', [
           'DATABASE_URL',
           'SESSION_SECRET',
-          'PORT',
+          'OPENAI_API_KEY',
         ].map(v => `${v}: ${process.env[v] ? '✓' : '✗'}`).join(', '));
         resolve();
       });
@@ -66,13 +66,7 @@ async function startServer() {
       server.on('error', (error: Error & { code?: string }) => {
         if (error.code === 'EADDRINUSE') {
           log(`Port ${PORT} is already in use`);
-          // Try to find an alternative port
-          const altPort = PORT + 1;
-          log(`Attempting to use alternative port ${altPort}...`);
-          server = app.listen(altPort, '0.0.0.0', () => {
-            log(`Server started on alternative port ${altPort}`);
-            resolve();
-          });
+          process.exit(1); // Exit if port is in use to prevent automatic port selection
         } else {
           log(`Error starting server: ${error.message}`);
           reject(error);
@@ -80,11 +74,16 @@ async function startServer() {
       });
     });
 
-    // Global error handler
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Global error handler with enhanced logging
+    app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-      log(`Error: ${status} - ${message}`);
+
+      // Enhanced error logging
+      log(`Error [${status}] ${message}`);
+      if (err.stack) {
+        log(`Stack trace: ${err.stack}`);
+      }
 
       // Don't expose error details in production
       const response = app.get("env") === "development"
