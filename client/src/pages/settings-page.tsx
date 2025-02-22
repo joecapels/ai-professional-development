@@ -48,15 +48,14 @@ export default function SettingsPage() {
   const form = useForm<LearningPreferences>({
     resolver: zodResolver(learningPreferencesSchema),
     defaultValues,
-    values: preferences || defaultValues,
   });
 
-  // Reset form when preferences are loaded
+  // Update form values when preferences are loaded
   useEffect(() => {
     if (preferences) {
       form.reset(preferences);
     }
-  }, [preferences, form]);
+  }, [preferences]);
 
   const updatePreferencesMutation = useMutation({
     mutationFn: async (data: LearningPreferences) => {
