@@ -1,6 +1,6 @@
 import { IStorage } from "./types";
-import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, Quiz, InsertQuiz, QuizResult, InsertQuizResult, SavedDocument, InsertDocument, Flashcard, InsertFlashcard, Badge, InsertBadge, UserAchievement, InsertUserAchievement, learningPreferencesSchema } from "@shared/schema";
-import { db, users, studyMaterials, progress, quizzes, quizResults, savedDocuments, studySessions, flashcards, badges, userAchievements } from "./db";
+import { User, StudyMaterial, Progress, InsertUser, InsertStudyMaterial, InsertProgress, LearningPreferences, SavedDocument, InsertDocument, Flashcard, InsertFlashcard, Badge, InsertBadge, UserAchievement, InsertUserAchievement, learningPreferencesSchema } from "@shared/schema";
+import { db, users, studyMaterials, progress, savedDocuments, studySessions, flashcards, badges, userAchievements } from "./db";
 import { eq, desc, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -125,43 +125,6 @@ export class DatabaseStorage implements IStorage {
     return newProgress;
   }
 
-  async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
-    const now = new Date();
-    const [newQuiz] = await db.insert(quizzes).values({
-      userId: quizData.userId,
-      subject: quizData.subject,
-      difficulty: quizData.difficulty,
-      createdAt: now
-    }).returning();
-    return newQuiz;
-  }
-
-  async getQuiz(id: number): Promise<Quiz | undefined> {
-    const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, id));
-    return quiz;
-  }
-
-  async getQuizzesByUser(userId: number): Promise<Quiz[]> {
-    return await db.select().from(quizzes).where(eq(quizzes.userId, userId));
-  }
-
-  async createQuizResult(resultData: InsertQuizResult): Promise<QuizResult> {
-    const now = new Date();
-    const [newResult] = await db.insert(quizResults).values({
-      userId: resultData.userId,
-      quizId: resultData.quizId,
-      score: resultData.score,
-      totalQuestions: resultData.totalQuestions,
-      subject: resultData.subject,
-      completedAt: now
-    }).returning();
-    return newResult;
-  }
-
-  async getQuizResultsByUser(userId: number): Promise<QuizResult[]> {
-    return await db.select().from(quizResults).where(eq(quizResults.userId, userId));
-  }
-
   async saveDocument(document: InsertDocument): Promise<SavedDocument> {
     const now = new Date();
     const [newDocument] = await db.insert(savedDocuments).values({
@@ -231,7 +194,6 @@ export class DatabaseStorage implements IStorage {
 
   async getUserStudyStats(userId: number) {
     const studySessions = await this.getStudySessionsByUser(userId);
-    const quizResults = await this.getQuizResultsByUser(userId);
     const documents = await this.getDocumentsByUser(userId);
 
     const totalStudyTime = studySessions.reduce((acc, session) => {
@@ -241,14 +203,6 @@ export class DatabaseStorage implements IStorage {
     const avgSessionLength = studySessions.length > 0
       ? Math.round(totalStudyTime / studySessions.length)
       : 0;
-
-    const quizStats = {
-      totalQuizzes: quizResults.length,
-      averageScore: quizResults.length > 0
-        ? Math.round(quizResults.reduce((acc, quiz) => acc + quiz.score, 0) / quizResults.length)
-        : 0,
-      perfectScores: quizResults.filter(quiz => quiz.score === 100).length
-    };
 
     const documentStats = {
       totalDocuments: documents.length,
@@ -286,7 +240,6 @@ export class DatabaseStorage implements IStorage {
       totalSessions: studySessions.length,
       currentStreak,
       maxStreak,
-      quizStats,
       documentStats,
       recentSessions: studySessions.slice(0, 5)
     };
@@ -464,17 +417,6 @@ export class DatabaseStorage implements IStorage {
         }
       },
       {
-        name: "Quiz Master",
-        description: "Score 100% on 3 quizzes",
-        type: "quiz_master",
-        rarity: "rare",
-        imageUrl: "/badges/quiz-master.svg",
-        criteria: {
-          type: "perfect_quizzes",
-          threshold: 3
-        }
-      },
-      {
         name: "Knowledge Explorer",
         description: "Study 5 different subjects",
         type: "knowledge_explorer",
@@ -533,17 +475,6 @@ export class DatabaseStorage implements IStorage {
             .from(studySessions)
             .where(eq(studySessions.userId, userId));
           progress.current = sessions.length;
-          break;
-        }
-        case "quiz_master": {
-          const results = await db
-            .select()
-            .from(quizResults)
-            .where(and(
-              eq(quizResults.userId, userId),
-              eq(quizResults.score, 100)
-            ));
-          progress.current = results.length;
           break;
         }
         case "knowledge_explorer": {
