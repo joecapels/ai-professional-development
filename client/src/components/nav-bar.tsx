@@ -75,7 +75,6 @@ export function NavBar() {
   const menuItems: MenuItem[] = !user?.isAdmin ? [
     { path: "/", label: "Dashboard", dataTour: "dashboard" },
     { path: "/chat", label: "Learn", dataTour: "learn" },
-    { path: "/quiz", label: "Practice", dataTour: "practice" },
     { path: "/flashcards", label: "Flashcards", dataTour: "flashcards" },
     { path: "/documents", label: "Documents", dataTour: "documents" },
     { path: "/badges", label: "Achievements", dataTour: "achievements" },
