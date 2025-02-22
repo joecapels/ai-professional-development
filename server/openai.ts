@@ -210,7 +210,7 @@ export async function handleStudyChat(
       encouraging: "Be encouraging and motivating. Celebrate student successes and provide positive reinforcement. Use phrases like 'Great question!' and 'You're making excellent progress!'",
       socratic: "Use the Socratic method. Guide students to answers through questioning. Help them discover solutions themselves rather than providing direct answers.",
       professional: "Maintain a professional and formal tone. Focus on clear, concise explanations with academic language.",
-      friendly: "Be casual and approachable. Use conversational language and relatable examples. Make learning feel fun and informal.",
+      friendly: "Be casual and approachable. Use conversational language and relatable examples.",
     };
 
     const personalityPrompt = preferences?.chatbotPersonality
