@@ -49,6 +49,60 @@ export default function SettingsPage() {
     defaultValues,
   });
 
+  const mutation = useMutation({
+    mutationFn: (data: LearningPreferences) =>
+      apiRequest("/api/preferences", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/preferences"] });
+      toast({
+        title: "Settings saved",
+        description: "Your learning preferences have been updated",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save settings",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: LearningPreferences) => {
+    mutation.mutate(data);
+  };
+
+  if (isLoading) {
+    return <Loader2 className="h-8 w-8 animate-spin" />;
+  }
+
+  return (
+    <div className="container mx-auto p-4">
+      <NavBar />
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Learning Preferences</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Add form fields here */}
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Save Changes
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   const updatePreferencesMutation = useMutation({
     mutationFn: async (data: LearningPreferences) => {
       const res = await apiRequest("POST", "/api/preferences", data);
