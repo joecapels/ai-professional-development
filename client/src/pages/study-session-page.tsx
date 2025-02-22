@@ -19,62 +19,71 @@ export default function StudySessionPage() {
   const maxReconnectAttempts = 5;
 
   const connectWebSocket = () => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-    wsRef.current = ws;
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+      wsRef.current = ws;
 
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-      reconnectAttempts.current = 0;
-      toast({
-        title: "Connected",
-        description: "Study session connection established",
-      });
-    };
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+        reconnectAttempts.current = 0;
+        toast({
+          title: "Connected",
+          description: "Study session connection established",
+        });
+      };
 
-    ws.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        if (message.type === 'error') {
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'error') {
+            toast({
+              title: "Session Error",
+              description: message.message,
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          console.error('Failed to parse WebSocket message:', error);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        if (reconnectAttempts.current < maxReconnectAttempts) {
+          reconnectAttempts.current++;
+          const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000);
+          setTimeout(connectWebSocket, timeout);
           toast({
-            title: "Session Error",
-            description: message.message,
+            title: "Disconnected",
+            description: "Attempting to reconnect...",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Connection Failed",
+            description: "Please refresh the page to reconnect",
             variant: "destructive",
           });
         }
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-      }
-    };
+      };
 
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      if (reconnectAttempts.current < maxReconnectAttempts) {
-        reconnectAttempts.current++;
-        const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000);
-        setTimeout(connectWebSocket, timeout);
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
         toast({
-          title: "Disconnected",
-          description: "Attempting to reconnect...",
+          title: "Connection Error",
+          description: "Failed to connect to study session",
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Connection Failed",
-          description: "Please refresh the page to reconnect",
-          variant: "destructive",
-        });
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      };
+    } catch (err) {
+      console.error("WebSocket connection failed:", err);
       toast({
         title: "Connection Error",
-        description: "Failed to connect to study session",
+        description: "Failed to establish WebSocket connection",
         variant: "destructive",
       });
-    };
+    }
   };
 
   useEffect(() => {
