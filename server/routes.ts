@@ -698,17 +698,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/quizzes", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
-    const { subject, difficulty } = req.body;
-    const questions = await generatePracticeQuestions(subject, difficulty);
+    try {
+      const { subject, difficulty } = req.body;
+      if (!subject || !difficulty) {
+        return res.status(400).json({ error: "Subject and difficulty are required" });
+      }
 
-    const quiz = await storage.createQuiz({
-      userId: req.user.id,
-      subject,
-      difficulty,
-      questions,
-    });
+      const questions = await generatePracticeQuestions(subject, difficulty);
+      if (!questions || questions.length === 0) {
+        return res.status(500).json({ error: "Failed to generate questions" });
+      }
 
-    res.json(quiz);
+      const quiz = await storage.createQuiz({
+        userId: req.user.id,
+        subject,
+        difficulty,
+        questions,
+      });
+
+      res.json(quiz);
+    } catch (error) {
+      console.error("Error generating quiz:", error);
+      res.status(500).json({ error: "Failed to create quiz" });
+    }
   });
 
   app.post("/api/quiz-results", async (req, res) => {
