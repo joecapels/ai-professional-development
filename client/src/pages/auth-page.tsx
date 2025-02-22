@@ -29,7 +29,8 @@ export default function AuthPage() {
   });
 
   if (user) {
-    return <Redirect to="/" />;
+    // Redirect admin users to admin dashboard, regular users to home
+    return <Redirect to={user.isAdmin ? "/admin" : "/"} />;
   }
 
   return (
