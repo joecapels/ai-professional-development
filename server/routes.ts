@@ -713,7 +713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate question format
       const validatedQuestions = questions.map(q => {
-        if (!q.question || !Array.isArray(q.options) || q.options.length < 2 || !q.correctAnswer || !q.explanation) {
+        if (!q.question || !Array.isArray(q.options) || !q.correctAnswer || !q.explanation) {
           throw new Error("Invalid question format from AI generation");
         }
         return {
@@ -731,20 +731,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         difficulty,
         questions: validatedQuestions,
         status: 'active',
-        score: 0, // Will be updated when completed
+        score: 0,
       });
 
-      // Ensure the response has the required structure
-      const formattedQuiz = {
+      // Send properly formatted response
+      res.json({
         id: quiz.id,
         subject: quiz.subject,
         difficulty: quiz.difficulty,
         questions: quiz.questions,
         status: quiz.status
-      };
-
-      console.log(`Successfully created quiz with ID: ${quiz.id}`);
-      res.json(formattedQuiz);
+      });
     } catch (error) {
       console.error("Error generating quiz:", error);
       res.status(500).json({ 
@@ -904,7 +901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const savedFlashcards = await storage.saveFlashcards(
         flashcards.map(card => ({
           ...card,
-          userId: req.user.id,
+          userId:req.user.id,
           documentIds: documentIds,
         }))
       );
