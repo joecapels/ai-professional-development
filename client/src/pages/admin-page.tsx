@@ -31,6 +31,8 @@ interface UserStats {
   totalDocuments: number;
   totalFlashcards: number;
   achievements: number;
+  lastLogin: string | null;
+  totalLogins: number;
 }
 
 interface AdminAnalytics {
@@ -45,6 +47,11 @@ interface AdminAnalytics {
     averageSessionDuration: number;
     totalDocuments: number;
     totalFlashcards: number;
+    userEngagement: {
+      daily: number;
+      weekly: number;
+      monthly: number;
+    };
   };
 }
 
@@ -293,12 +300,16 @@ export default function AdminPage() {
                         <TableHead>Username</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Joined Date</TableHead>
+                        <TableHead>Last Login</TableHead>
+                        <TableHead>Total Logins</TableHead>
+                        <TableHead>Chat Count</TableHead>
                         <TableHead>Study Sessions</TableHead>
                         <TableHead>Documents</TableHead>
                         <TableHead>Flashcards</TableHead>
                         <TableHead>Quizzes</TableHead>
                         <TableHead>Achievements</TableHead>
                         <TableHead>Avg. Session</TableHead>
+                        <TableHead>Engagement</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -313,6 +324,13 @@ export default function AdminPage() {
                             </span>
                           </TableCell>
                           <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            {analytics?.userStats[user.id]?.lastLogin
+                              ? new Date(analytics.userStats[user.id].lastLogin).toLocaleDateString()
+                              : 'Never'}
+                          </TableCell>
+                          <TableCell>{analytics?.userStats[user.id]?.totalLogins || 0}</TableCell>
+                          <TableCell>{analytics?.userStats[user.id]?.chatCount || 0}</TableCell>
                           <TableCell>{analytics?.userStats[user.id]?.studySessionCount || 0}</TableCell>
                           <TableCell>{analytics?.userStats[user.id]?.totalDocuments || 0}</TableCell>
                           <TableCell>{analytics?.userStats[user.id]?.totalFlashcards || 0}</TableCell>
@@ -320,6 +338,13 @@ export default function AdminPage() {
                           <TableCell>{analytics?.userStats[user.id]?.achievements || 0}</TableCell>
                           <TableCell>
                             {formatDuration(analytics?.userStats[user.id]?.averageSessionDuration || 0)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1 text-xs">
+                              <span className="text-green-500">Daily: {analytics?.aggregateStats.userEngagement.daily || 0}</span>
+                              <span className="text-blue-500">Weekly: {analytics?.aggregateStats.userEngagement.weekly || 0}</span>
+                              <span className="text-purple-500">Monthly: {analytics?.aggregateStats.userEngagement.monthly || 0}</span>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}

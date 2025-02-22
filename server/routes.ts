@@ -342,7 +342,6 @@ async function registerAdminRoutes(app: Express) {
         : 0;
 
 
-
       const userStats = {
         user: {
           id: user.id,
@@ -395,6 +394,8 @@ async function registerAdminRoutes(app: Express) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const port = process.env.PORT || 5000;
+
   // Health check endpoint
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -757,7 +758,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subject,
         difficulty,
         questions: validatedQuestions,
-        status: 'active',
         score: 0,
       });
 
@@ -767,13 +767,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subject: quiz.subject,
         difficulty: quiz.difficulty,
         questions: quiz.questions,
-        status: quiz.status
       });
     } catch (error) {
       console.error("Error generating quiz:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       res.status(500).json({
         error: "Failed to create quiz",
-        details: process.env.NODE_ENV === 'development' ? error.message : "An error occurred while creating the quiz"
+        details: process.env.NODE_ENV === 'development' ? errorMessage : "An error occurred while creating the quiz"
       });
     }
   });
