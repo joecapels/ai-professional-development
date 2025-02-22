@@ -138,5 +138,72 @@ export function setupAuth(app: Express) {
     res.json(userWithoutPassword);
   });
 
+  // Super user registration endpoint
+  app.post("/api/super-register", async (req, res, next) => {
+    try {
+      const { username, password, email, phoneNumber, country } = req.body;
+
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      // Create super user with admin privileges
+      const user = await storage.createUser({
+        username,
+        password: await hashPassword(password),
+        email,
+        phoneNumber,
+        country,
+        isAdmin: true,
+      });
+
+      req.login(user, (err) => {
+        if (err) return next(err);
+        // Don't send password back to client
+        const { password, ...userWithoutPassword } = user;
+        res.status(201).json(userWithoutPassword);
+      });
+    } catch (error) {
+      console.error("Super user registration error:", error);
+      res.status(500).json({ message: "Failed to create super user account" });
+    }
+  });
+
+  // Super user login endpoint
+  app.post("/api/super-login", async (req, res, next) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password are required" });
+    }
+
+    try {
+      const user = await storage.getUserByUsername(username);
+
+      if (!user || !user.isAdmin) {
+        return res.status(401).json({ message: "Invalid super user credentials" });
+      }
+
+      if (!(await comparePasswords(password, user.password))) {
+        return res.status(401).json({ message: "Invalid super user credentials" });
+      }
+
+      req.login(user, (err) => {
+        if (err) return next(err);
+        // Don't send password back to client
+        const { password, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
+    } catch (error) {
+      console.error("Super user login error:", error);
+      res.status(500).json({ message: "Failed to authenticate super user" });
+    }
+  });
+
   return app;
 }

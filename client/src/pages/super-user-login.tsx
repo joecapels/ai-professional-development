@@ -13,6 +13,7 @@ export default function SuperUserLoginPage() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -38,7 +39,10 @@ export default function SuperUserLoginPage() {
         body: JSON.stringify({
           username,
           password,
-          isAdmin: true, // Ensure the user is created with admin privileges
+          email: email || `${username}@admin.com`, // Provide a default email for login
+          phoneNumber: "N/A", // Required by schema
+          country: "N/A", // Required by schema
+          isAdmin: true,
         }),
       });
 
@@ -101,6 +105,18 @@ export default function SuperUserLoginPage() {
                   required
                 />
               </div>
+              {isRegistering && (
+                <div className="space-y-2">
+                  <Input
+                    type="email"
+                    placeholder="Email Address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full"
+                    required
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <div className="relative">
                   <Input
