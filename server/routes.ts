@@ -1,3 +1,9 @@
+interface StudySessionData {
+  ws: WebSocket;
+  userId: number;
+  sessionData: any; // This can be more specific based on your session data structure
+}
+
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocket, WebSocketServer } from 'ws';
@@ -9,7 +15,6 @@ import { generateStudyRecommendations, generatePracticeQuestions, handleStudyCha
 import { generateAdvancedAnalytics, generatePersonalizedStudyPlan } from "./analytics";
 import session from "express-session";
 import { pool } from "./db";
-import { log } from "./vite";
 
 // Extend the IncomingMessage type to include session
 interface WebSocketRequestWithSession extends IncomingMessage {
@@ -20,15 +25,8 @@ interface WebSocketRequestWithSession extends IncomingMessage {
   };
 }
 
-// Define StudySessionData interface
-interface StudySessionData {
-  ws: WebSocket;
-  userId: number;
-  sessionData: any; // This can be more specific based on your session data structure
-}
-
 // Track active study sessions with proper typing
-const activeSessions: Map<number, StudySessionData> = new Map();
+const activeSessions = new Map<number, StudySessionData>();
 
 // Add new routes before the registerRoutes function
 
@@ -344,7 +342,6 @@ async function registerAdminRoutes(app: Express) {
         : 0;
 
 
-
       const userStats = {
         user: {
           id: user.id,
@@ -458,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const activeSessions = Array.from(activeSessions.entries())
           .filter(([_, session]) => session.ws === ws);
-
+          
         await Promise.all(activeSessions.map(async ([sessionId, _]) => {
           try {
             await storage.completeStudySession(sessionId);
@@ -704,19 +701,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { subject, difficulty } = req.body;
       if (!subject || !difficulty) {
-        log(`Invalid quiz request: missing ${!subject ? 'subject' : 'difficulty'}`);
         return res.status(400).json({ error: "Subject and difficulty are required" });
       }
 
-      log(`Generating quiz for subject: ${subject}, difficulty: ${difficulty}`);
       const questions = await generatePracticeQuestions(subject, difficulty);
-
       if (!questions || questions.length === 0) {
-        log('Failed to generate questions - received empty response from OpenAI');
         return res.status(500).json({ error: "Failed to generate questions" });
       }
 
-      log(`Successfully generated ${questions.length} questions`);
       const quiz = await storage.createQuiz({
         userId: req.user.id,
         subject,
@@ -724,14 +716,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         questions,
       });
 
-      log(`Created quiz with ID: ${quiz.id}`);
       res.json(quiz);
     } catch (error) {
       console.error("Error generating quiz:", error);
-      log(`Quiz generation error: ${error.message}`);
-      if (error.response) {
-        log(`OpenAI API error: ${JSON.stringify(error.response.data)}`);
-      }
       res.status(500).json({ error: "Failed to create quiz" });
     }
   });

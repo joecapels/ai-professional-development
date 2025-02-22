@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { Progress } from "@shared/schema";
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+// Using gpt-4-turbo-preview as the default model for optimal performance
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Enhanced system prompt to handle multi-modal interactions
@@ -20,10 +20,7 @@ export async function generateStudyRecommendations(
     Progress Data:
     ${JSON.stringify(progress, null, 2)}
 
-    Respond with a JSON object in this format:
-    {
-      "recommendations": ["recommendation1", "recommendation2", "recommendation3"]
-    }`;
+    Respond with a JSON array of string recommendations.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4-turbo-preview",
@@ -70,7 +67,7 @@ export async function generatePracticeQuestions(
     - The correct answer
     - A brief explanation
 
-    Respond with a JSON object containing an array of questions in this format:
+    Respond with a JSON object containing an array of questions with the following structure:
     {
       "questions": [
         {
@@ -109,13 +106,6 @@ export async function generatePracticeQuestions(
       }
     ];
   }
-}
-
-interface PracticeQuestion {
-  question: string;
-  options: string[];
-  correctAnswer: string;
-  explanation: string;
 }
 
 export async function enhanceStudyContent(
@@ -210,7 +200,7 @@ export async function handleStudyChat(
       encouraging: "Be encouraging and motivating. Celebrate student successes and provide positive reinforcement. Use phrases like 'Great question!' and 'You're making excellent progress!'",
       socratic: "Use the Socratic method. Guide students to answers through questioning. Help them discover solutions themselves rather than providing direct answers.",
       professional: "Maintain a professional and formal tone. Focus on clear, concise explanations with academic language.",
-      friendly: "Be casual and approachable. Use conversational language and relatable examples.",
+      friendly: "Be casual and approachable. Use conversational language and relatable examples. Make learning feel fun and informal.",
     };
 
     const personalityPrompt = preferences?.chatbotPersonality
@@ -411,7 +401,7 @@ export async function handleMultiModalChat(
       : '';
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview", //Using gpt-4o for consistency
+      model: "gpt-4-vision-preview", // Using vision model for image support
       messages: [
         { 
           role: "system" as const, 
