@@ -450,21 +450,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`WebSocket authenticated for user ${userId}`);
 
     // Add error handling for the WebSocket connection
-    ws.on('error', (error) => {
+    ws.on('error', async (error) => {
       console.error(`WebSocket error for user ${userId}:`, error);
       try {
-        // Clean up any active sessions before closing
-        for (const [sessionId, session] of Array.from(activeSessions.entries())) {
-          if (session.ws === ws) {
-            storage.completeStudySession(sessionId).catch(err => {
-              console.error(`Error completing session ${sessionId}:`, err);
-            });
+        const activeSessions = Array.from(activeSessions.entries())
+          .filter(([_, session]) => session.ws === ws);
+          
+        await Promise.all(activeSessions.map(async ([sessionId, _]) => {
+          try {
+            await storage.completeStudySession(sessionId);
             activeSessions.delete(sessionId);
+          } catch (err) {
+            console.error(`Error completing session ${sessionId}:`, err);
           }
+        }));
+
+        if (ws.readyState === ws.OPEN) {
+          ws.close(1011, 'Internal server error');
         }
-        ws.close(1011, 'Internal server error');
       } catch (e) {
-        console.error('Error while closing WebSocket connection:', e);
+        console.error('Error while cleaning up WebSocket connection:', e);
       }
     });
 

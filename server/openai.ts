@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { Progress } from "@shared/schema";
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+// Using gpt-4-turbo-preview as the default model for optimal performance
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Enhanced system prompt to handle multi-modal interactions

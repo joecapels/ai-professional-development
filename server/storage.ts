@@ -350,7 +350,8 @@ export class DatabaseStorage implements IStorage {
       }
       return total;
     }, 0);
-    const totalDuration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000) - breakDuration;
+    const rawDuration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+    const totalDuration = Math.max(0, rawDuration - breakDuration);
 
     await db
       .update(studySessions)

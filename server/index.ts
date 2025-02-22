@@ -6,7 +6,7 @@ import helmet from "helmet";
 import compression from "compression";
 
 const app = express();
-const PORT = 5000; // Explicitly set to 5000 as per repository requirements
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
 
 // Security middleware
 app.use(helmet({
