@@ -344,7 +344,13 @@ export class DatabaseStorage implements IStorage {
     if (!session) return;
 
     const startTime = new Date(session.startTime);
-    const totalDuration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+    const breakDuration = (session.breaks || []).reduce((total, breakPeriod) => {
+      if (breakPeriod.startTime && breakPeriod.endTime) {
+        return total + (new Date(breakPeriod.endTime).getTime() - new Date(breakPeriod.startTime).getTime()) / 1000;
+      }
+      return total;
+    }, 0);
+    const totalDuration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000) - breakDuration;
 
     await db
       .update(studySessions)

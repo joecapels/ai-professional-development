@@ -453,6 +453,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('error', (error) => {
       console.error(`WebSocket error for user ${userId}:`, error);
       try {
+        // Clean up any active sessions before closing
+        for (const [sessionId, session] of Array.from(activeSessions.entries())) {
+          if (session.ws === ws) {
+            storage.completeStudySession(sessionId).catch(err => {
+              console.error(`Error completing session ${sessionId}:`, err);
+            });
+            activeSessions.delete(sessionId);
+          }
+        }
         ws.close(1011, 'Internal server error');
       } catch (e) {
         console.error('Error while closing WebSocket connection:', e);

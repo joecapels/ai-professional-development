@@ -23,7 +23,7 @@ export async function generateStudyRecommendations(
     Respond with a JSON array of string recommendations.`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-turbo-preview",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -80,7 +80,7 @@ export async function generatePracticeQuestions(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-turbo-preview",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -125,7 +125,7 @@ export async function enhanceStudyContent(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-turbo-preview",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -160,7 +160,7 @@ export async function analyzePerformance(progress: Progress[]): Promise<string> 
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-turbo-preview",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -237,7 +237,7 @@ export async function handleStudyChat(
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-turbo-preview",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -272,7 +272,7 @@ export async function generateMoodSuggestion(mood: string): Promise<string> {
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-turbo-preview",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
@@ -323,7 +323,7 @@ export async function generateFlashcardsFromContent(contentText: string): Promis
     }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-turbo-preview",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
