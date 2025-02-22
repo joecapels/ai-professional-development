@@ -154,6 +154,35 @@ export const progress = pgTable("progress", {
   completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const quizzes = pgTable("quizzes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  subject: text("subject").notNull(),
+  difficulty: integer("difficulty").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  questions: jsonb("questions").$type<{
+    question: string;
+    options: string[];
+    correctAnswer: string;
+    explanation: string;
+  }[]>(),
+});
+
+// Update the quiz results table definition
+export const quizResults = pgTable("quiz_results", {
+  id: serial("id").primaryKey(),
+  quizId: integer("quiz_id").notNull().references(() => quizzes.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  score: integer("score").notNull(),
+  totalQuestions: integer("total_questions").notNull().default(10),
+  subject: text("subject").notNull().default("General"),
+  answers: jsonb("answers").$type<{
+    questionIndex: number;
+    selectedAnswer: string;
+    isCorrect: boolean;
+  }[]>().default([]),
+  completedAt: timestamp("completed_at").notNull().defaultNow(),
+});
 
 export const savedDocuments = pgTable("saved_documents", {
   id: serial("id").primaryKey(),
@@ -233,6 +262,8 @@ export const learningPreferencesSchema = z.object({
 
 export const insertStudyMaterialSchema = createInsertSchema(studyMaterials);
 export const insertProgressSchema = createInsertSchema(progress);
+export const insertQuizSchema = createInsertSchema(quizzes);
+export const insertQuizResultSchema = createInsertSchema(quizResults);
 export const insertDocumentSchema = createInsertSchema(savedDocuments);
 
 // Add to existing export types
@@ -264,6 +295,10 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertStudyMaterial = z.infer<typeof insertStudyMaterialSchema>;
 export type InsertProgress = z.infer<typeof insertProgressSchema>;
 export type LearningPreferences = z.infer<typeof learningPreferencesSchema>;
+export type Quiz = typeof quizzes.$inferSelect;
+export type QuizResult = typeof quizResults.$inferSelect;
+export type InsertQuiz = z.infer<typeof insertQuizSchema>;
+export type InsertQuizResult = z.infer<typeof insertQuizResultSchema>;
 export type SavedDocument = typeof savedDocuments.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 

@@ -11,10 +11,17 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
   PieChart,
   Pie,
   Cell,
   Legend,
+  BarChart,
+  Bar,
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -50,6 +57,30 @@ interface StudyPlan {
   }[];
 }
 
+interface AnswerPatterns {
+  correctVsIncorrect: { category: string; count: number }[];
+  topicAccuracy: { topic: string; accuracy: number }[];
+  mistakeFrequency: { mistake: string; count: number }[];
+}
+
+interface QuizAnalysis {
+  topicBreakdown: {
+    topic: string;
+    correctAnswers: number;
+    totalQuestions: number;
+  }[];
+  commonMistakes: {
+    topic: string;
+    description: string;
+    frequency: number;
+  }[];
+  timeOfDayPerformance: {
+    timeSlot: string;
+    averageScore: number;
+  }[];
+  answerPatterns: AnswerPatterns;
+}
+
 interface DocumentAnalysis {
   topicsDistribution: {
     topic: string;
@@ -70,6 +101,7 @@ interface AnalyticsData {
   performanceMetrics: PerformanceMetrics;
   subjectPerformance: SubjectPerformance[];
   nextStepRecommendations: string[];
+  quizAnalysis: QuizAnalysis;
   documentAnalysis: DocumentAnalysis;
 }
 
@@ -106,7 +138,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  const { performanceMetrics, subjectPerformance, nextStepRecommendations, documentAnalysis } = analytics;
+  const { performanceMetrics, subjectPerformance, nextStepRecommendations, quizAnalysis, documentAnalysis } = analytics;
 
   return (
     <div className="min-h-screen bg-background">
@@ -146,6 +178,118 @@ export default function AnalyticsPage() {
                       />
                     </LineChart>
                   </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quiz Analysis */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quiz Performance Analysis</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* Topic Breakdown */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Topic Performance</h3>
+                    <div className="space-y-4">
+                      {quizAnalysis.topicBreakdown.map((topic, i) => (
+                        <div key={i} className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="font-medium">{topic.topic}</span>
+                            <span>{Math.round((topic.correctAnswers / topic.totalQuestions) * 100)}%</span>
+                          </div>
+                          <Progress
+                            value={(topic.correctAnswers / topic.totalQuestions) * 100}
+                            className="h-2"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Time of Day Performance */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Performance by Time of Day</h3>
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={quizAnalysis.timeOfDayPerformance}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="timeSlot" />
+                          <YAxis />
+                          <Tooltip />
+                          <Line
+                            type="monotone"
+                            dataKey="averageScore"
+                            stroke="hsl(var(--primary))"
+                            activeDot={{ r: 6 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Answer Patterns Analysis */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Answer Patterns Analysis</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* Correct vs Incorrect Distribution */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Answer Distribution</h3>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={quizAnalysis.answerPatterns.correctVsIncorrect}
+                            dataKey="count"
+                            nameKey="category"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            fill="hsl(var(--primary))"
+                          >
+                            {quizAnalysis.answerPatterns.correctVsIncorrect.map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={index === 0 ? "hsl(var(--primary))" : "hsl(var(--destructive))"}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Topic Accuracy */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Topic Accuracy</h3>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={quizAnalysis.answerPatterns.topicAccuracy}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="topic" />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="accuracy" fill="hsl(var(--primary))">
+                            {quizAnalysis.answerPatterns.topicAccuracy.map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={entry.accuracy >= 70 ? "hsl(var(--primary))" : "hsl(var(--warning))"}
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -219,6 +363,19 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
+                  {/* Common Mistakes Analysis */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Areas for Improvement</h3>
+                    <div className="space-y-4">
+                      {quizAnalysis.commonMistakes.map((mistake, i) => (
+                        <div key={i} className="p-4 bg-muted rounded-lg">
+                          <p className="font-medium mb-2">{mistake.topic}</p>
+                          <p className="text-sm text-muted-foreground">{mistake.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Personalized Study Plan */}
                   <div>
                     <h3 className="text-lg font-semibold mb-4">Next Steps</h3>
@@ -234,6 +391,7 @@ export default function AnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
+
 
             {/* Strengths and Improvements */}
             <Card className="h-full">
@@ -261,6 +419,7 @@ export default function AnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
+
 
             {/* Study Plan */}
             <Card className="h-full">

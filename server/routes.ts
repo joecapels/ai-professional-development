@@ -455,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const activeSessions = Array.from(activeSessions.entries())
           .filter(([_, session]) => session.ws === ws);
-
+          
         await Promise.all(activeSessions.map(async ([sessionId, _]) => {
           try {
             await storage.completeStudySession(sessionId);
@@ -694,6 +694,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add quiz routes here
+  app.post("/api/quizzes", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const { subject, difficulty } = req.body;
+      if (!subject || !difficulty) {
+        return res.status(400).json({ error: "Subject and difficulty are required" });
+      }
+
+      const questions = await generatePracticeQuestions(subject, difficulty);
+      if (!questions || questions.length === 0) {
+        return res.status(500).json({ error: "Failed to generate questions" });
+      }
+
+      const quiz = await storage.createQuiz({
+        userId: req.user.id,
+        subject,
+        difficulty,
+        questions,
+      });
+
+      res.json(quiz);
+    } catch (error) {
+      console.error("Error generating quiz:", error);
+      res.status(500).json({ error: "Failed to create quiz" });
+    }
+  });
+
+  app.post("/api/quiz-results", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const result = await storage.createQuizResult({
+        ...req.body,
+        userId: req.user.id,
+        score: calculateScore(req.body.answers),
+      });
+
+      // Check and update badges after quiz completion
+      await storage.checkAndAwardBadges(req.user.id);
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error creating quiz result:", error);
+      res.status(500).json({ error: "Failed to create quiz result" });
+    }
+  });
+
+  app.get("/api/quizzes", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const quizzes = await storage.getQuizzesByUser(req.user.id);
+    res.json(quizzes);
+  });
+
+  app.get("/api/quiz-results", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const results = await storage.getQuizResultsByUser(req.user.id);
+    res.json(results);
+  });
+
 
   app.post("/api/documents", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -844,6 +904,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to calculate quiz score
+  function calculateScore(answers: { isCorrect: boolean }[]): number {
+    const correctAnswers = answers.filter(a => a.isCorrect).length;
+    return Math.round((correctAnswers / answers.length) * 100);
+  }
 
   // Add study stats route
   app.get("/api/study-stats", async (req, res) => {

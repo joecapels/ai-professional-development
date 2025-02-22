@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon, Brain, Clock, LineChart, BookOpen, MessageSquare, Quote, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { NavBar } from "@/components/nav-bar";
-import type { StudyMaterial, Progress as ProgressType, SavedDocument } from "@shared/schema";
+import type { StudyMaterial, Progress as ProgressType, SavedDocument, QuizResult } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { MoodTracker } from "@/components/mood-tracker";
@@ -56,10 +56,14 @@ export default function StudentPage() {
     queryKey: ["/api/documents"],
   });
 
+  const { data: quizResults, isLoading: quizResultsLoading } = useQuery<QuizResult[]>({
+    queryKey: ["/api/quiz-results"],
+  });
+
   // Get a random quote
   const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
 
-  if (materialsLoading || progressLoading || recommendationsLoading || documentsLoading) {
+  if (materialsLoading || progressLoading || recommendationsLoading || documentsLoading || quizResultsLoading) {
     return (
       <div className="min-h-screen">
         <NavBar />
@@ -69,6 +73,15 @@ export default function StudentPage() {
       </div>
     );
   }
+
+  // Calculate quiz statistics
+  const totalQuizzes = quizResults?.length || 0;
+  const averageScore = quizResults?.length
+    ? Math.round(quizResults.reduce((acc, quiz) => acc + quiz.score, 0) / quizResults.length)
+    : 0;
+  const latestQuiz = quizResults?.sort((a, b) =>
+    new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+  )[0];
 
   // Calculate chat statistics
   const chatDocuments = documents?.filter(doc => doc.type === "chat") || [];
@@ -162,7 +175,7 @@ export default function StudentPage() {
               </Card>
             </motion.div>
 
-            {/* Study Session Stats */}
+            {/* Quiz Statistics Card */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -172,20 +185,32 @@ export default function StudentPage() {
               <Card className="h-full bg-gradient-to-br from-green-500/5 to-green-600/10 hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-2 md:pb-4">
                   <CardTitle className="flex items-center gap-2 text-green-600 dark:text-green-400 text-lg md:text-xl">
-                    <Clock className="h-5 w-5" />
-                    Study Sessions
+                    <Brain className="h-5 w-5" />
+                    Quiz Performance
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-3 md:gap-4 grid-cols-2">
+                  <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-3">
                     <div className="space-y-1 md:space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">Total Sessions</p>
-                      <p className="text-xl md:text-2xl font-bold">{progress?.length || 0}</p>
+                      <p className="text-sm font-medium text-muted-foreground">Total Quizzes</p>
+                      <p className="text-xl md:text-2xl font-bold">{totalQuizzes}</p>
                     </div>
                     <div className="space-y-1 md:space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">Progress</p>
-                      <Progress value={65} className="h-2" />
-                      <p className="text-sm text-muted-foreground">65% Complete</p>
+                      <p className="text-sm font-medium text-muted-foreground">Average Score</p>
+                      <p className="text-xl md:text-2xl font-bold">{averageScore}%</p>
+                    </div>
+                    <div className="space-y-1 md:space-y-2 col-span-2 md:col-span-1">
+                      <p className="text-sm font-medium text-muted-foreground">Latest Quiz</p>
+                      {latestQuiz ? (
+                        <div>
+                          <p className="text-xl md:text-2xl font-bold">{latestQuiz.score}%</p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(latestQuiz.completedAt), "MMM d, yyyy")}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">No quizzes taken yet</p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
