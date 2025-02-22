@@ -342,6 +342,7 @@ async function registerAdminRoutes(app: Express) {
         : 0;
 
 
+
       const userStats = {
         user: {
           id: user.id,
@@ -616,8 +617,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Learning preferences routes
   app.get("/api/preferences", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const user = await storage.getUser(req.user.id);
-    res.json(user?.learningPreferences || null);
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      console.log("Fetched user preferences:", user.learningPreferences);
+      res.json(user.learningPreferences || null);
+    } catch (error) {
+      console.error("Error fetching preferences:", error);
+      res.status(500).json({ error: "Failed to fetch preferences" });
+    }
   });
 
   app.post("/api/preferences", async (req, res) => {
@@ -896,7 +906,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         documentIds.map(id => storage.getDocument(id))
       );
 
-      // Filter out any null results and documents that don't belong to the user
       const validDocuments = documents.filter(
         doc => doc && doc.userId === req.user.id
       );
@@ -905,20 +914,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "No valid documents found" });
       }
 
-      //      // Combine all document content for processing
       const combinedContent = validDocuments
         .map(doc => doc?.content ?? '')
         .filter(content => content !== '')
         .join("\n\n");
 
-      // Generate flashcards using OpenAI
       const flashcards = await generateFlashcardsFromContent(combinedContent);
 
-      // Save the generated flashcards
       const savedFlashcards = await storage.saveFlashcards(
         flashcards.map(card => ({
           ...card,
-          userId:req.user.id,
+          userId: req.user.id,
           documentIds: documentIds,
         }))
       );
