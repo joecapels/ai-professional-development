@@ -361,7 +361,7 @@ export async function generatePersonalizedStudyPlan(
       response_format: { type: "json_object" }
     });
 
-    const suggestedPlan = JSON.parse(response.choices[0].message.content);
+    const suggestedPlan = JSON.parse(response.choices[0].message.content || '{}');
 
     return {
       dailyGoals: suggestedPlan.dailyGoals || ["Complete your profile settings"],

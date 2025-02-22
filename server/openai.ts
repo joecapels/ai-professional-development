@@ -55,11 +55,13 @@ interface PracticeQuestion {
   explanation: string;
 }
 
+// Update the practice questions generation function for better error handling
 export async function generatePracticeQuestions(
   subject: string,
   difficulty: number
 ): Promise<PracticeQuestion[]> {
   try {
+    console.log(`Generating practice questions for subject: ${subject}, difficulty: ${difficulty}`);
     const prompt = `Generate 3 multiple-choice practice questions for the subject "${subject}" at difficulty level ${difficulty} (1-5).
     Each question should have:
     - Clear question text
@@ -85,24 +87,68 @@ export async function generatePracticeQuestions(
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: prompt }
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
+      temperature: 0.7
     });
 
     const content = response.choices[0].message.content;
     if (!content) {
-      throw new Error("No content in response");
+      console.error("No content in OpenAI response");
+      throw new Error("Empty response from OpenAI");
     }
 
-    const result = JSON.parse(content);
-    return result.questions || [];
+    console.log("Raw OpenAI Response:", content);
+
+    try {
+      const result = JSON.parse(content);
+      console.log("Parsed OpenAI Response:", result);
+
+      if (!result.questions || !Array.isArray(result.questions)) {
+        console.error("Invalid response format:", result);
+        return [
+          {
+            question: "What would you like to study?",
+            options: ["Math", "Science", "History", "Literature"],
+            correctAnswer: "Math",
+            explanation: "Let's start with a topic you're interested in."
+          }
+        ];
+      }
+
+      // Validate each question
+      const validQuestions = result.questions.filter(q => 
+        q.question && 
+        Array.isArray(q.options) && 
+        q.options.length >= 2 &&
+        q.correctAnswer &&
+        q.explanation
+      );
+
+      if (validQuestions.length === 0) {
+        console.error("No valid questions in response");
+        return [
+          {
+            question: "What subject interests you the most?",
+            options: ["Mathematics", "Sciences", "Languages", "Arts"],
+            correctAnswer: "Mathematics",
+            explanation: "Choose a subject to begin your learning journey."
+          }
+        ];
+      }
+
+      return validQuestions;
+    } catch (parseError) {
+      console.error("Failed to parse OpenAI response:", parseError);
+      throw new Error("Failed to parse quiz questions");
+    }
   } catch (error) {
     console.error("Error generating practice questions:", error);
     return [
       {
-        question: "An error occurred while generating questions. Please try again later.",
-        options: ["OK"],
-        correctAnswer: "OK",
-        explanation: "System is temporarily unavailable."
+        question: "Would you like to try a different subject?",
+        options: ["Yes, try another subject", "No, go back", "Need help", "Contact support"],
+        correctAnswer: "Yes, try another subject",
+        explanation: "Let's find a subject that works better for you."
       }
     ];
   }
@@ -200,7 +246,7 @@ export async function handleStudyChat(
       encouraging: "Be encouraging and motivating. Celebrate student successes and provide positive reinforcement. Use phrases like 'Great question!' and 'You're making excellent progress!'",
       socratic: "Use the Socratic method. Guide students to answers through questioning. Help them discover solutions themselves rather than providing direct answers.",
       professional: "Maintain a professional and formal tone. Focus on clear, concise explanations with academic language.",
-      friendly: "Be casual and approachable. Use conversational language and relatable examples. Make learning feel fun and informal.",
+      friendly: "Be casual and approachable. Use conversational language and relatable examples.",
     };
 
     const personalityPrompt = preferences?.chatbotPersonality

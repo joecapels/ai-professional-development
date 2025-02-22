@@ -34,22 +34,69 @@ export default function QuizPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const generateQuizMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/quizzes", {
-        subject,
-        difficulty,
-      });
-      return res.json();
+      try {
+        setError(null);
+        setIsLoading(true);
+        const res = await apiRequest("POST", "/api/quizzes", {
+          subject,
+          difficulty,
+        });
+        if (!res.ok) {
+          throw new Error(`Failed to generate quiz: ${res.statusText}`);
+        }
+        const data = await res.json();
+        console.log("Generated quiz data:", data);
+
+        // Validate quiz data structure
+        if (!data || typeof data !== 'object') {
+          throw new Error("Invalid quiz response format");
+        }
+
+        if (!data.id || !data.questions) {
+          throw new Error("Missing required quiz fields");
+        }
+
+        if (!Array.isArray(data.questions) || data.questions.length === 0) {
+          throw new Error("No questions available. Please try again.");
+        }
+
+        // Validate each question
+        const validQuestions = data.questions.every(q => 
+          q.question && 
+          Array.isArray(q.options) && 
+          q.options.length >= 2 &&
+          q.correctAnswer &&
+          q.explanation
+        );
+
+        if (!validQuestions) {
+          throw new Error("Invalid question format received");
+        }
+
+        return data;
+      } catch (err) {
+        console.error("Quiz generation error:", err);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
     },
     onSuccess: (quiz: Quiz) => {
+      console.log("Setting quiz state:", quiz);
       setCurrentQuiz(quiz);
       setCurrentQuestionIndex(0);
       setSelectedAnswers([]);
       setShowExplanation(false);
+      setError(null);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error("Quiz generation error:", error);
+      setError(error.message);
       toast({
         title: "Failed to generate quiz",
         description: error.message,
@@ -59,12 +106,15 @@ export default function QuizPage() {
   });
 
   const submitAnswerMutation = useMutation({
-    mutationFn: async (data: { 
-      quizId: number; 
+    mutationFn: async (data: {
+      quizId: number;
       totalQuestions: number;
-      answers: { questionIndex: number; selectedAnswer: string; isCorrect: boolean }[] 
+      answers: { questionIndex: number; selectedAnswer: string; isCorrect: boolean }[];
     }) => {
       const res = await apiRequest("POST", "/api/quiz-results", data);
+      if (!res.ok) {
+        throw new Error("Failed to submit quiz results");
+      }
       return res.json();
     },
     onSuccess: (result: QuizResult) => {
@@ -73,24 +123,30 @@ export default function QuizPage() {
         description: `Your score: ${result.score}%`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
-      setLocation("/"); // Redirect to home page after quiz completion
+      setLocation("/");
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to submit quiz",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
   const handleEndQuiz = () => {
-    if (!currentQuiz?.questions) return;
+    if (!currentQuiz?.questions || !Array.isArray(currentQuiz.questions)) {
+      console.error("Invalid quiz state:", currentQuiz);
+      return;
+    }
 
-    const totalQuestions = currentQuiz.questions.length;
-
-    // Calculate score based on answered questions
     const answers = selectedAnswers.map((selectedAnswer, index) => ({
       questionIndex: index,
       selectedAnswer: selectedAnswer || "",
-      isCorrect: selectedAnswer === currentQuiz.questions![index]?.correctAnswer,
+      isCorrect: selectedAnswer === currentQuiz.questions?.[index]?.correctAnswer,
     }));
 
-    // Add empty answers for unanswered questions
-    while (answers.length < totalQuestions) {
+    while (answers.length < currentQuiz.questions.length) {
       answers.push({
         questionIndex: answers.length,
         selectedAnswer: "",
@@ -100,7 +156,7 @@ export default function QuizPage() {
 
     submitAnswerMutation.mutate({
       quizId: currentQuiz.id,
-      totalQuestions,
+      totalQuestions: currentQuiz.questions.length,
       answers,
     });
   };
@@ -108,35 +164,53 @@ export default function QuizPage() {
   const currentQuestion: Question | undefined = currentQuiz?.questions?.[currentQuestionIndex];
 
   const handleAnswerSelect = (answer: string) => {
+    if (!currentQuiz?.questions) return;
     const newAnswers = [...selectedAnswers];
     newAnswers[currentQuestionIndex] = answer;
     setSelectedAnswers(newAnswers);
     setShowExplanation(true);
-
-    if (currentQuestionIndex === (currentQuiz?.questions?.length || 0) - 1) {
-      // Submit quiz if it's the last question
-      submitAnswerMutation.mutate({
-        quizId: currentQuiz!.id,
-        totalQuestions: currentQuiz!.questions.length,
-        answers: newAnswers.map((selectedAnswer, index) => ({
-          questionIndex: index,
-          selectedAnswer,
-          isCorrect: selectedAnswer === currentQuiz?.questions?.[index].correctAnswer,
-        })),
-      });
-    }
   };
 
   const handleNextQuestion = () => {
-    setCurrentQuestionIndex((prev) => prev + 1);
-    setShowExplanation(false);
+    if (!currentQuiz?.questions) return;
+    if (currentQuestionIndex < currentQuiz.questions.length - 1) {
+      setCurrentQuestionIndex((prev) => prev + 1);
+      setShowExplanation(false);
+    } else {
+      handleEndQuiz();
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
       <main className="container py-8">
-        {!currentQuiz ? (
+        {error && (
+          <Card className="mb-4 bg-destructive/10">
+            <CardContent className="p-4">
+              <p className="text-destructive">{error}</p>
+              <Button
+                className="mt-2"
+                variant="outline"
+                onClick={() => {
+                  setError(null);
+                  setCurrentQuiz(null);
+                }}
+              >
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {isLoading ? (
+          <Card className="max-w-md mx-auto">
+            <CardContent className="p-6 flex flex-col items-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <p>Generating quiz questions...</p>
+            </CardContent>
+          </Card>
+        ) : !currentQuiz ? (
           <Card className="max-w-2xl mx-auto">
             <CardHeader>
               <CardTitle>Generate a Quiz</CardTitle>
@@ -185,8 +259,8 @@ export default function QuizPage() {
                 Question {currentQuestionIndex + 1} of{" "}
                 {currentQuiz.questions?.length}
               </CardTitle>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleEndQuiz}
                 disabled={submitAnswerMutation.isPending}
               >
@@ -222,10 +296,7 @@ export default function QuizPage() {
                   </p>
                   <p>{currentQuestion.explanation}</p>
                   {currentQuestionIndex < currentQuiz.questions!.length - 1 && (
-                    <Button
-                      onClick={handleNextQuestion}
-                      className="mt-4"
-                    >
+                    <Button onClick={handleNextQuestion} className="mt-4">
                       Next Question
                     </Button>
                   )}
