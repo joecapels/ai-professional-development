@@ -698,7 +698,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add quiz routes here
   app.post("/api/quizzes", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-
     try {
       const { subject, difficulty } = req.body;
       if (!subject || !difficulty) {
