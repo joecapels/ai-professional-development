@@ -351,29 +351,52 @@ export async function generatePersonalizedStudyPlan(
       messages: [
         {
           role: "system",
-          content: "You are an expert learning advisor. Generate a personalized study plan based on the user's performance metrics."
-        },
-        {
-          role: "user",
-          content: JSON.stringify(metrics)
-        }
-      ],
-      response_format: { type: "json_object" }
-    });
-
-    const suggestedPlan = JSON.parse(response.choices[0].message.content || '{}');
-
-    return {
-      dailyGoals: suggestedPlan.dailyGoals || ["Complete your profile settings"],
-      focusAreas: suggestedPlan.focusAreas || ["Basic concepts"],
-      estimatedTimeInvestment: suggestedPlan.estimatedTimeInvestment || 1,
-      milestones: suggestedPlan.milestones || [
-        {
-          description: "Complete initial setup",
-          targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          content: `You are an expert learning advisor. Generate a personalized study plan with the following structure:
+{
+  "dailyGoals": ["goal1", "goal2", ...],
+  "focusAreas": ["area1", "area2", ...],
+  "estimatedTimeInvestment": number,
+  "milestones": [{"description": "milestone1", "targetDate": "ISO date string"}, ...]
+}
+Base the plan on these performance metrics: ${JSON.stringify(metrics)}`
         }
       ]
-    };
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No content in response");
+    }
+
+    try {
+      const suggestedPlan = JSON.parse(content);
+      return {
+        dailyGoals: suggestedPlan.dailyGoals || ["Complete your profile settings"],
+        focusAreas: suggestedPlan.focusAreas || ["Basic concepts"],
+        estimatedTimeInvestment: suggestedPlan.estimatedTimeInvestment || 1,
+        milestones: suggestedPlan.milestones || [
+          {
+            description: "Complete initial setup",
+            targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          }
+        ]
+      };
+    } catch (parseError) {
+      console.error("Error parsing OpenAI response:", parseError);
+      // If JSON parsing fails, try to extract information from the text response
+      const lines = content.split('\n');
+      return {
+        dailyGoals: lines.filter(line => line.includes("goal") || line.includes("task")).slice(0, 3),
+        focusAreas: lines.filter(line => line.includes("focus") || line.includes("area")).slice(0, 3),
+        estimatedTimeInvestment: 1,
+        milestones: [
+          {
+            description: "Complete initial setup",
+            targetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          }
+        ]
+      };
+    }
   } catch (error) {
     console.error("Error generating study plan:", error);
     return {
