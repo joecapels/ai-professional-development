@@ -4,17 +4,21 @@ import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import helmet from "helmet";
 import compression from "compression";
+import path from "path";
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+const DEFAULT_PORT = 5000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : DEFAULT_PORT;
+const FALLBACK_PORTS = [3000, 3001, 3002, 5000, 5001, 8080];
 
-// Security middleware
+// Security middleware with relaxed CSP for development
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:"],
       connectSrc: ["'self'", process.env.NODE_ENV === "development" ? "*" : ""]
     }
@@ -24,7 +28,7 @@ app.use(helmet({
 // Performance middleware
 app.use(compression());
 
-// Essential middleware only
+// Essential middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -38,46 +42,56 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+async function tryPort(port: number): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const server = app.listen(port, '0.0.0.0')
+      .once('listening', () => {
+        log(`Server successfully bound to port ${port}`);
+        resolve(server);
+      })
+      .once('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          log(`Port ${port} is already in use`);
+          server.close();
+          reject(new Error(`Port ${port} is already in use`));
+        } else {
+          reject(err);
+        }
+      });
+  });
+}
+
 async function startServer() {
   let server: any = null;
 
   try {
-    // Register minimal routes first
-    log('Initializing minimal server routes...');
+    // Register API routes first
+    log('Initializing server routes...');
     server = await registerRoutes(app);
 
-    // Start server with better error handling for port conflicts
-    await new Promise<void>((resolve, reject) => {
-      log(`Starting server on port ${PORT}...`);
+    // Try ports until one works
+    let currentPortIndex = 0;
+    let success = false;
 
-      // Try to create server first
-      server = app.listen(PORT, '0.0.0.0', () => {
-        log(`Server successfully bound to port ${PORT}`);
-        log(`Server running in ${app.get("env")} mode`);
-        resolve();
-      });
-
-      // Enhanced error handling
-      server.on('error', (error: Error & { code?: string }) => {
-        if (error.code === 'EADDRINUSE') {
-          log(`Port ${PORT} is already in use`);
-          reject(new Error(`Port ${PORT} is already in use`));
-        } else {
-          log(`Error starting server: ${error.message}`);
-          reject(error);
+    while (!success && currentPortIndex < FALLBACK_PORTS.length) {
+      const currentPort = FALLBACK_PORTS[currentPortIndex];
+      try {
+        log(`Attempting to start server on port ${currentPort}...`);
+        server = await tryPort(currentPort);
+        success = true;
+        log(`Server running on port ${currentPort} in ${app.get("env")} mode`);
+      } catch (error: any) {
+        if (error.code === 'EADDRINUSE' || error.message.includes('already in use')) {
+          currentPortIndex++;
+          continue;
         }
-      });
+        throw error;
+      }
+    }
 
-      // Add timeout to detect slow startup
-      const startupTimeout = setTimeout(() => {
-        reject(new Error(`Server startup timed out after 15 seconds`));
-      }, 15000);
-
-      // Clear timeout on successful start
-      server.on('listening', () => {
-        clearTimeout(startupTimeout);
-      });
-    });
+    if (!success) {
+      throw new Error('Unable to find an available port');
+    }
 
     // Global error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -85,7 +99,6 @@ async function startServer() {
       const message = err.message || "Internal Server Error";
       log(`Error: ${status} - ${message}`);
 
-      // Don't expose error details in production
       const response = app.get("env") === "development"
         ? { message, stack: err.stack }
         : { message: "Internal Server Error" };
@@ -93,7 +106,7 @@ async function startServer() {
       res.status(status).json(response);
     });
 
-    // Once server is confirmed running, setup development or production environment
+    // Setup static files and SPA handling after API routes
     if (app.get("env") === "development") {
       log('Setting up Vite development server...');
       await setupVite(app, server);
@@ -104,7 +117,22 @@ async function startServer() {
       serveStatic(app);
     }
 
-    // Initialize badges asynchronously
+    // Catch-all route for SPA - must be after API routes and static files
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api/')) {
+        next();
+        return;
+      }
+      // In development, this will be handled by Vite
+      // In production, it will serve the static index.html
+      if (app.get("env") === "development") {
+        next();
+      } else {
+        res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+      }
+    });
+
+    // Initialize badges in background
     log('Initializing badges in background...');
     setTimeout(async () => {
       try {

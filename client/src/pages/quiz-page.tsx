@@ -46,37 +46,37 @@ export default function QuizPage() {
           subject,
           difficulty,
         });
+
         if (!res.ok) {
-          throw new Error(`Failed to generate quiz: ${res.statusText}`);
+          const errorData = await res.json();
+          throw new Error(errorData.error || `Failed to generate quiz: ${res.statusText}`);
         }
+
         const data = await res.json();
         console.log("Generated quiz data:", data);
 
-        // Validate quiz data structure
+        // Enhanced validation
         if (!data || typeof data !== 'object') {
           throw new Error("Invalid quiz response format");
         }
 
         if (!data.id || !data.questions) {
-          throw new Error("Missing required quiz fields");
+          throw new Error("Quiz is missing required fields (id or questions)");
         }
 
         if (!Array.isArray(data.questions) || data.questions.length === 0) {
-          throw new Error("No questions available. Please try again.");
+          throw new Error("No questions available in the quiz. Please try again.");
         }
 
-        // Validate each question
-        const validQuestions = data.questions.every(q => 
-          q.question && 
-          Array.isArray(q.options) && 
-          q.options.length >= 2 &&
-          q.correctAnswer &&
-          q.explanation
-        );
-
-        if (!validQuestions) {
-          throw new Error("Invalid question format received");
-        }
+        // Validate each question structure
+        data.questions.forEach((q: any, index: number) => {
+          if (!q.question || !Array.isArray(q.options) || !q.correctAnswer || !q.explanation) {
+            throw new Error(`Invalid question format at question ${index + 1}`);
+          }
+          if (q.options.length < 2) {
+            throw new Error(`Question ${index + 1} has insufficient options (minimum 2 required)`);
+          }
+        });
 
         return data;
       } catch (err) {

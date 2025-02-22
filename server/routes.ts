@@ -708,25 +708,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Generating quiz for subject: ${subject}, difficulty: ${difficulty}`);
       const questions = await generatePracticeQuestions(subject, difficulty);
 
-      if (!questions || questions.length === 0) {
-        console.error("No questions generated");
-        return res.status(500).json({ error: "Failed to generate questions" });
+      if (!questions || !Array.isArray(questions) || questions.length === 0) {
+        throw new Error("Failed to generate quiz questions");
       }
 
-      console.log(`Successfully generated ${questions.length} questions`);
+      // Validate question format
+      const validatedQuestions = questions.map(q => {
+        if (!q.question || !Array.isArray(q.options) || q.options.length < 2 || !q.correctAnswer || !q.explanation) {
+          throw new Error("Invalid question format from AI generation");
+        }
+        return {
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation
+        };
+      });
+
+      // Create the quiz with validated questions
       const quiz = await storage.createQuiz({
         userId: req.user.id,
         subject,
         difficulty,
-        questions,
+        questions: validatedQuestions,
+        status: 'active',
+        score: 0, // Will be updated when completed
       });
 
-      res.json(quiz);
+      // Ensure the response has the required structure
+      const formattedQuiz = {
+        id: quiz.id,
+        subject: quiz.subject,
+        difficulty: quiz.difficulty,
+        questions: quiz.questions,
+        status: quiz.status
+      };
+
+      console.log(`Successfully created quiz with ID: ${quiz.id}`);
+      res.json(formattedQuiz);
     } catch (error) {
       console.error("Error generating quiz:", error);
       res.status(500).json({ 
         error: "Failed to create quiz",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : "An error occurred while creating the quiz"
       });
     }
   });
@@ -868,7 +892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "No valid documents found" });
       }
 
-      // Combine all document content for processing
+      //      // Combine all document content for processing
       const combinedContent = validDocuments
         .map(doc => doc?.content ?? '')
         .filter(content => content !== '')
