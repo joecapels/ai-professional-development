@@ -33,23 +33,29 @@ export default function SettingsPage() {
     queryKey: ["/api/preferences"],
   });
 
-  const defaultValues: LearningPreferences = {
+  // Only set default values if no preferences exist
+  const defaultValues: LearningPreferences = preferences || {
     learningStyle: "visual",
     pacePreference: "moderate",
     explanationDetail: "detailed",
     exampleFrequency: "moderate",
     chatbotPersonality: "encouraging",
     gradeLevel: "high_school",
-    researchAreas: ["computer_science"],
-    ...preferences // This ensures we merge any existing preferences
+    researchAreas: ["computer_science"]
   };
 
   const form = useForm<LearningPreferences>({
     resolver: zodResolver(learningPreferencesSchema),
     defaultValues,
-    // Important: This ensures the form updates when preferences are loaded
     values: preferences || defaultValues,
   });
+
+  // Reset form when preferences are loaded
+  useEffect(() => {
+    if (preferences) {
+      form.reset(preferences);
+    }
+  }, [preferences, form]);
 
   const updatePreferencesMutation = useMutation({
     mutationFn: async (data: LearningPreferences) => {
