@@ -622,9 +622,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/preferences", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const preferences: LearningPreferences = req.body;
-    const user = await storage.updateUserPreferences(req.user.id, preferences);
-    res.json(user.learningPreferences);
+    try {
+      console.log("Received preferences update:", req.body);
+      const preferences: LearningPreferences = req.body;
+
+      // Validate the incoming data matches our schema
+      if (!preferences || !preferences.learningStyle || !preferences.pacePreference) {
+        return res.status(400).json({ error: "Invalid preferences data" });
+      }
+
+      const user = await storage.updateUserPreferences(req.user.id, preferences);
+      if (!user || !user.learningPreferences) {
+        throw new Error("Failed to update user preferences");
+      }
+
+      console.log("Updated preferences:", user.learningPreferences);
+      res.json(user.learningPreferences);
+    } catch (error) {
+      console.error("Error updating preferences:", error);
+      res.status(500).json({ error: "Failed to update preferences" });
+    }
   });
 
   // AI recommendations route
@@ -744,7 +761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error generating quiz:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to create quiz",
         details: process.env.NODE_ENV === 'development' ? error.message : "An error occurred while creating the quiz"
       });

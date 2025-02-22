@@ -41,27 +41,38 @@ export default function SettingsPage() {
     chatbotPersonality: "encouraging",
     gradeLevel: "high_school",
     researchAreas: ["computer_science"],
-    ...preferences
+    ...preferences // This ensures we merge any existing preferences
   };
 
   const form = useForm<LearningPreferences>({
     resolver: zodResolver(learningPreferencesSchema),
     defaultValues,
+    // Important: This ensures the form updates when preferences are loaded
+    values: preferences || defaultValues,
   });
 
   const updatePreferencesMutation = useMutation({
     mutationFn: async (data: LearningPreferences) => {
-      const res = await apiRequest("POST", "/api/preferences", data);
-      return res.json();
+      console.log("Submitting preferences:", data);
+      const response = await apiRequest("POST", "/api/preferences", data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update preferences");
+      }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/preferences"] });
-      toast({ title: "Settings updated successfully" });
+      toast({ 
+        title: "Settings updated successfully",
+        description: "Your learning preferences have been saved."
+      });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error("Preferences update error:", error);
       toast({
         title: "Failed to update settings",
-        description: error.message,
+        description: error.message || "Please try again later",
         variant: "destructive",
       });
     },
