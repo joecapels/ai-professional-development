@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { AppTour } from "@/components/app-tour";
-import { ErrorBoundary } from "@/components/error-boundary"; // Added import
+import { ErrorBoundary } from "@/components/error-boundary"; 
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import HomePage from "@/pages/home-page";
@@ -21,6 +21,7 @@ import AdminPage from "@/pages/admin-page";
 import NotificationsPage from "@/pages/notifications-page";
 import UpgradesPage from "@/pages/upgrades-page";
 import SuperUserLoginPage from "@/pages/super-user-login";
+import StudyTrackerPage from "@/pages/study-tracker-page";
 
 function Router() {
   return (
@@ -36,6 +37,7 @@ function Router() {
       <ProtectedRoute path="/notifications" component={NotificationsPage} />
       <ProtectedRoute path="/admin" component={AdminPage} />
       <ProtectedRoute path="/upgrades" component={UpgradesPage} />
+      <ProtectedRoute path="/study-tracker" component={StudyTrackerPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/super-login" component={SuperUserLoginPage} />
       <Route component={NotFound} />
