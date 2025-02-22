@@ -9,6 +9,20 @@ import * as z from 'zod';
 
 const PostgresSessionStore = connectPg(session);
 
+// Helper function to extract topics from text
+function extractTopicsFromText(text: string): string[] {
+  // This is a simple implementation. Could be enhanced with NLP
+  const commonTopics = [
+    'mathematics', 'physics', 'chemistry', 'biology',
+    'history', 'literature', 'programming', 'algorithms',
+    'data structures', 'machine learning', 'statistics'
+  ];
+
+  return commonTopics.filter(topic => 
+    text.toLowerCase().includes(topic.toLowerCase())
+  );
+}
+
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
@@ -211,7 +225,7 @@ export class DatabaseStorage implements IStorage {
     return session;
   }
 
-  async getStudySessionsByUser(userId: number) {
+  async getStudySessionsByUser(userId: number): Promise<any[]> {
     return await db
       .select({
         id: studySessions.id,
@@ -229,10 +243,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(studySessions.startTime));
   }
 
-  async getUserStudyStats(userId: number) {
+  async getUserStudyStats(userId: number): Promise<{ totalStudyTime: number; avgSessionLength: number; totalSessions: number; currentStreak: number; maxStreak: number; studyPatterns: Record<string, number>; subjectAnalysis: Record<string, number>; learningPreferences: LearningPreferences; learningStylesUsage: Record<string, number>; quizStats: { totalQuizzes: number; averageScore: number; perfectScores: number; bySubject: Record<string, { attempts: number; avgScore: number }> }; flashcardAnalysis: Record<string, number>; documentStats: { totalDocuments: number; byType: Record<string, number>; recentActivity: SavedDocument[] }; recentSessions: any[] }> {
     const studySessions = await this.getStudySessionsByUser(userId);
     const quizResults = await this.getQuizResultsByUser(userId);
     const documents = await this.getDocumentsByUser(userId);
+    const flashcards = await this.getFlashcardsByUser(userId);
+    const user = await this.getUser(userId);
+
+    if (!user) throw new Error('User not found');
 
     const totalStudyTime = studySessions.reduce((acc, session) => {
       return acc + (session.totalDuration || 0);
@@ -242,13 +260,59 @@ export class DatabaseStorage implements IStorage {
       ? Math.round(totalStudyTime / studySessions.length)
       : 0;
 
+    // Analyze study patterns by time of day
+    const studyPatterns = studySessions.reduce((acc: Record<string, number>, session) => {
+      const hour = new Date(session.startTime).getHours();
+      const timeOfDay = 
+        hour >= 5 && hour < 12 ? 'morning' :
+        hour >= 12 && hour < 17 ? 'afternoon' :
+        hour >= 17 && hour < 22 ? 'evening' : 'night';
+      acc[timeOfDay] = (acc[timeOfDay] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Analyze subjects and topics
+    const subjectAnalysis = studySessions.reduce((acc: Record<string, number>, session) => {
+      acc[session.subject] = (acc[session.subject] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Analyze preferred learning styles from actual usage
+    const learningStylesUsage = studySessions.reduce((acc: Record<string, number>, session) => {
+      if (session.metrics?.learningStyle) {
+        acc[session.metrics.learningStyle] = (acc[session.metrics.learningStyle] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    // Quiz performance by subject
     const quizStats = {
       totalQuizzes: quizResults.length,
       averageScore: quizResults.length > 0
         ? Math.round(quizResults.reduce((acc, quiz) => acc + quiz.score, 0) / quizResults.length)
         : 0,
-      perfectScores: quizResults.filter(quiz => quiz.score === 100).length
+      perfectScores: quizResults.filter(quiz => quiz.score === 100).length,
+      bySubject: quizResults.reduce((acc: Record<string, { attempts: number; avgScore: number }>, quiz) => {
+        if (!acc[quiz.subject]) {
+          acc[quiz.subject] = { attempts: 0, avgScore: 0 };
+        }
+        acc[quiz.subject].attempts++;
+        acc[quiz.subject].avgScore = Math.round(
+          (acc[quiz.subject].avgScore * (acc[quiz.subject].attempts - 1) + quiz.score) / 
+          acc[quiz.subject].attempts
+        );
+        return acc;
+      }, {})
     };
+
+    // Flashcard topic analysis
+    const flashcardAnalysis = flashcards.reduce((acc: Record<string, number>, card) => {
+      const topics = extractTopicsFromText(card.front + ' ' + card.back);
+      topics.forEach(topic => {
+        acc[topic] = (acc[topic] || 0) + 1;
+      });
+      return acc;
+    }, {});
 
     const documentStats = {
       totalDocuments: documents.length,
@@ -261,6 +325,7 @@ export class DatabaseStorage implements IStorage {
         .slice(0, 5)
     };
 
+    // Calculate study streaks
     let currentStreak = 0;
     let maxStreak = 0;
     let lastDate: Date | null = null;
@@ -286,7 +351,12 @@ export class DatabaseStorage implements IStorage {
       totalSessions: studySessions.length,
       currentStreak,
       maxStreak,
+      studyPatterns,
+      subjectAnalysis,
+      learningPreferences: user.learningPreferences,
+      learningStylesUsage,
       quizStats,
+      flashcardAnalysis,
       documentStats,
       recentSessions: studySessions.slice(0, 5)
     };
