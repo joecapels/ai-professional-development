@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge, UserAchievement } from "@shared/schema";
 import { NavBar } from "@/components/nav-bar";
-import { AnimatedBadge } from "@/components/animated-badge";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
+import { Card, CardHeader, CardContent, CardDescription } from "@/components/ui/card";
+import { Badge as BadgeUI } from "@/components/ui/badge";
 
 export default function BadgesPage() {
   const { toast } = useToast();
@@ -35,13 +36,7 @@ export default function BadgesPage() {
           <h1 className="text-4xl font-bold mb-8">Learning Achievements</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="p-6">
-                <div className="space-y-3">
-                  <Skeleton className="h-24 w-24 rounded-full mx-auto" />
-                  <Skeleton className="h-6 w-3/4 mx-auto" />
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              </div>
+              <Skeleton key={i} className="h-[200px] w-full" />
             ))}
           </div>
         </main>
@@ -74,53 +69,52 @@ export default function BadgesPage() {
     <div className="min-h-screen bg-background">
       <NavBar />
       <main className="container mx-auto px-4 py-8">
-        <motion.div 
-          className="mb-8 space-y-4"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1 className="text-4xl font-bold">Learning Achievements</h1>
-          <div className="flex items-center gap-4">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-4">Learning Achievements</h1>
+          <div className="flex items-center gap-4 bg-muted p-4 rounded-lg">
             <Progress value={achievementPercentage} className="w-64" />
             <span className="text-sm text-muted-foreground">
               {totalAchieved} of {totalBadges} badges earned
             </span>
           </div>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {badges?.map((badge, index) => {
+          {badges?.map((badge) => {
             const progress = getBadgeProgress(badge.id);
-            const isEarned = !!progress;
+            const isEarned = progress?.current >= (progress?.target || 0);
 
             return (
               <motion.div
                 key={badge.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -5 }}
-                className="relative group"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
               >
-                <AnimatedBadge
-                  name={badge.name}
-                  description={badge.description}
-                  imageUrl={badge.imageUrl}
-                  rarity={badge.rarity}
-                  progress={progress}
-                  earned={isEarned}
-                />
-                {!isEarned && (
-                  <motion.div 
-                    className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    initial={false}
-                  >
-                    <p className="text-sm text-center px-4">
-                      Complete the required challenges to earn this badge!
-                    </p>
-                  </motion.div>
-                )}
+                <Card className={isEarned ? "border-primary" : "border-muted"}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <BadgeUI variant={isEarned ? "default" : "outline"}>
+                        {badge.rarity}
+                      </BadgeUI>
+                      {progress && (
+                        <span className="text-sm text-muted-foreground">
+                          {progress.current}/{progress.target}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-semibold">{badge.name}</h3>
+                    <CardDescription>{badge.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {progress && (
+                      <Progress 
+                        value={(progress.current / progress.target) * 100} 
+                        className="h-2"
+                      />
+                    )}
+                  </CardContent>
+                </Card>
               </motion.div>
             );
           })}
