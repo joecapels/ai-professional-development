@@ -5,7 +5,7 @@ import {
   Menu, X, Search, Bell, 
   User as UserProfile, LogOut, Settings2, 
   BookOpen, Trophy, BarChart2,
-  Check, Clock 
+  Check, Clock, LineChart 
 } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -77,6 +77,7 @@ export function NavBar() {
     { path: "/chat", label: "Learn", dataTour: "learn" },
     { path: "/flashcards", label: "Flashcards", dataTour: "flashcards" },
     { path: "/documents", label: "Documents", dataTour: "documents" },
+    { path: "/study-tracker", label: "Study Tracker", dataTour: "study-tracker" },
     { path: "/badges", label: "Achievements", dataTour: "achievements" },
     { path: "/analytics", label: "Analytics", dataTour: "analytics" },
     { path: "/upgrades", label: "Upgrade", dataTour: "upgrades" },
@@ -227,6 +228,12 @@ export function NavBar() {
                           <DropdownMenuItem>
                             <BookOpen className="mr-2 h-4 w-4" />
                             <span>My Learning</span>
+                          </DropdownMenuItem>
+                        </Link>
+                        <Link href="/study-tracker">
+                          <DropdownMenuItem>
+                            <LineChart className="mr-2 h-4 w-4" />
+                            <span>Study Tracker</span>
                           </DropdownMenuItem>
                         </Link>
                         <Link href="/badges">
